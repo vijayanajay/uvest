@@ -1,0 +1,12 @@
+Symbol: MOTILALOFS
+Expiry: 25 AUG
+Type: FUTURES
+Action: BUY
+Entry Price: 906.00
+Entry Range: 904.50 - 907.50
+Live Price: 910.50
+Target: 938.00
+Stoploss: 875.00
+Lot Size: 775
+Margin: 184778.61
+App Warning: Trade is outside the entry range. Take caution

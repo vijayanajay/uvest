@@ -1,0 +1,15 @@
+{
+  "symbol": "MOTILALOFS",
+  "expiry": "25 AUG",
+  "instrument_type": "FUT",
+  "action": "BUY",
+  "entry_price": 906.00,
+  "entry_range_min": 904.50,
+  "entry_range_max": 907.50,
+  "live_price": 910.50,
+  "target": 938.00,
+  "stoploss": 875.00,
+  "lot_size": 775,
+  "margin": 184778.61,
+  "app_warning": "Trade is outside the entry range. Take caution"
+}
