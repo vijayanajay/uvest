@@ -8,10 +8,20 @@ Scoring breakdown (100 pts):
     2. Price discipline / range ...... 20 pts
     3. Technical & volatility ........ 20 pts
     4. Historical edge ............... 20 pts
-    5. Event safety .................. 15 pts (assumed clean unless flagged)
+    5. Event safety .................. 15 pts (real check: days to expiry)
+
+Waiver model (no free points): a check that cannot be evaluated — market
+data unavailable, no track record for the ticker, expiry not supplied —
+earns 0 and is labelled `waived`. Waived checks neither add nor subtract
+points; the decision bands are applied to the share of *available* points
+(`effective_score`), so missing data never inflates a score and never
+silently caps a good one.
 
 Output contract:
-    final_confidence_score : int
+    final_confidence_score : int     (raw points earned, out of max_possible)
+    max_possible_score     : int     (100 minus waived max points)
+    effective_score        : float   (% of available points earned)
+    waived                 : list[str]
     decision               : str
     rejection_reasons      : list[str]      (BRD parity — plain strings)
     rejection_details      : list[dict]     (rich form for the report renderer)
@@ -35,93 +45,131 @@ def calculate_score(math_res: dict[str, Any], market_res: dict[str, Any], audit_
     component_scores: dict[str, Any] = {}
     details: list[dict[str, Any]] = []
 
-    def reject(category: str, reason: str, earned: int, maximum: int) -> None:
-        details.append({"category": category, "earned": earned, "max": maximum, "reason": reason})
+    def record(category: str, key: str, earned: int, maximum: int, reason: str | None = None, waived: bool = False) -> None:
+        component_scores[key] = {"earned": earned, "max": maximum, "waived": waived}
+        if reason:
+            details.append({"category": category, "earned": earned, "max": maximum, "reason": reason, "waived": waived})
 
     # 1. Math R:R Check (Max 25 pts)
     live_rr = math_res.get("live_rr", 0.0)
     if live_rr >= 1.5:
         score += 25
-        component_scores["rr_check"] = {"earned": 25, "max": 25}
+        record("R:R CHECK PASS", "rr_check", 25, 25)
     elif live_rr >= 1.0:
         score += 10
-        component_scores["rr_check"] = {"earned": 10, "max": 25}
-        reject("SUB-OPTIMAL R:R", "WARNING: R:R is between 1.0 and 1.5. Sub-optimal reward profile.", 10, 25)
+        record(
+            "SUB-OPTIMAL R:R", "rr_check", 10, 25,
+            "WARNING: R:R is between 1.0 and 1.5. Sub-optimal reward profile.",
+        )
     else:
-        component_scores["rr_check"] = {"earned": 0, "max": 25}
-        reject(
-            "INVERTED RISK-TO-REWARD",
+        record(
+            "INVERTED RISK-TO-REWARD", "rr_check", 0, 25,
             f"CRITICAL: Inverted R:R ({live_rr}). Risking more than potential reward.",
-            0, 25,
         )
 
     # 2. Price Discipline / Range Check (Max 20 pts)
     if not math_res.get("outside_entry_range", False):
         score += 20
-        component_scores["price_discipline"] = {"earned": 20, "max": 20}
+        record("PRICE DISCIPLINE PASS", "price_discipline", 20, 20)
     else:
-        component_scores["price_discipline"] = {"earned": 0, "max": 20}
-        reject(
-            "PRICE DISCIPLINE VIOLATION",
+        record(
+            "PRICE DISCIPLINE VIOLATION", "price_discipline", 0, 20,
             "ENTRY VIOLATION: Current price is outside Univest's recommended range.",
-            0, 20,
         )
 
-    # 3. Technical & Volatility Check (Max 20 pts)
+    # 3. Technical & Volatility Check (Max 20 pts) — vol 10 + trend 10
     market_available = "error" not in market_res
-    if market_available and not market_res.get("is_tight_sl", False):
-        score += 10
-        component_scores["volatility"] = {"earned": 10, "max": 10}
-    elif not market_available:
-        component_scores["volatility"] = {"earned": 0, "max": 10}
-        component_scores["trend"] = {"earned": 0, "max": 10}
-        reject(
-            "MARKET DATA UNAVAILABLE",
+    if not market_available:
+        record("VOLATILITY", "volatility", 0, 10, waived=True)
+        record("TREND", "trend", 0, 10, waived=True)
+        record(
+            "MARKET DATA UNAVAILABLE", "market_data", 0, 20,
             "Could not fetch live ATR/EMA; volatility and trend checks waived.",
-            0, 20,
+            waived=True,
         )
     else:
-        component_scores["volatility"] = {"earned": 0, "max": 10}
-        reject(
-            "VOLATILITY RISK",
-            "Stop Loss is tighter than 1.0 x Daily ATR (High noise stopout risk).",
-            0, 10,
-        )
+        if market_res.get("is_tight_sl", False):
+            record(
+                "VOLATILITY RISK", "volatility", 0, 10,
+                "Stop Loss is tighter than 1.0 x Daily ATR (High noise stopout risk).",
+            )
+        else:
+            score += 10
+            record("VOLATILITY PASS", "volatility", 10, 10)
 
-    if market_available and market_res.get("above_50_ema", True):
-        score += 10
-        component_scores["trend"] = {"earned": 10, "max": 10}
-    elif market_available:
-        component_scores["trend"] = {"earned": 0, "max": 10}
-        reject("TREND CONFLICT", "Stock is trading below its 50 EMA.", 0, 10)
+        if market_res.get("above_50_ema", False):
+            score += 10
+            record("TREND PASS", "trend", 10, 10)
+        else:
+            record("TREND CONFLICT", "trend", 0, 10, "Stock is trading below its 50 EMA.")
 
-    # 4. Historical Edge Check (Max 20 pts)
-    if audit_res.get("edge_is_positive", False) or audit_res.get("status") == "NO_HISTORICAL_DATA_FOR_TICKER":
+    # 4. Historical Edge Check (Max 20 pts) — no data is waived, never a win
+    if audit_res.get("edge_is_positive", False):
         score += 20
-        component_scores["historical_edge"] = {"earned": 20, "max": 20}
+        record("HISTORICAL EDGE PASS", "historical_edge", 20, 20)
+    elif audit_res.get("status") == "NO_HISTORICAL_DATA_FOR_TICKER":
+        record(
+            "HISTORICAL EDGE (NO DATA)", "historical_edge", 0, 20,
+            "No track record for this ticker yet - no points granted for missing data (waived).",
+            waived=True,
+        )
     else:
-        component_scores["historical_edge"] = {"earned": 0, "max": 20}
-        reject(
-            "HISTORICAL EDGE FAIL",
+        record(
+            "HISTORICAL EDGE FAIL", "historical_edge", 0, 20,
             "Univest signals for this setup/ticker have a negative net expectancy.",
-            0, 20,
         )
 
-    # 5. Event Safety Check (Max 15 pts) - Assumed clean unless flagged
-    score += 15
-    component_scores["event_safety"] = {"earned": 15, "max": 15}
+    # 5. Event Safety Check (Max 15 pts) — real check: days to expiry
+    days = math_res.get("days_to_expiry")
+    if days is None:
+        record(
+            "EVENT SAFETY (NO EXPIRY)", "event_safety", 0, 15,
+            "Expiry not specified or unparsable - event-safety check waived rather than assumed clean.",
+            waived=True,
+        )
+    elif days >= 5:
+        score += 15
+        record("EVENT SAFETY PASS", "event_safety", 15, 15)
+    elif days >= 3:
+        score += 10
+        record(
+            "EXPIRY PROXIMITY", "event_safety", 10, 15,
+            f"Only {days} days to expiry - the trade window is shrinking and expiry-week whipsaw risk rises.",
+        )
+    elif days < 0:
+        record(
+            "EXPIRY ALREADY PASSED", "event_safety", 0, 15,
+            f"Expiry is {abs(days)} day(s) in the past - this recommendation is stale; do not enter it.",
+        )
+    else:
+        record(
+            "EXPIRY DAY RISK", "event_safety", 0, 15,
+            f"Only {days} day(s) to expiry - expiry-day whipsaw risk; decision capped at CONDITIONAL GO.",
+        )
 
-    # Decision Output
+    # Decision — bands applied to the share of AVAILABLE points. Waived checks
+    # grant nothing and are not penalized either.
+    waived_max = sum(d["max"] for d in details if d.get("waived"))
+    max_possible = 100 - waived_max
+    effective = round(score / max_possible * 100, 1) if max_possible > 0 else 0.0
+
     decision = "NO-GO (REJECT)"
-    if score >= 80:
+    if effective >= 80:
         decision = "GO (EXECUTE FULL SIZE)"
-    elif score >= 65:
+    elif effective >= 65:
+        decision = "CONDITIONAL GO (REDUCE SIZE 50%)"
+
+    # Expiry-day veto: never full-size into a trade with <3 days to expiry.
+    if decision == "GO (EXECUTE FULL SIZE)" and days is not None and days < 3:
         decision = "CONDITIONAL GO (REDUCE SIZE 50%)"
 
     return {
         "final_confidence_score": score,
+        "max_possible_score": max_possible,
+        "effective_score": effective,
+        "waived": [d["category"] for d in details if d.get("waived")],
         "decision": decision,
-        "rejection_reasons": [d["reason"] for d in details],
+        "rejection_reasons": [d["reason"] for d in details if not d.get("waived")],
         "rejection_details": details,
         "component_scores": component_scores,
     }

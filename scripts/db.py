@@ -3,16 +3,20 @@
 The database is the memory of the whole learning loop:
 
   * Every analyzed recommendation is upserted as an OPEN row
-    (`5_track_and_resolve.py`) with its score and decision.
+    (`5_track_and_resolve.py`) with its score and decision, along with its
+    parsed expiry date.
   * On later runs, OPEN rows are re-checked against live prices and
-    resolved to WIN / LOSS.
+    resolved to WIN / LOSS — either by hitting target/stop, or at expiry
+    against the last available close. `pnl_inr` is net of modeled
+    transaction costs (see `common.estimate_costs`).
   * `3_historical_audit.py` reads resolved rows to compute the real
     track record; `is_seed` rows are only a bootstrap until real data
     exists.
 
 Schema is versioned with `PRAGMA user_version`. v1 databases (seed-only,
 no tracking columns) are rebuilt automatically — they contain no
-user-tracked data.
+user-tracked data. v2 databases gain the expiry/costs columns via ALTER
+(v3).
 """
 
 from __future__ import annotations
@@ -21,9 +25,9 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-from common import DB_FILE  # noqa: E402
+from common import DB_FILE, parse_expiry  # noqa: E402
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 SCHEMA = """
 CREATE TABLE trade_recommendations (
@@ -47,6 +51,9 @@ CREATE TABLE trade_recommendations (
     recommended_on  TEXT,
     resolved_on     TEXT,
     final_price     REAL,
+    expiry          TEXT,
+    expiry_date     TEXT,
+    costs_inr       REAL,
     is_seed         INTEGER NOT NULL DEFAULT 0,
     UNIQUE (symbol, instrument_type, action, entry_price, target, stoploss)
 );
@@ -55,19 +62,35 @@ CREATE INDEX idx_symbol_type ON trade_recommendations (symbol, instrument_type);
 
 
 def ensure_schema(conn: sqlite3.Connection) -> None:
-    """Create or migrate the schema. v1 (seed-only) DBs are rebuilt."""
+    """Create or migrate the schema.
+
+    v1 (seed-only) DBs are rebuilt losslessly. v2 DBs are upgraded in place
+    with the expiry/costs columns added via ALTER TABLE.
+    """
     version = conn.execute("PRAGMA user_version").fetchone()[0]
     exists = conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='trade_recommendations'"
     ).fetchone()
     if version >= SCHEMA_VERSION and exists:
         return
-    if exists:
+    if not exists:
+        conn.executescript(SCHEMA)
+        conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
+        conn.commit()
+        return
+    if version < 2:
         # v1 held only seed rows (tracking did not exist), so a rebuild is lossless.
         conn.execute("DROP TABLE trade_recommendations")
-    conn.executescript(SCHEMA)
-    conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
-    conn.commit()
+        conn.executescript(SCHEMA)
+        conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
+        conn.commit()
+        return
+    if version == 2:
+        conn.execute("ALTER TABLE trade_recommendations ADD COLUMN expiry TEXT")
+        conn.execute("ALTER TABLE trade_recommendations ADD COLUMN expiry_date TEXT")
+        conn.execute("ALTER TABLE trade_recommendations ADD COLUMN costs_inr REAL")
+        conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
+        conn.commit()
 
 
 def connect(db_path: Path = DB_FILE) -> sqlite3.Connection:
@@ -96,6 +119,8 @@ def upsert_tracked_trade(conn: sqlite3.Connection, data: dict[str, Any],
     live = float(data.get("live_price", entry))
     er_min = float(data.get("entry_range_min", entry))
     er_max = float(data.get("entry_range_max", entry))
+    expiry_text = data.get("expiry")
+    expiry_date = parse_expiry(expiry_text)
 
     # R:R at the recommended entry (not live)
     risk = entry - sl if action == "BUY" else sl - entry
@@ -114,10 +139,11 @@ def upsert_tracked_trade(conn: sqlite3.Connection, data: dict[str, Any],
             """
             UPDATE trade_recommendations
             SET entry_range_min=?, entry_range_max=?, live_price=?, lot_size=?, margin=?,
-                confidence_score=?, decision=?, rr_ratio=?
+                confidence_score=?, decision=?, rr_ratio=?, expiry=?, expiry_date=?
             WHERE id=?
             """,
-            (er_min, er_max, live, lot, margin, score, decision, rr, row_id),
+            (er_min, er_max, live, lot, margin, score, decision, rr, expiry_text,
+             expiry_date.isoformat() if expiry_date else None, row_id),
         )
         inserted = False
     else:
@@ -126,11 +152,13 @@ def upsert_tracked_trade(conn: sqlite3.Connection, data: dict[str, Any],
             INSERT INTO trade_recommendations
                 (symbol, instrument_type, action, entry_price, target, stoploss,
                  entry_range_min, entry_range_max, live_price, lot_size, margin,
-                 outcome, confidence_score, decision, rr_ratio, recommended_on, is_seed)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'OPEN', ?, ?, ?, datetime('now'), 0)
+                 outcome, confidence_score, decision, rr_ratio, recommended_on,
+                 expiry, expiry_date, is_seed)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'OPEN', ?, ?, ?, datetime('now'), ?, ?, 0)
             """,
             (symbol, inst, action, entry, target, sl, er_min, er_max, live, lot, margin,
-             score, decision, rr),
+             score, decision, rr, expiry_text,
+             expiry_date.isoformat() if expiry_date else None),
         )
         row_id = cursor.lastrowid
         inserted = True

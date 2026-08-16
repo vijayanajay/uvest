@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import INPUT_FILE, emit_json, fail, load_json  # noqa: E402
+from common import INPUT_FILE, days_to_expiry, emit_json, fail, load_json  # noqa: E402
 
 
 def analyze_math(data: dict[str, Any]) -> dict[str, Any]:
@@ -37,7 +37,13 @@ def analyze_math(data: dict[str, Any]) -> dict[str, Any]:
     entry_range_min = float(data.get("entry_range_min", entry))
     entry_range_max = float(data.get("entry_range_max", entry))
 
+    expiry_text = data.get("expiry")
+    expiry_date, days_left = days_to_expiry(expiry_text)
+
     return {
+        "expiry": expiry_text,
+        "expiry_date": expiry_date.isoformat() if expiry_date else None,
+        "days_to_expiry": days_left,
         "entry_price": entry,
         "stoploss": sl,
         "target": target,

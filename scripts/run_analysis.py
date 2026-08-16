@@ -60,6 +60,7 @@ def run_step(script: str, out_file: Path, description: str, *extra_args: str) ->
         capture_output=True,
         text=True,
         encoding="utf-8",
+        errors="replace",  # a stray non-UTF-8 byte must never crash the orchestrator
     )
     try:
         payload = json.loads(result.stdout)
@@ -83,10 +84,12 @@ def render_report(data: dict[str, Any], math_res: dict[str, Any], market_res: di
     header_label = f"{symbol} {expiry} {inst}".strip()
 
     score = score_res["final_confidence_score"]
+    max_possible = score_res.get("max_possible_score", 100)
+    effective = score_res.get("effective_score", score)
     decision = score_res["decision"]
-    if score >= 80:
+    if decision == "GO (EXECUTE FULL SIZE)":
         emoji = "🟢"
-    elif score >= 65:
+    elif decision == "CONDITIONAL GO (REDUCE SIZE 50%)":
         emoji = "🟡"
     else:
         emoji = "🔴"
@@ -135,7 +138,8 @@ def render_report(data: dict[str, Any], math_res: dict[str, Any], market_res: di
         f"*Generated {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} · "
         f"Action: {data.get('action', 'n/a')} · Lot size: {lot_label} · Margin: {indian_currency(data.get('margin', 0))}*",
         "",
-        f"### **FINAL CONFIDENCE SCORE: {score} / 100**",
+        f"### **FINAL CONFIDENCE SCORE: {score} / {max_possible}**"
+        + (f" ({effective}% of available points)" if max_possible < 100 else ""),
         f"### **DECISION: {emoji} {decision}**",
         "",
         "---",
@@ -150,16 +154,36 @@ def render_report(data: dict[str, Any], math_res: dict[str, Any], market_res: di
         f"| **Real Risk:Reward** | 1 : {raw_rr:.2f} (at entry) | **1 : {live_rr:.2f} (live)** | {rr_impact} |",
         f"| **Volatility Check** | {vol_cell} | SL distance: {indian_currency(math_res.get('live_risk_per_share', 0))} | {vol_impact} |",
         f"| **Trend Context** | 50 EMA: {indian_currency(market_res.get('ema_50', 0)) if market_available else 'n/a'} | Close: {indian_currency(market_res.get('close_price', 0)) if market_available else 'n/a'} | {trend} |",
-        "",
-        "---",
     ]
+
+    # ---- Expiry row (event-safety context) --------------------------------
+    expiry_label = data.get("expiry")
+    days = math_res.get("days_to_expiry")
+    if days is not None:
+        if days >= 5:
+            expiry_impact = "✅ ≥5 days to expiry — clean window"
+        elif days >= 3:
+            expiry_impact = f"⚠️ **Only {days} days to expiry** — expiry-week whipsaw risk"
+        elif days < 0:
+            expiry_impact = f"❌ **Expiry already passed ({abs(days)} day(s) ago)** — stale recommendation"
+        else:
+            expiry_impact = f"❌ **Only {days} day(s) to expiry** — expiry-day risk; decision capped at CONDITIONAL GO"
+        lines.append(
+            f"| **Expiry** | {expiry_label or 'n/a'} | **{days} day(s) away** | {expiry_impact} |"
+        )
+    else:
+        lines.append(
+            f"| **Expiry** | {expiry_label or 'n/a'} | — | ⏭️ Waived — no expiry supplied, event-safety check unscored |"
+        )
+    lines += ["", "---", ""]
 
     # ---- Historical audit section ----------------------------------------
     audit_section = ["### 📊 Univest Historical Performance Audit", ""]
     if audit_res.get("status") == "NO_HISTORICAL_DATA_FOR_TICKER":
         audit_section += [
-            f"* **`{symbol} {inst}`:** No historical recommendations found in `univest_history.db`.",
-            f"* **Verdict:** Treated as neutral (benchmark win rate {audit_res.get('win_rate', 0.65) * 100:.0f}%) — no track record to add or subtract edge.",
+            f"* **`{symbol} {inst}`:** No resolved recommendations in the track record yet.",
+            "* **Verdict:** Historical edge **waived** — no points granted, no penalty assumed. "
+            "The check activates once real outcomes accumulate for this ticker.",
         ]
     else:
         edge = audit_res["edge_is_positive"]
@@ -232,6 +256,9 @@ def render_report(data: dict[str, Any], math_res: dict[str, Any], market_res: di
             "* **How the loop improves decisions:** every analyzed reco is recorded as OPEN; future runs re-check it "
             "against live prices to mark WIN/LOSS. Script 3's audit uses this real record (seed data is only a "
             "bootstrap until real resolutions exist), so the historical-edge check gets sharper with every run.",
+            "* **P&L is net of modeled transaction costs** (~0.09% of notional for FUT, ~0.25% for OPT, see "
+            "`common.estimate_costs`). Recos that never hit target or stop are settled at the last close on/before "
+            "expiry once data covers it — nothing stays OPEN past its contract.",
             "",
             "---",
             "",
@@ -240,16 +267,25 @@ def render_report(data: dict[str, Any], math_res: dict[str, Any], market_res: di
     # ---- Rejection reasons ------------------------------------------------
     lines += ["### ❌ Rejection Reasons & Flags", ""]
     details = score_res.get("rejection_details") or []
-    if details:
-        for i, d in enumerate(details, start=1):
+    hard_details = [d for d in details if not d.get("waived")]
+    if hard_details:
+        for i, d in enumerate(hard_details, start=1):
             lines.append(f"{i}. **{d['category']} (Score: {d['earned']}/{d['max']}):** {d['reason']}")
     else:
         lines.append("No rejection flags raised — all checks passed.")
     lines += ["", "---", ""]
 
+    # ---- Waived checks (no free points) ------------------------------------
+    waived_details = [d for d in details if d.get("waived")]
+    if waived_details:
+        lines += ["### ⏭️ Waived Checks (no points granted, no penalty)", ""]
+        for i, d in enumerate(waived_details, start=1):
+            lines.append(f"{i}. **{d['category']} (0/{d['max']}):** {d['reason']}")
+        lines += ["", "---", ""]
+
     # ---- Actionable recommendation ----------------------------------------
     lines += ["### 💡 Agent Actionable Recommendation", ""]
-    has_caveats = bool(score_res.get("rejection_details"))
+    has_caveats = bool([d for d in (score_res.get("rejection_details") or []) if not d.get("waived")])
     primary = {
         "GO (EXECUTE FULL SIZE)": (
             "**EXECUTE THE TRADE** at market with full size — every discipline, volatility and edge check passed."

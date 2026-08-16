@@ -9,6 +9,15 @@ Two responsibilities, both idempotent:
    conservatively as a LOSS (stoploss assumed hit first). Nothing is
    resolved on the recommendation day itself.
 
+   Expiry-aware: triggers are only honoured up to the recommendation's
+   expiry date. If neither target nor stop is hit and the fetched data
+   covers the expiry date, the reco is settled at the last close on/before
+   expiry (WIN if that close is above entry for BUY, below for SELL, else
+   LOSS) — so open rows can never outlive their contract.
+
+   All resolved P&L is net of modeled transaction costs (see
+   `common.estimate_costs`); `costs_inr` is stored alongside `pnl_inr`.
+
 2. TRACK: the recommendation currently under analysis (current_trade.json)
    is upserted as an OPEN row with its confidence score and decision, so
    future runs can resolve it. Re-analyzing the same setup refreshes the
@@ -31,14 +40,15 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import INPUT_FILE, emit_json, load_json  # noqa: E402
+from common import INPUT_FILE, emit_json, estimate_costs, load_json  # noqa: E402
 from db import compute_stats, connect, upsert_tracked_trade  # noqa: E402
 
 
 def resolve_open_trades(conn, offline: bool = False) -> tuple[list[dict[str, Any]], str]:
     """Resolve OPEN recommendations against live prices. Returns (resolved, status)."""
     rows = conn.execute(
-        "SELECT id, symbol, action, entry_price, target, stoploss, recommended_on, lot_size "
+        "SELECT id, symbol, action, entry_price, target, stoploss, recommended_on, lot_size, "
+        "instrument_type, expiry_date "
         "FROM trade_recommendations WHERE is_seed=0 AND outcome='OPEN'"
     ).fetchall()
 
@@ -63,19 +73,29 @@ def resolve_open_trades(conn, offline: bool = False) -> tuple[list[dict[str, Any
         if df.empty:
             continue
 
+        # Materialize bars once per symbol: (day, low, high, close)
+        bars = [
+            (ts.date(), float(bar["Low"]), float(bar["High"]), float(bar["Close"]))
+            for ts, bar in df.iterrows()
+        ]
+
         for r in recs:
-            rid, sym, action, entry, target, sl, rec_on, lot = r
+            rid, sym, action, entry, target, sl, rec_on, lot, inst, expiry_text = r
             try:
                 rec_day = date.fromisoformat(rec_on[:10])
             except ValueError:
                 continue
+            expiry = date.fromisoformat(expiry_text) if expiry_text else None
+
             outcome = final = None
             trigger_day = None
-            for ts, bar in df.iterrows():
-                day = ts.date()
+            # 1. Trigger scan — only bars strictly after the recommendation day,
+            #    and never after expiry (a contract cannot be traded post-expiry).
+            for day, low, high, _close in bars:
                 if day <= rec_day:
                     continue  # the trade was placed intraday on rec_day; resolution starts the next bar
-                low, high = float(bar["Low"]), float(bar["High"])
+                if expiry and day > expiry:
+                    break
                 if action == "SELL":
                     if high >= sl:   # price rose to the stop first
                         outcome, final, trigger_day = "LOSS", sl, day
@@ -91,18 +111,31 @@ def resolve_open_trades(conn, offline: bool = False) -> tuple[list[dict[str, Any
                         outcome, final, trigger_day = "WIN", target, day
                         break
 
+            # 2. Expiry settlement — no trigger and data covers the expiry date:
+            #    close the position at the last close on/before expiry.
+            if not outcome and expiry and lot:
+                covered = [b for b in bars if b[0] <= expiry]
+                if covered and bars and bars[-1][0] >= expiry:
+                    final = covered[-1][3]  # last close on/before expiry
+                    trigger_day = covered[-1][0]
+                    gross = (final - entry) * lot if action == "BUY" else (entry - final) * lot
+                    outcome = "WIN" if gross > 0 else "LOSS"
+
             if not outcome:
                 continue
 
             lot = lot or 0
-            pnl = (final - entry) * lot if action == "BUY" else (entry - final) * lot
+            costs = estimate_costs(entry, lot, inst)
+            pnl = ((final - entry) * lot if action == "BUY" else (entry - final) * lot) - costs
             conn.execute(
-                "UPDATE trade_recommendations SET outcome=?, pnl_inr=?, final_price=?, resolved_on=? WHERE id=?",
-                (outcome, round(pnl, 2), final, str(trigger_day), rid),
+                "UPDATE trade_recommendations SET outcome=?, pnl_inr=?, final_price=?, resolved_on=?, costs_inr=? "
+                "WHERE id=?",
+                (outcome, round(pnl, 2), final, str(trigger_day), costs, rid),
             )
             resolved.append({
                 "symbol": sym, "action": action, "outcome": outcome,
-                "pnl_inr": round(pnl, 2), "final_price": final, "resolved_on": str(trigger_day),
+                "pnl_inr": round(pnl, 2), "costs_inr": costs, "final_price": final,
+                "resolved_on": str(trigger_day),
             })
 
     conn.commit()

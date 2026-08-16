@@ -52,12 +52,16 @@ current_trade.json ──► scripts/1_math_and_rr.py ──► script1_out.json
 memory of this system. Every recommendation you analyze is recorded as an
 `OPEN` row with its confidence score and decision. On later runs, Script 5
 re-checks open rows against live daily bars and resolves them: target hit
-→ `WIN`, stoploss hit → `LOSS`, otherwise still `OPEN`. Script 3's
-historical audit then uses **your real resolved track record** (seed data
-is only a bootstrap). This is how the system improves: the discipline
-rules are continuously validated against what actually happened, and the
-report quantifies what you would have made or saved on the calls you
-skipped.
+→ `WIN`, stoploss hit → `LOSS`, otherwise still `OPEN`. Resolution is
+**expiry-aware**: triggers are only honoured up to the recommendation's
+expiry, and a reco that never triggers is settled at the last close on/
+before expiry once the data covers it — nothing stays `OPEN` past its
+contract. All resolved P&L is **net of modeled transaction costs** (~0.09%
+of notional for FUT, ~0.25% for OPT). Script 3's historical audit then uses
+**your real resolved track record** (seed data is only a bootstrap). This
+is how the system improves: the discipline rules are continuously
+validated against what actually happened, and the report quantifies what
+you would have made or saved on the calls you skipped.
 
 **Scoring rubric (memorize it):**
 
@@ -67,14 +71,21 @@ skipped.
 | Price discipline | 20 | Live price inside Univest range → 20, else 0 |
 | Volatility | 10 | SL ≥ 1.0 × daily ATR → 10, else 0 |
 | Trend | 10 | Above 50 EMA → 10, else 0 |
-| Historical edge | 20 | Positive expectancy OR no data → 20, else 0 |
-| Event safety | 15 | Assumed clean unless flagged |
+| Historical edge | 20 | Positive expectancy → 20; **no data → 0 (waived)**; negative → 0 |
+| Event safety | 15 | ≥ 5 days to expiry → 15; 3–4 → 10; < 3 → 0 (and **caps decision at CONDITIONAL GO**); no/unparsable expiry → 0 (waived) |
 
-| Total score | Decision |
+**Waiver model (no free points):** any component that cannot be evaluated
+— market data offline, no track record for the ticker, no expiry — earns
+**0** and is labelled `waived`. Waived checks never inflate a score and
+are never penalized. Decision bands apply to the **share of available
+points** (`effective_score`), not a flat total: ≥ 80% → GO, 65–79% →
+CONDITIONAL GO, < 65% → NO-GO.
+
+| Effective score | Decision |
 | :--- | :--- |
-| 80–100 | 🟢 GO (EXECUTE FULL SIZE) |
-| 65–79 | 🟡 CONDITIONAL GO (REDUCE SIZE 50%) |
-| 0–64 | 🔴 NO-GO (REJECT) |
+| ≥ 80% of available | 🟢 GO (EXECUTE FULL SIZE) |
+| 65–79% of available | 🟡 CONDITIONAL GO (REDUCE SIZE 50%) |
+| < 65% of available | 🔴 NO-GO (REJECT) |
 
 ---
 
@@ -135,7 +146,7 @@ must pull back to ≤ ₹1,995.00 for the range check to pass").
 ```
 # 🛡️ TRADE VALIDATION REPORT: SYMBOL EXPIRY TYPE
 
-### **FINAL CONFIDENCE SCORE: NN / 100**
+### **FINAL CONFIDENCE SCORE: NN / 100**  (or NN / available with waivers, plus effective %)
 ### **DECISION: 🟢/🟡/🔴 DECISION TEXT**
 
 ### 🔍 Quantitative & Risk Analysis
@@ -148,12 +159,13 @@ must pull back to ≤ ₹1,995.00 for the range check to pass").
 | **Real Risk:Reward** | 1 : rr (at entry) | **1 : lr (live)** | ❌ Negative Symmetry / ✅ Reward exceeds risk |
 | **Volatility Check** | Daily ATR: ₹a | SL distance: ₹d | ✅ Pass (SL ~Nx ATR) / ❌ Fail |
 | **Trend Context** | 50 EMA: ₹e | Close: ₹c | ✅ Above 50 EMA (BULLISH) / ❌ Below |
+| **Expiry** | 25 AUG | N days away | ✅ ≥5 days clean / ⚠️ expiry week / ❌ expiry-day risk |
 
 ### 📊 Univest Historical Performance Audit (`SYMBOL TYPE`)
 - **Ticker Historical Win Rate:** NN% (N Trades sampled · real tracked record / bootstrap seed data)
 - **Avg Win:** +₹W | **Avg Loss:** -₹L
 - **Historical Expectancy:** **±₹E / trade**
-- **Verdict:** (positive edge → conviction / negative edge → avoid / no data → neutral)
+- **Verdict:** (positive edge → conviction / negative edge → avoid / no data → edge **waived** — 0 points, no penalty)
 
 ### 📈 Self-Tracked Track Record & Learning Loop
 - **Resolved this run:** X (✅ W wins / ❌ L losses) — BHARTIARTL → WIN +₹P, ...
@@ -186,7 +198,16 @@ never silently drop a check.
   and trend points are waived automatically and the report must note the
   caveat. Tell the user to re-run when connectivity is restored.
 - **No historical data for the ticker:** Script 3 returns
-  `NO_HISTORICAL_DATA_FOR_TICKER` — treat as neutral (+20 pts) and say so.
+  `NO_HISTORICAL_DATA_FOR_TICKER` — the historical-edge check is
+  **waived (0 pts)**, never auto-passed. Say so explicitly: no points
+  granted, no penalty assumed.
+- **Expiry handling:** parse the expiry label (e.g. "25 AUG") into a date
+  and surface `days_to_expiry` in the report. A reco with < 3 days to
+  expiry scores 0 on event safety and can never be a full-size GO. Never
+  recommend entering a trade whose expiry has already passed.
+- **P&L is net of costs:** resolved wins/losses and the missed/avoided
+  numbers already have modeled transaction costs deducted — do not add
+  costs again when interpreting them.
 - **Track record integrity:** every analyzed reco is recorded automatically.
   Never edit or delete rows in `univest_history.db` directly — the scripts own
   it. `seed_history.py --fresh` wipes real tracked data; warn the user before

@@ -56,7 +56,14 @@ re-checks every open recommendation against live prices and resolves it:
 
 Resolution scans daily bars from the recommendation date; the first
 trigger wins (same-bar ambiguity is resolved conservatively as a LOSS).
-Nothing resolves on the recommendation day itself.
+Nothing resolves on the recommendation day itself. Triggers are only
+honoured up to the recommendation's **expiry**: if neither target nor
+stop is hit and the data covers the expiry date, the reco is settled at
+the last close on/before expiry (WIN if that close is past entry for
+BUY / below entry for SELL, else LOSS) — nothing stays OPEN past its
+contract. All resolved P&L is **net of modeled transaction costs**
+(~0.09% of notional for FUT, ~0.25% for OPT, see `common.estimate_costs`),
+so the track record does not flatter itself.
 
 The report then shows you, from your **real** accumulated record:
 
@@ -120,18 +127,26 @@ normalizes it into `current_trade.json`, then runs the pipeline.
 | `1_math_and_rr.py` | Raw & live (slippage-adjusted) R:R, per-lot risk/reward in INR, entry-range violation & inverted-R:R flags |
 | `2_market_data.py` | Yahoo Finance (`yfinance`): 14-day ATR, 50 EMA, trend direction, stop-loss distance vs ATR |
 | `3_historical_audit.py` | SQLite audit: win rate, avg win/loss, net expectancy for symbol + type — **prefers real tracked data, falls back to seeds** |
-| `4_score_calculator.py` | Weighted decision engine: 25 pts R:R, 20 price discipline, 20 technical, 20 historical edge, 15 event safety |
+| `4_score_calculator.py` | Weighted decision engine: 25 pts R:R, 20 price discipline, 20 technical, 20 historical edge, 15 event safety (real check: days to expiry) — **waiver model**: unevaluable checks score 0 and are labelled, never auto-passed |
 | `5_track_and_resolve.py` | **Learning loop**: resolves open recos vs live prices, records the current reco, reports track-record & missed/avoided stats |
 | `seed_history.py` | Bootstraps `univest_history.db` with sample history (only used until real data exists) |
 | `run_analysis.py` | Orchestrates the full blueprint + learning loop and renders `decision_report.md` |
 
 ## Scoring & Decisions
 
-| Score | Decision |
+| Effective score | Decision |
 | :--- | :--- |
-| 80 – 100 | 🟢 **GO (EXECUTE FULL SIZE)** |
-| 65 – 79 | 🟡 **CONDITIONAL GO (REDUCE SIZE 50%)** |
-| 0 – 64 | 🔴 **NO-GO (REJECT)** |
+| ≥ 80% of available | 🟢 **GO (EXECUTE FULL SIZE)** |
+| 65 – 79% of available | 🟡 **CONDITIONAL GO (REDUCE SIZE 50%)** |
+| < 65% of available | 🔴 **NO-GO (REJECT)** |
+
+The bands apply to the **share of available points**, not a flat 0–100:
+components that cannot be evaluated (market data offline, no track record
+for the ticker, no expiry supplied) earn **0 and are marked waived** — they
+neither inflate nor penalize the score. Event safety is a real check now:
+≥ 5 days to expiry → 15 pts, 3–4 days → 10 pts, < 3 days → 0 pts, and a
+sub-3-day expiry **caps the decision at CONDITIONAL GO** (never full size
+into expiry-day whipsaw).
 
 ## Database
 
@@ -151,6 +166,9 @@ CREATE TABLE trade_recommendations (
     live_price REAL, lot_size REAL, margin REAL,
     confidence_score INTEGER, decision TEXT,
     recommended_on TEXT, resolved_on TEXT, final_price REAL,
+    expiry TEXT,       -- original Univest label, e.g. "25 AUG"
+    expiry_date TEXT,  -- parsed ISO date, used for expiry settlement
+    costs_inr REAL,    -- modeled transaction costs deducted from pnl_inr
     is_seed INTEGER NOT NULL DEFAULT 0, -- 1 = bootstrap data
     UNIQUE (symbol, instrument_type, action, entry_price, target, stoploss)
 );

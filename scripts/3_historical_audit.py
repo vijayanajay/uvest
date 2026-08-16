@@ -37,9 +37,10 @@ def fetch_resolved(conn, symbol: str, instrument_type: str, is_seed: int) -> lis
 
 def audit_univest_performance(symbol: str, instrument_type: str) -> dict[str, Any]:
     if not DB_FILE.exists():
+        # No database at all — nothing to audit. No points are granted for
+        # missing data (the score calculator waives this check instead).
         return {
             "ticker_sample_size": 0,
-            "win_rate": 0.65,  # Default benchmark
             "net_expectancy_inr": 0,
             "status": "NO_HISTORICAL_DATA_FOR_TICKER",
         }
@@ -54,7 +55,6 @@ def audit_univest_performance(symbol: str, instrument_type: str) -> dict[str, An
         conn.close()
         return {
             "ticker_sample_size": 0,
-            "win_rate": 0.65,
             "net_expectancy_inr": 0,
             "status": "NO_HISTORICAL_DATA_FOR_TICKER",
         }
@@ -69,10 +69,10 @@ def audit_univest_performance(symbol: str, instrument_type: str) -> dict[str, An
     conn.close()
 
     if not rows:
-        # Fallback to general instrument stats if symbol stats don't exist
+        # No resolved rows for this ticker (neither tracked nor seed) — the
+        # historical edge check is waived, not benchmarked against a guess.
         return {
             "ticker_sample_size": 0,
-            "win_rate": 0.65,  # Default benchmark
             "net_expectancy_inr": 0,
             "status": "NO_HISTORICAL_DATA_FOR_TICKER",
         }
