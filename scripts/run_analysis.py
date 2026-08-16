@@ -30,6 +30,7 @@ from common import (  # noqa: E402
     OUT3_FILE,
     OUT4_FILE,
     OUT5_FILE,
+    OUT6_FILE,
     PROJECT_ROOT,
     REPORT_FILE,
     indian_currency,
@@ -49,6 +50,7 @@ PIPELINE = [
     ("scripts/1_math_and_rr.py", OUT1_FILE, "risk/reward math"),
     ("scripts/2_market_data.py", OUT2_FILE, "live market context"),
     ("scripts/3_historical_audit.py", OUT3_FILE, "historical audit"),
+    ("scripts/6_backtest_setup.py", OUT6_FILE, "similar-setup backtest"),
 ]
 
 
@@ -77,7 +79,8 @@ def run_step(script: str, out_file: Path, description: str, *extra_args: str) ->
 
 def render_report(data: dict[str, Any], math_res: dict[str, Any], market_res: dict[str, Any],
                   audit_res: dict[str, Any], score_res: dict[str, Any],
-                  track_res: dict[str, Any] | None = None) -> str:
+                  track_res: dict[str, Any] | None = None,
+                  backtest_res: dict[str, Any] | None = None) -> str:
     symbol = data["symbol"]
     expiry = data.get("expiry", "")
     inst = data.get("instrument_type", "")
@@ -205,6 +208,58 @@ def render_report(data: dict[str, Any], math_res: dict[str, Any], market_res: di
         ]
     lines += audit_section + ["", "---", ""]
 
+    # ---- Similar-setup backtest (empirical success probability) ------------
+    if backtest_res and "error" not in backtest_res:
+        s = backtest_res.get("sample", {})
+        ov = s.get("overall", {})
+        by_trend = s.get("by_trend", {})
+        trend_state = backtest_res.get("trend_state")
+        lines += ["### 📈 Similar-Setup Backtest (what history says about this shape)", ""]
+        if ov.get("n"):
+            sig = (f"{backtest_res.get('action')} · R:R {backtest_res.get('rr')} · "
+                   f"stop {backtest_res.get('stop_atr_ratio')}×ATR · "
+                   f"window {backtest_res.get('window_bars')} trading bar(s)"
+                   + (" (from days-to-expiry)" if backtest_res.get("window_origin") == "expiry" else ""))
+            avg = ov.get("avg_pnl_inr", 0)
+            net = ov.get("net_pnl_inr", 0)
+            avg_str = f"+{indian_currency(avg)}" if avg >= 0 else f"-{indian_currency(abs(avg))}"
+            net_str = f"+{indian_currency(net)}" if net >= 0 else f"-{indian_currency(abs(net))}"
+            lines.append(f"* **Setup signature:** {sig}")
+            lines.append(
+                f"* **Overall:** {ov['n']} similar setups replayed · "
+                f"**{ov['success_rate']}%** hit target before stop · "
+                f"**{ov['win_rate']}%** resolved as wins (incl. window-end settlement) · "
+                f"{ov['target_first']} target-first / {ov['stop_first']} stop-first / "
+                f"{ov['settled_at_window_end']} settled · avg P&L {avg_str} · net P&L (all replays) {net_str}"
+            )
+            matched = by_trend.get(trend_state, {}) if trend_state else {}
+            if matched.get("n"):
+                lines.append(
+                    f"* **{trend_state} trend context (matches this reco):** {matched['n']} setups · "
+                    f"**{matched['success_rate']}%** hit target before stop · "
+                    f"**{matched['win_rate']}%** wins"
+                )
+            other_key = "BEARISH" if trend_state == "BULLISH" else "BULLISH"
+            other = by_trend.get(other_key, {})
+            if other.get("n"):
+                lines.append(
+                    f"* **Opposite trend context ({other_key}):** {other['n']} setups · "
+                    f"{other['success_rate']}% hit target first · {other['win_rate']}% wins"
+                )
+            for note in backtest_res.get("notes", []):
+                lines.append(f"  ⓘ {note}")
+            lines.append(
+                "* **How to read this:** the win rate is a measured probability from comparable setups, "
+                "not a rubric opinion — but the sample is correlated (overlapping windows), so treat it as "
+                "evidence, not certainty."
+            )
+        else:
+            lines.append("* No comparable setups found in the available history.")
+        lines += ["", "---", ""]
+    elif backtest_res and "error" in backtest_res:
+        lines += ["### 📈 Similar-Setup Backtest", "",
+                  f"* ⚠️ Backtest unavailable: {backtest_res['error']}", "", "---", ""]
+
     # ---- Self-tracked track record & learning loop -------------------------
     if track_res and "error" not in track_res:
         tr = track_res.get("track_record", {})
@@ -259,10 +314,44 @@ def render_report(data: dict[str, Any], math_res: dict[str, Any], market_res: di
             "* **P&L is net of modeled transaction costs** (~0.09% of notional for FUT, ~0.25% for OPT, see "
             "`common.estimate_costs`). Recos that never hit target or stop are settled at the last close on/before "
             "expiry once data covers it — nothing stays OPEN past its contract.",
-            "",
-            "---",
-            "",
         ]
+
+        # ---- Score calibration (is the confidence honest?) -----------------
+        cal = track_res.get("calibration", {}) if isinstance(track_res, dict) else {}
+        if cal and cal.get("resolved_tracked"):
+            total = cal.get("total", {})
+            lines += ["", "### 🎯 Score Calibration (is the confidence honest?)", ""]
+            lines.append(
+                f"* **Tracked resolved recos:** {total['n']} · overall win rate "
+                f"**{total['win_rate']}%** (95% CI {total['ci_low']}–{total['ci_high']}% · "
+                f"smoothed {total['smoothed_win_rate']}%)"
+            )
+            short_names = {
+                "GO (EXECUTE FULL SIZE)": "GO",
+                "CONDITIONAL GO (REDUCE SIZE 50%)": "CONDITIONAL",
+                "NO-GO (REJECT)": "NO-GO",
+            }
+            for label, b in cal.get("buckets", {}).items():
+                short = short_names.get(label, label)
+                if b["n"] < 5:
+                    lines.append(
+                        f"* **{short}:** {b['n']} resolved ({b['wins']}W/{b['losses']}L) · "
+                        f"win rate {b['win_rate']}% · insufficient sample (<5) for a reliable estimate"
+                    )
+                else:
+                    lines.append(
+                        f"* **{short}:** win rate **{b['win_rate']}%** ({b['wins']}/{b['n']}) · "
+                        f"95% CI {b['ci_low']}–{b['ci_high']}% · smoothed {b['smoothed_win_rate']}%"
+                    )
+            lines.append(
+                "* **What this tells you:** if GO recos historically won ~60%, \"GO\" is a quality label, "
+                "not a probability — size accordingly. The decision bands are re-tunable from this data as it accumulates."
+            )
+            lines += ["", "---", ""]
+        else:
+            lines += ["", "### 🎯 Score Calibration (is the confidence honest?)", "",
+                      "* No resolved tracked recommendations yet — calibration activates once outcomes accumulate. "
+                      "Until then treat the score as a rubric opinion, not a measured probability.", "", "---", ""]
 
     # ---- Rejection reasons ------------------------------------------------
     lines += ["### ❌ Rejection Reasons & Flags", ""]
@@ -283,6 +372,45 @@ def render_report(data: dict[str, Any], math_res: dict[str, Any], market_res: di
             lines.append(f"{i}. **{d['category']} (0/{d['max']}):** {d['reason']}")
         lines += ["", "---", ""]
 
+    # ---- What would change the decision (flip table) -----------------------
+    flip = score_res.get("flip_table") or {}
+    flip_rows = flip.get("rows") or []
+    if flip_rows:
+        lines += ["### 🔀 What Would Change the Decision", ""]
+        max_possible = score_res.get("max_possible_score", 100)
+        dir_words = {"below": "at or below", "above": "at or above"}
+        for r in flip_rows:
+            kind = r.get("kind")
+            gain = r["gain"]
+            after_txt = f"+{gain} → {r['score_after']}/{max_possible} → **{r['decision_after']}**"
+            if kind == "price":
+                act = f"Enter {dir_words.get(r.get('direction'), 'at')} {indian_currency(r['price'])}"
+                tag = ""
+            elif kind == "range":
+                act = f"Enter within {indian_currency(r['range_min'])} – {indian_currency(r['range_max'])}"
+                tag = ""
+            elif kind == "structural":
+                act = r.get("detail", "")
+                tag = " (adjusts the trade, not the entry price)"
+            elif kind == "market":
+                act = r.get("detail", "")
+                tag = " (market condition — not triggerable by price)"
+            else:
+                act = r.get("detail", "")
+                tag = " (not triggerable by price or timing)"
+            mark = "⚠ " if not r.get("achievable", True) else ""
+            lines.append(f"* {mark}**{r['label']}** ({r['earned']}/{r['max']}): {act} → {after_txt}{tag}")
+        for c in flip.get("conflicts", []):
+            lines.append(f"* ⛔ **Conflict:** {c}")
+        bc = flip.get("best_case")
+        if bc:
+            lines.append(
+                f"* 🎯 **Best case by entry timing alone:** {bc.get('zone', indian_currency(bc['price']))} → "
+                f"{bc['score']}/{max_possible} → **{bc['decision']}**. {bc.get('note', '')}"
+            )
+        lines.append(f"* *{flip.get('note', '')}*")
+        lines += ["", "---", ""]
+
     # ---- Actionable recommendation ----------------------------------------
     lines += ["### 💡 Agent Actionable Recommendation", ""]
     has_caveats = bool([d for d in (score_res.get("rejection_details") or []) if not d.get("waived")])
@@ -296,17 +424,6 @@ def render_report(data: dict[str, Any], math_res: dict[str, Any], market_res: di
     }.get(decision, "**REJECT THE TRADE.** Do not place an order at the live price.")
     lines.append(f"* **Primary Recommendation:** {primary}")
 
-    if outside and decision != "GO (EXECUTE FULL SIZE)" and live > range_max:
-        # Compute a limit price that re-aligns R:R to >= 1.5
-        alt_entry = (target + 1.5 * sl) / 2.5
-        alt_risk = alt_entry - sl
-        alt_reward = target - alt_entry
-        alt_rr = alt_reward / alt_risk if alt_risk > 0 else 0
-        lines.append(
-            f"* **Alternative Execution (If required):** Do not place a Market Order. Place a **LIMIT BUY at "
-            f"{indian_currency(alt_entry)}** (re-aligns R:R to 1:{alt_rr:.2f} with "
-            f"{indian_currency(alt_risk * lot)} risk vs {indian_currency(alt_reward * lot)} target)."
-        )
     if outside and live < range_min:
         lines.append(
             f"* **Alternative Execution:** The live price is **below** the recommended range (favorable). "
@@ -314,6 +431,11 @@ def render_report(data: dict[str, Any], math_res: dict[str, Any], market_res: di
         )
     if not market_available:
         lines.append("* **Data caveat:** Live market data could not be fetched — volatility/trend scores were waived. Re-run once connectivity is restored.")
+
+    act = flip.get("activation") if flip_rows else None
+    if act:
+        order = "LIMIT BUY" if (math_res.get("action") or "BUY").upper() == "BUY" else "LIMIT SELL"
+        lines.append(f"* **Standing-order trigger:** {act.get('note', '')} Run `python scripts/watch.py` to monitor the live price against this trigger.")
     lines.append("")
 
     return "\n".join(lines)
@@ -339,26 +461,27 @@ def main() -> int:
     print(f"▶ Analyzing trade: {data.get('symbol', '?')} {data.get('expiry', '')} {data.get('instrument_type', '')}")
     print("  Step 1: Read current_trade.json  ✓")
 
-    print("  Step 2-4: Running modular script suite")
+    print("  Steps 2-5: Running modular script suite")
     run_step("scripts/1_math_and_rr.py", OUT1_FILE, "risk/reward math")
     run_step("scripts/2_market_data.py", OUT2_FILE, "live market context")
     run_step("scripts/3_historical_audit.py", OUT3_FILE, "historical audit")
+    run_step("scripts/6_backtest_setup.py", OUT6_FILE, "similar-setup backtest")
 
-    print("  Step 5: Scoring decision")
+    print("  Step 6: Scoring decision")
     score_res = run_step("scripts/4_score_calculator.py", OUT4_FILE, "confidence score")
     if "error" in score_res:
         print(f"❌ {score_res['error']}", file=sys.stderr)
         return 1
 
-    print("  Step 6: Recording track record & resolving open recos")
+    print("  Step 7: Recording track record & resolving open recos")
     track_args = ["--score", str(score_res["final_confidence_score"]), "--decision", score_res["decision"]]
     if no_track:
         track_args.append("--no-track")
     track_res = run_step("scripts/5_track_and_resolve.py", OUT5_FILE, "track & resolve", *track_args)
 
-    print("  Step 7: Rendering Decision Report\n")
+    print("  Step 8: Rendering Decision Report\n")
     report = render_report(data, load_json(OUT1_FILE), load_json(OUT2_FILE), load_json(OUT3_FILE),
-                           score_res, track_res)
+                           score_res, track_res, load_json(OUT6_FILE))
     REPORT_FILE.write_text(report, encoding="utf-8")
     print(report)
     print(f"\n📄 Report saved to {REPORT_FILE}")

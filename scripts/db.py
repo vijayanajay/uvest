@@ -167,6 +167,60 @@ def upsert_tracked_trade(conn: sqlite3.Connection, data: dict[str, Any],
     return inserted, row_id
 
 
+def _calibration_row(wins: int, losses: int) -> dict[str, Any]:
+    """Observed win rate with a Wilson 95% CI and a Bayesian-smoothed
+    estimate (uniform Beta(1,1) prior) so small samples are not overstated."""
+    n = wins + losses
+    if n == 0:
+        return {"n": 0, "wins": 0, "losses": 0, "win_rate": None,
+                "ci_low": None, "ci_high": None, "smoothed_win_rate": None}
+    p = wins / n
+    z = 1.959963984540054  # 1.96, 95% two-sided
+    denom = 1 + z * z / n
+    center = (p + z * z / (2 * n)) / denom
+    half = z * (p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5 / denom
+    return {
+        "n": n, "wins": wins, "losses": losses,
+        "win_rate": round(p * 100, 1),
+        "ci_low": round(max(0.0, center - half) * 100, 1),
+        "ci_high": round(min(1.0, center + half) * 100, 1),
+        "smoothed_win_rate": round((wins + 1) / (n + 2) * 100, 1),
+    }
+
+
+def compute_calibration(conn: sqlite3.Connection) -> dict[str, Any]:
+    """Calibrate the confidence score against reality.
+
+    Every resolved TRACKED recommendation is bucketed by its stored decision
+    label and the observed win rate per bucket is reported with sample size,
+    a Wilson 95% CI, and a Bayesian-smoothed estimate. This is what turns the
+    rubric score into a measured probability - and what makes the decision
+    bands re-tunable from real data once outcomes accumulate.
+    """
+    rows = conn.execute(
+        "SELECT decision, outcome FROM trade_recommendations "
+        "WHERE is_seed=0 AND outcome IN ('WIN', 'LOSS')"
+    ).fetchall()
+    buckets: dict[str, list[int]] = {}
+    for decision, outcome in rows:
+        key = decision or "UNKNOWN"
+        bucket = buckets.setdefault(key, [0, 0])
+        if outcome == "WIN":
+            bucket[0] += 1
+        else:
+            bucket[1] += 1
+    total_w = sum(b[0] for b in buckets.values())
+    total_l = sum(b[1] for b in buckets.values())
+    return {
+        "buckets": {
+            key: _calibration_row(w, l)
+            for key, (w, l) in sorted(buckets.items(), key=lambda kv: -sum(kv[1]))
+        },
+        "total": _calibration_row(total_w, total_l),
+        "resolved_tracked": total_w + total_l,
+    }
+
+
 def compute_stats(conn: sqlite3.Connection) -> dict[str, Any]:
     """Aggregate the self-tracked record and decision accuracy."""
     tracked = conn.execute(

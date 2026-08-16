@@ -32,9 +32,11 @@ The repository implements `BRD.md`. The pipeline is:
 current_trade.json ──► scripts/1_math_and_rr.py ──► script1_out.json
                      ──► scripts/2_market_data.py ──► script2_out.json
                      ──► scripts/3_historical_audit.py ──► script3_out.json
-                     ──► scripts/4_score_calculator.py ──► FINAL SCORE + DECISION
-                     ──► scripts/5_track_and_resolve.py ──► univest_history.db (learning loop)
+                     ──► scripts/6_backtest_setup.py ──► script6_out.json (similar-setup backtest)
+                     ──► scripts/4_score_calculator.py ──► FINAL SCORE + DECISION + flip table + activation
+                     ──► scripts/5_track_and_resolve.py ──► univest_history.db (learning loop + calibration)
                      ──► decision_report.md (rendered Markdown report)
+                     ──► scripts/watch.py (optional standing-order monitor)
 ```
 
 | File | Role |
@@ -43,8 +45,10 @@ current_trade.json ──► scripts/1_math_and_rr.py ──► script1_out.json
 | `scripts/1_math_and_rr.py` | Raw + live R:R, per-lot INR risk/reward, entry-range & inverted-R:R flags |
 | `scripts/2_market_data.py` | Live Yahoo Finance data: 14-day ATR, 50 EMA, trend, SL-vs-ATR tightness |
 | `scripts/3_historical_audit.py` | SQLite audit: win rate, avg win/loss, net expectancy — **prefers the real self-tracked record, falls back to seeds** |
-| `scripts/4_score_calculator.py` | Weighted engine: 25 R:R + 20 price discipline + 20 technical + 20 historical edge + 15 event safety |
-| `scripts/5_track_and_resolve.py` | **The learning loop**: resolves open recos against live prices (WIN/LOSS), records the current reco with its score & decision, reports track-record and missed/avoided stats |
+| `scripts/4_score_calculator.py` | Weighted engine: 25 R:R + 20 price discipline + 20 technical + 20 historical edge + 15 event safety. Also emits the **flip table**: per-check thresholds that would change the decision, conflicts between checks, the best-case entry zone, and the activation price |
+| `scripts/5_track_and_resolve.py` | **The learning loop**: resolves open recos against live prices (WIN/LOSS), records the current reco with its score & decision, reports track-record, missed/avoided stats, and **score calibration** (win rate per decision bucket with Wilson CI) |
+| `scripts/6_backtest_setup.py` | **Similar-setup backtest**: replays the current setup (same R:R + ATR-relative stop) across history with the resolver's trigger rules; reports the empirical hit-target-first rate, win rate, and trend-matched vs trend-opposed buckets |
+| `scripts/watch.py` | **Standing-order monitor**: computes the activation price/zone from `current_trade.json` and polls the live price until the trade triggers (`--loop`) |
 | `scripts/seed_history.py` | Bootstraps `univest_history.db` with sample history (used only until real data exists) |
 | `scripts/run_analysis.py` | Orchestrates the whole blueprint + learning loop and renders the report |
 
@@ -115,17 +119,21 @@ stdout to its file.
 python scripts/seed_history.py --fresh
 
 # 1. Orchestrated run (recommended): writes current_trade.json if needed,
-#    runs scripts 1→5, records the reco in the track record, resolves open
+#    runs scripts 1→6, records the reco in the track record, resolves open
 #    recos against live prices, renders the report
 python scripts/run_analysis.py
 
 # 2. Standalone — resolve open recos and inspect the track record
 python scripts/5_track_and_resolve.py --no-track
 
+# 3. Standing-order monitor — poll the live price against the activation zone
+python scripts/watch.py --loop
+
 # OR the BRD step-by-step blueprint:
 # python scripts/1_math_and_rr.py > script1_out.json
 # python scripts/2_market_data.py --symbol SYMBOL --expiry 25AUG > script2_out.json
 # python scripts/3_historical_audit.py --symbol SYMBOL --type FUT > script3_out.json
+# python scripts/6_backtest_setup.py > script6_out.json
 # python scripts/4_score_calculator.py
 # python scripts/5_track_and_resolve.py --score 35 --decision "NO-GO (REJECT)"
 ```
@@ -167,6 +175,12 @@ must pull back to ≤ ₹1,995.00 for the range check to pass").
 - **Historical Expectancy:** **±₹E / trade**
 - **Verdict:** (positive edge → conviction / negative edge → avoid / no data → edge **waived** — 0 points, no penalty)
 
+### 📈 Similar-Setup Backtest (empirical success probability)
+- **Setup signature:** BUY · R:R 1.03 · stop 1.49×ATR · window 6 bars (from days-to-expiry)
+- **Overall:** 689 similar setups · **34.8%** hit target before stop · **53.1%** resolved as wins (incl. settlement) · target-first/stop-first/settled counts · avg P&L · net P&L
+- **Trend-matched context (BULLISH, matches this reco):** 417 setups · 36.7% target-first · 55.6% wins · (opposite trend for contrast)
+- ⓘ caveats: overlapping (correlated) windows; shape not price level; P&L net of costs
+
 ### 📈 Self-Tracked Track Record & Learning Loop
 - **Resolved this run:** X (✅ W wins / ❌ L losses) — BHARTIARTL → WIN +₹P, ...
 - **Recommendations tracked:** N total · O open · R resolved
@@ -174,6 +188,19 @@ must pull back to ≤ ₹1,995.00 for the range check to pass").
 - **Decision accuracy:** approved (GO/COND) hit rate H% (a/b)
 - **What you missed / saved on NO-GO calls:** M later won (missed ≈ ₹X) · K later lost (avoided ≈ ₹Y)
 - **How the loop improves decisions:** (one line — see Section 2)
+
+### 🎯 Score Calibration (is the confidence honest?)
+- Per decision bucket (GO / CONDITIONAL / NO-GO): n, observed win rate, **Wilson 95% CI**, Bayesian-smoothed estimate
+- **Insufficient data:** until ~5 resolved tracked recos exist, say plainly: the score is a rubric opinion, not a measured probability
+
+### 🔀 What Would Change the Decision (flip table)
+- Per failing check: the exact flip condition and the resulting score/decision, e.g. "Enter at or below ₹906.50 → R:R ≥ 1.0 (+10 → 45/80 → NO-GO)"
+- **Conflicts:** e.g. "R:R ≥ 1.5 needs entry ≤ ₹900.20, but price discipline needs ₹904.50–₹907.50 — these can never both pass"
+- **Best case by entry timing alone:** the price *zone* reaching the best achievable decision (e.g. ₹904.50–₹906.50 → GO), with the best fill
+
+### 💡 Agent Actionable Recommendation
+- **Primary Recommendation:** ...
+- **Standing-order trigger:** Place a LIMIT BUY in ₹904.50–₹906.50 → GO (65/80); best fill ₹906.50. Point the user at `python scripts/watch.py --loop` to monitor it.
 
 ### ❌ Rejection Reasons & Flags
 1. **CATEGORY (Score: X/MAX):** reason
@@ -217,7 +244,20 @@ never silently drop a check.
   rejection signal. If the live price slipped above the entry range,
   compute and offer the **limit price that re-aligns R:R to ≥ 1.5**:
   `limit = (target + 1.5 × stoploss) / 2.5`, and quote the resulting
-  per-lot risk and reward in INR.
+  per-lot risk and reward in INR. Prefer the flip table's **best-case
+  zone**: the range of prices that reach the best achievable decision
+  (often the R:R ≥ 1.0 boundary inside the recommended range, which can
+  beat the R:R ≥ 1.5 price that lies outside the range).
+- **Backtest honesty:** the similar-setup backtest is evidence, not
+  certainty — windows overlap (correlated samples), and it tests the setup
+  *shape*, not the price level. Never quote the backtest win rate as a
+  promise. If script 6 fails (network), say the backtest is unavailable and
+  continue — the score stands alone.
+- **Standing-order trigger:** every rejected trade whose price-dependent
+  checks are fixable gets an activation zone. Point the user to
+  `python scripts/watch.py [--loop]` to monitor the live price, and tell
+  them to re-run the pipeline when the price enters the zone — never tell
+  them to enter at a price that still fails the audit.
 - **Integrity rules:**
   - Every number in your report traces to a script output. No exceptions.
   - If a script errors, surface the error verbatim; never paper over it.

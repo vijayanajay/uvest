@@ -13,18 +13,35 @@ current_trade.json ──► 1_math_and_rr.py ──► 2_market_data.py ──�
         (input)              │                     │                     │
                             ▼                     ▼                     ▼
                      script1_out.json      script2_out.json      script3_out.json
-                            └───────────► 4_score_calculator.py ◄──────────┘
-                                                  │
-                                                  ▼
-                                       Confidence Score + Decision
-                                                  │
-                                                  ▼
-                                   5_track_and_resolve.py  ──►  univest_history.db
-                                        (learning loop)        (real track record)
-                                                  │
-                                                  ▼
-                                       decision_report.md (Markdown)
+                            │                     │                     │
+                            └───────────┬─────────┘                     │
+                                        │                               ▼
+                                        │                         6_backtest_setup.py
+                                        │                    (similar-setup backtest)
+                                        │                               │
+                                        │                               ▼
+                                        │                          script6_out.json
+                                        │                               │
+                                        └──────────────┬────────────────┘
+                                                       ▼
+                                            4_score_calculator.py
+                                        (score + flip table + activation)
+                                                       │
+                                                       ▼
+                                            Confidence Score + Decision
+                                                       │
+                                                       ▼
+                                      5_track_and_resolve.py  ──►  univest_history.db
+                                           (learning loop)        (real track record)
+                                                       │
+                                                       ▼
+                                            decision_report.md (Markdown)
 ```
+
+The report also tells you **what would change the decision** (per-check flip
+thresholds, conflicts, and the best-case entry zone) and — via
+`scripts/watch.py` — lets you monitor the live price against that
+activation trigger as a standing order.
 
 ## Quick Start
 
@@ -87,8 +104,10 @@ actually happened.
 python scripts/1_math_and_rr.py                    # > script1_out.json
 python scripts/2_market_data.py --symbol BHARTIARTL --expiry 25AUG   # > script2_out.json
 python scripts/3_historical_audit.py --symbol BHARTIARTL --type FUT  # > script3_out.json
-python scripts/4_score_calculator.py
+python scripts/6_backtest_setup.py                 # > script6_out.json
+python scripts/4_score_calculator.py               # score + flip table + activation
 python scripts/5_track_and_resolve.py --score 35 --decision "NO-GO (REJECT)"  # track + resolve
+python scripts/watch.py --loop                     # monitor the live price against the trigger
 ```
 
 Each script emits one JSON object to stdout — the machine-readable
@@ -127,8 +146,10 @@ normalizes it into `current_trade.json`, then runs the pipeline.
 | `1_math_and_rr.py` | Raw & live (slippage-adjusted) R:R, per-lot risk/reward in INR, entry-range violation & inverted-R:R flags |
 | `2_market_data.py` | Yahoo Finance (`yfinance`): 14-day ATR, 50 EMA, trend direction, stop-loss distance vs ATR |
 | `3_historical_audit.py` | SQLite audit: win rate, avg win/loss, net expectancy for symbol + type — **prefers real tracked data, falls back to seeds** |
-| `4_score_calculator.py` | Weighted decision engine: 25 pts R:R, 20 price discipline, 20 technical, 20 historical edge, 15 event safety (real check: days to expiry) — **waiver model**: unevaluable checks score 0 and are labelled, never auto-passed |
-| `5_track_and_resolve.py` | **Learning loop**: resolves open recos vs live prices, records the current reco, reports track-record & missed/avoided stats |
+| `4_score_calculator.py` | Weighted decision engine: 25 pts R:R, 20 price discipline, 20 technical, 20 historical edge, 15 event safety (real check: days to expiry) — **waiver model**: unevaluable checks score 0 and are labelled, never auto-passed. Also emits the **flip table**: per-check thresholds that would change the decision, conflicts between checks, the best-case entry zone, and the activation price |
+| `5_track_and_resolve.py` | **Learning loop**: resolves open recos vs live prices, records the current reco, reports track-record & missed/avoided stats + **score calibration** (win rate per decision bucket with Wilson CI) |
+| `6_backtest_setup.py` | **Empirical success probability**: replays the current setup — same direction, same R:R, same ATR-relative stop — across 3 years of daily bars using the resolver's trigger rules; reports hit-target-first rate, win rate, and trend-matched vs trend-opposed buckets |
+| `watch.py` | **Standing-order monitor**: computes the activation price/zone from `current_trade.json` and polls the live price until the trade triggers (`--loop`) |
 | `seed_history.py` | Bootstraps `univest_history.db` with sample history (only used until real data exists) |
 | `run_analysis.py` | Orchestrates the full blueprint + learning loop and renders `decision_report.md` |
 
@@ -147,6 +168,61 @@ neither inflate nor penalize the score. Event safety is a real check now:
 ≥ 5 days to expiry → 15 pts, 3–4 days → 10 pts, < 3 days → 0 pts, and a
 sub-3-day expiry **caps the decision at CONDITIONAL GO** (never full size
 into expiry-day whipsaw).
+
+## Decision Support (what raises the chance of success)
+
+Beyond the score, the pipeline answers three questions that matter more than
+the number itself:
+
+### 1. Similar-setup backtest — the probability *before* you trade
+
+`scripts/6_backtest_setup.py` replays the current setup across up to 3 years
+of daily bars. The setup is treated as a **shape, not a price level**: every
+historical day re-derives the stop/target from the reco's R:R and its stop
+distance relative to that day's ATR, enters at the next bar's open (no
+lookahead), and resolves with the exact conservative trigger rules the
+learning loop uses (stop-first on same-bar ambiguity, window-end settlement
+for untriggered candidates). The report shows the hit-target-first rate, the
+win rate including settlement, and the split by trend context — whether the
+reco's own bullish/bearish context historically mattered.
+
+Caveats the report states out loud: consecutive signal days produce
+**overlapping (correlated)** windows, and the test is of the setup *shape*
+— it says nothing about the specific price level.
+
+### 2. What would change the decision (flip table)
+
+For every failing check the report states the exact condition that flips it:
+
+* "Enter at or below ₹906.50 → R:R ≥ 1.0 (+10 → 45/80 → still NO-GO)"
+* "Enter within ₹904.50–₹907.50 → price discipline (+20 → 55/80 → CONDITIONAL)"
+* **Conflicts**: when the R:R ≥ 1.5 price lies outside the recommended
+  range, the two price-based checks can never both pass — the
+  target/stoploss geometry itself caps the score.
+* **Best case by entry timing alone**: the price *zone* (e.g.
+  ₹904.50–₹906.50) that reaches the best achievable decision, with the
+  best fill highlighted — the standing-order trigger.
+
+### 3. Score calibration — is the confidence honest?
+
+Every resolved tracked recommendation is bucketed by its decision label and
+reported with sample size, observed win rate, a **Wilson 95% confidence
+interval**, and a Bayesian-smoothed estimate (uniform prior). Until at least
+~5 resolved tracked recos exist the report says so explicitly: the score is
+a *rubric opinion*, not a *measured probability*. Once outcomes accumulate
+the decision bands become re-tunable from real data instead of fiat.
+
+### 4. Watch mode — patience as an edge
+
+```bash
+python scripts/watch.py            # one status check: live price vs trigger
+python scripts/watch.py --loop     # poll every 30s until the trade activates
+```
+
+`watch.py` computes the activation price/zone straight from
+`current_trade.json`, fetches the live market price, and reports how far the
+trade is from activation. When it triggers, re-run the pipeline to re-score
+with the new price.
 
 ## Database
 

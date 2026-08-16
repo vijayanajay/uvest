@@ -23,6 +23,7 @@ OUT2_FILE = PROJECT_ROOT / "script2_out.json"
 OUT3_FILE = PROJECT_ROOT / "script3_out.json"
 OUT4_FILE = PROJECT_ROOT / "script4_out.json"
 OUT5_FILE = PROJECT_ROOT / "script5_out.json"
+OUT6_FILE = PROJECT_ROOT / "script6_out.json"
 DB_FILE = PROJECT_ROOT / "univest_history.db"
 REPORT_FILE = PROJECT_ROOT / "decision_report.md"
 
@@ -43,6 +44,13 @@ def save_json(path: Path, data: dict[str, Any]) -> None:
 def emit_json(data: dict[str, Any]) -> None:
     """Print a dict as JSON to stdout — the machine-readable contract
     every script in this suite honours."""
+    # Windows consoles default to cp1252; the JSON contract may carry
+    # non-ASCII text (₹, ≥, → …), so force UTF-8 on stdout. Idempotent.
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8")
+        except Exception:
+            pass
     print(json.dumps(data, indent=2, ensure_ascii=False))
 
 
@@ -116,6 +124,22 @@ def days_to_expiry(expiry_text: str | None, today: date | None = None) -> tuple[
     if parsed is None:
         return None, None
     return parsed, (parsed - (today or date.today())).days
+
+
+def flip_prices(sl: float, target: float, range_min: float | None = None, range_max: float | None = None) -> dict[str, Any]:
+    """Price thresholds that flip the price-dependent checks of a reco.
+
+    The price P at which live (reward)/(risk) equals r is the same formula
+    for BUY and SELL: P = (target + r*sl) / (1 + r). A BUY improves at or
+    below P (buy lower -> more reward, less risk); a SELL improves at or
+    above P. Callers apply the direction.
+    """
+    return {
+        "rr_1_5_price": round((target + 1.5 * sl) / 2.5, 2),
+        "rr_1_0_price": round((target + sl) / 2.0, 2),
+        "range_min": range_min,
+        "range_max": range_max,
+    }
 
 
 # ---- Transaction-cost model ------------------------------------------------

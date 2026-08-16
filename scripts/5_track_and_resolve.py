@@ -41,7 +41,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import INPUT_FILE, emit_json, estimate_costs, load_json  # noqa: E402
-from db import compute_stats, connect, upsert_tracked_trade  # noqa: E402
+from db import compute_calibration, compute_stats, connect, upsert_tracked_trade  # noqa: E402
 
 
 def resolve_open_trades(conn, offline: bool = False) -> tuple[list[dict[str, Any]], str]:
@@ -153,6 +153,8 @@ def track_and_stats(conn, data: dict[str, Any] | None, score: int | None, decisi
         updated = not newly_tracked
         stats = compute_stats(conn)  # refresh counts with the new/updated row
 
+    calibration = compute_calibration(conn)
+
     return {
         "tracking": {
             "newly_tracked": bool(newly_tracked),
@@ -165,6 +167,7 @@ def track_and_stats(conn, data: dict[str, Any] | None, score: int | None, decisi
             "details": resolved,
         },
         "resolution_status": res_status,
+        "calibration": calibration,
         **stats,
     }
 

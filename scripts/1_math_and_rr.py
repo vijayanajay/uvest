@@ -41,6 +41,7 @@ def analyze_math(data: dict[str, Any]) -> dict[str, Any]:
     expiry_date, days_left = days_to_expiry(expiry_text)
 
     return {
+        "action": str(data.get("action", "BUY")).upper(),
         "expiry": expiry_text,
         "expiry_date": expiry_date.isoformat() if expiry_date else None,
         "days_to_expiry": days_left,
