@@ -19,6 +19,7 @@ OUT1_FILE = PROJECT_ROOT / "script1_out.json"
 OUT2_FILE = PROJECT_ROOT / "script2_out.json"
 OUT3_FILE = PROJECT_ROOT / "script3_out.json"
 OUT4_FILE = PROJECT_ROOT / "script4_out.json"
+OUT5_FILE = PROJECT_ROOT / "script5_out.json"
 DB_FILE = PROJECT_ROOT / "univest_history.db"
 REPORT_FILE = PROJECT_ROOT / "decision_report.md"
 

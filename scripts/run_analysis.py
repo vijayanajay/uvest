@@ -1,15 +1,16 @@
 """End-to-end pipeline runner.
 
-Executes the exact blueprint from BRD.md:
+Executes the blueprint from BRD.md plus the learning loop:
     Step 1: Read `current_trade.json`
-    Step 2: Run scripts/1_math_and_rr.py          -> script1_out.json
-    Step 3: Run scripts/2_market_data.py          -> script2_out.json
-    Step 4: Run scripts/3_historical_audit.py     -> script3_out.json
-    Step 5: Run scripts/4_score_calculator.py     -> final score
-    Step 6: Render synthesized analysis to Markdown (stdout + decision_report.md)
+    Step 2: Run scripts/1_math_and_rr.py            -> script1_out.json
+    Step 3: Run scripts/2_market_data.py            -> script2_out.json
+    Step 4: Run scripts/3_historical_audit.py       -> script3_out.json
+    Step 5: Run scripts/4_score_calculator.py       -> final score
+    Step 6: Run scripts/5_track_and_resolve.py      -> track & resolve recos, stats
+    Step 7: Render synthesized analysis to Markdown (stdout + decision_report.md)
 
 Usage:
-    python scripts/run_analysis.py [path/to/current_trade.json]
+    python scripts/run_analysis.py [path/to/current_trade.json] [--no-track]
 """
 
 from __future__ import annotations
@@ -28,6 +29,7 @@ from common import (  # noqa: E402
     OUT2_FILE,
     OUT3_FILE,
     OUT4_FILE,
+    OUT5_FILE,
     PROJECT_ROOT,
     REPORT_FILE,
     indian_currency,
@@ -50,10 +52,10 @@ PIPELINE = [
 ]
 
 
-def run_step(script: str, out_file: Path, description: str) -> dict[str, Any]:
+def run_step(script: str, out_file: Path, description: str, *extra_args: str) -> dict[str, Any]:
     """Run one pipeline script, capture its JSON stdout, and persist it."""
     result = subprocess.run(
-        [PYTHON, script],
+        [PYTHON, script, *extra_args],
         cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,
@@ -73,7 +75,8 @@ def run_step(script: str, out_file: Path, description: str) -> dict[str, Any]:
 
 
 def render_report(data: dict[str, Any], math_res: dict[str, Any], market_res: dict[str, Any],
-                  audit_res: dict[str, Any], score_res: dict[str, Any]) -> str:
+                  audit_res: dict[str, Any], score_res: dict[str, Any],
+                  track_res: dict[str, Any] | None = None) -> str:
     symbol = data["symbol"]
     expiry = data.get("expiry", "")
     inst = data.get("instrument_type", "")
@@ -169,13 +172,70 @@ def render_report(data: dict[str, Any], math_res: dict[str, Any], market_res: di
             "Due to bad R:R on Univest's signals for this ticker, taking these trades over time results in "
             "**negative overall profitability despite a >50% win rate.**"
         )
+        source = "real tracked record" if audit_res.get("data_source") == "tracked" else "bootstrap seed data"
         audit_section += [
-            f"* **Ticker Historical Win Rate:** {audit_res['historical_win_rate']}% ({audit_res['ticker_sample_size']} Trades sampled)",
+            f"* **Ticker Historical Win Rate:** {audit_res['historical_win_rate']}% ({audit_res['ticker_sample_size']} Trades sampled · {source})",
             f"* **Avg Win:** +{indian_currency(audit_res['avg_win_inr'])} | **Avg Loss:** -{indian_currency(audit_res['avg_loss_inr'])}",
             f"* **Historical Expectancy:** **{exp_str} / trade**",
             f"* **Verdict:** {verdict}",
         ]
     lines += audit_section + ["", "---", ""]
+
+    # ---- Self-tracked track record & learning loop -------------------------
+    if track_res and "error" not in track_res:
+        tr = track_res.get("track_record", {})
+        da = track_res.get("decision_accuracy", {})
+        rtr = track_res.get("resolved_this_run", {})
+        lines += ["### 📈 Self-Tracked Track Record & Learning Loop", ""]
+
+        if track_res.get("resolution_status") == "offline":
+            lines.append("* ⚠️ **Prices could not be refreshed this run (offline)** — open recommendations remain pending; nothing was resolved.")
+        if track_res.get("resolved_this_run", {}).get("count"):
+            res_lines = []
+            for d in rtr.get("details", []):
+                sign = "+" if d["pnl_inr"] >= 0 else "-"
+                res_lines.append(f"{d['symbol']} → {d['outcome']} {sign}{indian_currency(abs(d['pnl_inr']))}")
+            lines.append(
+                f"* **Resolved this run:** {rtr['count']} (✅ {rtr['wins']} wins / ❌ {rtr['losses']} losses) — "
+                + "; ".join(res_lines)
+            )
+
+        exp = tr.get("net_expectancy_per_trade", 0)
+        exp_str = f"+{indian_currency(exp)}" if exp >= 0 else f"-{indian_currency(abs(exp))}"
+        net = tr.get("net_pnl_inr", 0)
+        net_str = f"+{indian_currency(net)}" if net >= 0 else f"-{indian_currency(abs(net))}"
+        lines.append(
+            f"* **Recommendations tracked:** {track_res.get('total_tracked', 0)} total · "
+            f"{track_res.get('open_count', 0)} open · {track_res.get('resolved_count', 0)} resolved"
+        )
+        if tr.get("sample_size"):
+            lines.append(
+                f"* **Real track-record expectancy:** **{exp_str} / trade** "
+                f"(win rate {tr['win_rate']}% over {tr['sample_size']} resolved) · net P&L {net_str}"
+            )
+        else:
+            lines.append("* **Real track record:** no resolved recommendations yet — keep analyzing, outcomes will accumulate here.")
+
+        if da.get("approved_resolved"):
+            hit = da["approved_hit_rate"]
+            lines.append(f"* **Decision accuracy:** approved (GO/COND) hit rate **{hit}%** ({da['approved_wins']}/{da['approved_resolved']})")
+        if da.get("rejected_resolved"):
+            missed = da.get("missed_profit_inr", 0)
+            avoided = da.get("avoided_losses_inr", 0)
+            lines.append(
+                f"* **What you missed / saved on NO-GO calls:** {da['rejected_wins_missed']} later won "
+                f"(missed ≈ {indian_currency(missed)}) · {da['rejected_losses_avoided']} later lost "
+                f"(avoided ≈ {indian_currency(avoided)})"
+            )
+
+        lines += [
+            "* **How the loop improves decisions:** every analyzed reco is recorded as OPEN; future runs re-check it "
+            "against live prices to mark WIN/LOSS. Script 3's audit uses this real record (seed data is only a "
+            "bootstrap until real resolutions exist), so the historical-edge check gets sharper with every run.",
+            "",
+            "---",
+            "",
+        ]
 
     # ---- Rejection reasons ------------------------------------------------
     lines += ["### ❌ Rejection Reasons & Flags", ""]
@@ -224,7 +284,10 @@ def render_report(data: dict[str, Any], math_res: dict[str, Any], market_res: di
 
 
 def main() -> int:
-    input_path = Path(sys.argv[1]) if len(sys.argv) > 1 else INPUT_FILE
+    argv = sys.argv[1:]
+    no_track = "--no-track" in argv
+    positional = [a for a in argv if not a.startswith("--")]
+    input_path = Path(positional[0]) if positional else INPUT_FILE
     if not input_path.exists():
         print(f"❌ Input file not found: {input_path}", file=sys.stderr)
         print("   Copy current_trade.json and edit it, or paste a raw trade into input.txt.", file=sys.stderr)
@@ -251,8 +314,15 @@ def main() -> int:
         print(f"❌ {score_res['error']}", file=sys.stderr)
         return 1
 
-    print("  Step 6: Rendering Decision Report\n")
-    report = render_report(data, load_json(OUT1_FILE), load_json(OUT2_FILE), load_json(OUT3_FILE), score_res)
+    print("  Step 6: Recording track record & resolving open recos")
+    track_args = ["--score", str(score_res["final_confidence_score"]), "--decision", score_res["decision"]]
+    if no_track:
+        track_args.append("--no-track")
+    track_res = run_step("scripts/5_track_and_resolve.py", OUT5_FILE, "track & resolve", *track_args)
+
+    print("  Step 7: Rendering Decision Report\n")
+    report = render_report(data, load_json(OUT1_FILE), load_json(OUT2_FILE), load_json(OUT3_FILE),
+                           score_res, track_res)
     REPORT_FILE.write_text(report, encoding="utf-8")
     print(report)
     print(f"\n📄 Report saved to {REPORT_FILE}")

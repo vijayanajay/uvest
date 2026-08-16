@@ -2,10 +2,10 @@
 
 An implementation of `BRD.md`: a local, script-driven trade validation
 workflow that turns a raw trade recommendation into a **0–100 Confidence
-Score** and a **GO / No-Go decision**, backed by real math, live market
-data, and a historical track-record audit.
+Score** and a **GO / No-Go decision** — backed by real math, live market
+data, and a **self-building historical track record**.
 
-No OCR, no vision layer — you paste text/JSON, the agent runs four modular
+No OCR, no vision layer — you paste text/JSON, the agent runs modular
 Python scripts, and the suite prints a synthesized Decision Report.
 
 ```
@@ -16,7 +16,11 @@ current_trade.json ──► 1_math_and_rr.py ──► 2_market_data.py ──�
                             └───────────► 4_score_calculator.py ◄──────────┘
                                                   │
                                                   ▼
-                                        Confidence Score + Decision
+                                       Confidence Score + Decision
+                                                  │
+                                                  ▼
+                                   5_track_and_resolve.py  ──►  univest_history.db
+                                        (learning loop)        (real track record)
                                                   │
                                                   ▼
                                        decision_report.md (Markdown)
@@ -28,7 +32,7 @@ current_trade.json ──► 1_math_and_rr.py ──► 2_market_data.py ──�
 # 1. Install dependencies (Python 3.11+)
 python -m pip install -r requirements.txt
 
-# 2. Seed the historical audit database (one-time)
+# 2. Bootstrap the track-record DB (optional — pipeline auto-creates it)
 python scripts/seed_history.py --fresh
 
 # 3. Edit current_trade.json with your trade (or copy input.txt format)
@@ -39,6 +43,37 @@ python scripts/run_analysis.py
 
 The Decision Report is printed to stdout and saved to `decision_report.md`.
 
+## The Learning Loop (why the DB exists)
+
+Every time you run the pipeline, **the recommendation you analyzed is
+recorded in `univest_history.db`** as an `OPEN` row — along with its
+confidence score and GO/NO-GO decision. On your *next* run, Script 5
+re-checks every open recommendation against live prices and resolves it:
+
+* price hit the **target** → `WIN`
+* price hit the **stoploss** → `LOSS`
+* neither yet → stays `OPEN`
+
+Resolution scans daily bars from the recommendation date; the first
+trigger wins (same-bar ambiguity is resolved conservatively as a LOSS).
+Nothing resolves on the recommendation day itself.
+
+The report then shows you, from your **real** accumulated record:
+
+* total tracked / open / resolved recommendations
+* what was **resolved this run** (wins/losses with P&L)
+* real win rate, avg win/loss, expectancy, net P&L
+* **decision accuracy**: hit rate of your GO/CONDITIONAL calls, and on
+  NO-GO calls — how many *would have won* (**missed profit**) vs *would
+  have lost* (**losses avoided**)
+
+**This is what feeds back into decision-making:** Script 3's historical
+audit prefers your real tracked resolutions for a ticker and only falls
+back to bootstrap seed data while no real data exists yet. So the
+"historical edge" check gets sharper every time you use the system — the
+NO-GO discipline is continuously validated (or corrected) by what
+actually happened.
+
 ## Running Individual Scripts (BRD Blueprint)
 
 ```bash
@@ -46,11 +81,13 @@ python scripts/1_math_and_rr.py                    # > script1_out.json
 python scripts/2_market_data.py --symbol BHARTIARTL --expiry 25AUG   # > script2_out.json
 python scripts/3_historical_audit.py --symbol BHARTIARTL --type FUT  # > script3_out.json
 python scripts/4_score_calculator.py
+python scripts/5_track_and_resolve.py --score 35 --decision "NO-GO (REJECT)"  # track + resolve
 ```
 
 Each script emits one JSON object to stdout — the machine-readable
 contract between stages. `scripts/run_analysis.py` automates all of the
-above in the exact order the BRD specifies.
+above in the exact order the BRD specifies. Add `--no-track` to analyze
+without recording the trade.
 
 ## Input
 
@@ -82,10 +119,11 @@ normalizes it into `current_trade.json`, then runs the pipeline.
 | :--- | :--- |
 | `1_math_and_rr.py` | Raw & live (slippage-adjusted) R:R, per-lot risk/reward in INR, entry-range violation & inverted-R:R flags |
 | `2_market_data.py` | Yahoo Finance (`yfinance`): 14-day ATR, 50 EMA, trend direction, stop-loss distance vs ATR |
-| `3_historical_audit.py` | SQLite (`univest_history.db`): historical win rate, avg win/loss, net expectancy per trade for symbol + instrument type |
+| `3_historical_audit.py` | SQLite audit: win rate, avg win/loss, net expectancy for symbol + type — **prefers real tracked data, falls back to seeds** |
 | `4_score_calculator.py` | Weighted decision engine: 25 pts R:R, 20 price discipline, 20 technical, 20 historical edge, 15 event safety |
-| `seed_history.py` | Creates & seeds `univest_history.db` with sample track records (see below) |
-| `run_analysis.py` | Orchestrates the full blueprint and renders `decision_report.md` |
+| `5_track_and_resolve.py` | **Learning loop**: resolves open recos vs live prices, records the current reco, reports track-record & missed/avoided stats |
+| `seed_history.py` | Bootstraps `univest_history.db` with sample history (only used until real data exists) |
+| `run_analysis.py` | Orchestrates the full blueprint + learning loop and renders `decision_report.md` |
 
 ## Scoring & Decisions
 
@@ -95,39 +133,44 @@ normalizes it into `current_trade.json`, then runs the pipeline.
 | 65 – 79 | 🟡 **CONDITIONAL GO (REDUCE SIZE 50%)** |
 | 0 – 64 | 🔴 **NO-GO (REJECT)** |
 
-## Seeded Historical Data
+## Database
 
-`scripts/seed_history.py` loads 30 sample trades demonstrating every
-branch of the audit:
-
-* **BHARTIARTL FUT** (12 trades, 58% win rate) — **negative expectancy**
-  (`-₹1,216.67/trade`): the classic "wins often, loses big" trap → REJECT
-* **RELIANCE FUT** (10 trades) — **positive expectancy** (`+₹13,000/trade`)
-  → historically approve
-* **NIFTY OPT** (8 trades) — positive expectancy on options
-* **HDFCBANK FUT** — intentionally no rows, exercising the
-  `NO_HISTORICAL_DATA_FOR_TICKER` fallback
-
-Replace the sample rows with real recommendation history (from Univest,
-broker APIs, or CSV exports) for production use. Schema:
+Schema (versioned via `PRAGMA user_version`; v1 seed-only DBs are rebuilt
+automatically):
 
 ```sql
 CREATE TABLE trade_recommendations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     symbol TEXT NOT NULL,
-    instrument_type TEXT NOT NULL,   -- FUT / OPT
-    outcome TEXT NOT NULL,           -- WIN / LOSS
-    pnl_inr REAL NOT NULL,
-    rr_ratio REAL,
+    instrument_type TEXT NOT NULL,      -- FUT / OPT
+    action TEXT,                        -- BUY / SELL
+    outcome TEXT NOT NULL,              -- WIN / LOSS / OPEN
+    pnl_inr REAL, rr_ratio REAL,
     entry_price REAL, target REAL, stoploss REAL,
-    recommended_on TEXT
+    entry_range_min REAL, entry_range_max REAL,
+    live_price REAL, lot_size REAL, margin REAL,
+    confidence_score INTEGER, decision TEXT,
+    recommended_on TEXT, resolved_on TEXT, final_price REAL,
+    is_seed INTEGER NOT NULL DEFAULT 0, -- 1 = bootstrap data
+    UNIQUE (symbol, instrument_type, action, entry_price, target, stoploss)
 );
 ```
+
+Notes:
+
+* `seed_history.py --fresh` wipes **everything, including your real
+  tracked record** — only use it to restart the loop from scratch.
+* Without `--fresh`, seeding is skipped once bootstrap rows exist, and it
+  never touches tracked rows.
+* The unique key means re-analyzing the same setup refreshes its row
+  (live price, score, decision) instead of duplicating it.
 
 ## Notes
 
 * Script 2 needs internet access (Yahoo Finance). If it fails, the suite
   degrades gracefully: volatility/trend points are waived and the report
-  says so explicitly — it never invents numbers.
+  says so explicitly — it never invents numbers. Offline resolution
+  (`--offline`) leaves open recos pending.
 * `prompt.md` is the ready-to-paste master prompt that drives the entire
-  workflow in any agentic IDE (Antigravity / Cursor / Windsurf / VS Code).
+  workflow — including the learning loop — in any agentic IDE
+  (Antigravity / Cursor / Windsurf / VS Code).

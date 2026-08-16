@@ -33,6 +33,7 @@ current_trade.json ──► scripts/1_math_and_rr.py ──► script1_out.json
                      ──► scripts/2_market_data.py ──► script2_out.json
                      ──► scripts/3_historical_audit.py ──► script3_out.json
                      ──► scripts/4_score_calculator.py ──► FINAL SCORE + DECISION
+                     ──► scripts/5_track_and_resolve.py ──► univest_history.db (learning loop)
                      ──► decision_report.md (rendered Markdown report)
 ```
 
@@ -41,10 +42,22 @@ current_trade.json ──► scripts/1_math_and_rr.py ──► script1_out.json
 | `current_trade.json` | Canonical input (symbol, expiry, type, action, entry, range, live, target, stoploss, lot size, margin) |
 | `scripts/1_math_and_rr.py` | Raw + live R:R, per-lot INR risk/reward, entry-range & inverted-R:R flags |
 | `scripts/2_market_data.py` | Live Yahoo Finance data: 14-day ATR, 50 EMA, trend, SL-vs-ATR tightness |
-| `scripts/3_historical_audit.py` | SQLite audit of past recommendations: win rate, avg win/loss, net expectancy |
+| `scripts/3_historical_audit.py` | SQLite audit: win rate, avg win/loss, net expectancy — **prefers the real self-tracked record, falls back to seeds** |
 | `scripts/4_score_calculator.py` | Weighted engine: 25 R:R + 20 price discipline + 20 technical + 20 historical edge + 15 event safety |
-| `scripts/seed_history.py` | Seeds `univest_history.db` (run once; `--fresh` to reseed) |
-| `scripts/run_analysis.py` | Orchestrates the whole blueprint and renders the report |
+| `scripts/5_track_and_resolve.py` | **The learning loop**: resolves open recos against live prices (WIN/LOSS), records the current reco with its score & decision, reports track-record and missed/avoided stats |
+| `scripts/seed_history.py` | Bootstraps `univest_history.db` with sample history (used only until real data exists) |
+| `scripts/run_analysis.py` | Orchestrates the whole blueprint + learning loop and renders the report |
+
+**THE LEARNING LOOP (read carefully):** `univest_history.db` is the
+memory of this system. Every recommendation you analyze is recorded as an
+`OPEN` row with its confidence score and decision. On later runs, Script 5
+re-checks open rows against live daily bars and resolves them: target hit
+→ `WIN`, stoploss hit → `LOSS`, otherwise still `OPEN`. Script 3's
+historical audit then uses **your real resolved track record** (seed data
+is only a bootstrap). This is how the system improves: the discipline
+rules are continuously validated against what actually happened, and the
+report quantifies what you would have made or saved on the calls you
+skipped.
 
 **Scoring rubric (memorize it):**
 
@@ -87,18 +100,23 @@ run scripts individually, run them in this exact order and capture each
 stdout to its file.
 
 ```bash
-# 0. One-time setup (only if univest_history.db is missing)
+# 0. One-time bootstrap (optional — the pipeline auto-creates the DB)
 python scripts/seed_history.py --fresh
 
 # 1. Orchestrated run (recommended): writes current_trade.json if needed,
-#    runs scripts 1→4, renders the report to stdout + decision_report.md
+#    runs scripts 1→5, records the reco in the track record, resolves open
+#    recos against live prices, renders the report
 python scripts/run_analysis.py
+
+# 2. Standalone — resolve open recos and inspect the track record
+python scripts/5_track_and_resolve.py --no-track
 
 # OR the BRD step-by-step blueprint:
 # python scripts/1_math_and_rr.py > script1_out.json
 # python scripts/2_market_data.py --symbol SYMBOL --expiry 25AUG > script2_out.json
 # python scripts/3_historical_audit.py --symbol SYMBOL --type FUT > script3_out.json
 # python scripts/4_score_calculator.py
+# python scripts/5_track_and_resolve.py --score 35 --decision "NO-GO (REJECT)"
 ```
 
 **Hard rule:** You must actually run the scripts and read their JSON
@@ -132,10 +150,18 @@ must pull back to ≤ ₹1,995.00 for the range check to pass").
 | **Trend Context** | 50 EMA: ₹e | Close: ₹c | ✅ Above 50 EMA (BULLISH) / ❌ Below |
 
 ### 📊 Univest Historical Performance Audit (`SYMBOL TYPE`)
-- **Ticker Historical Win Rate:** NN% (N Trades sampled)
+- **Ticker Historical Win Rate:** NN% (N Trades sampled · real tracked record / bootstrap seed data)
 - **Avg Win:** +₹W | **Avg Loss:** -₹L
 - **Historical Expectancy:** **±₹E / trade**
 - **Verdict:** (positive edge → conviction / negative edge → avoid / no data → neutral)
+
+### 📈 Self-Tracked Track Record & Learning Loop
+- **Resolved this run:** X (✅ W wins / ❌ L losses) — BHARTIARTL → WIN +₹P, ...
+- **Recommendations tracked:** N total · O open · R resolved
+- **Real track-record expectancy:** ±₹E / trade (win rate W% over R resolved) · net P&L ±₹N
+- **Decision accuracy:** approved (GO/COND) hit rate H% (a/b)
+- **What you missed / saved on NO-GO calls:** M later won (missed ≈ ₹X) · K later lost (avoided ≈ ₹Y)
+- **How the loop improves decisions:** (one line — see Section 2)
 
 ### ❌ Rejection Reasons & Flags
 1. **CATEGORY (Score: X/MAX):** reason
@@ -161,6 +187,11 @@ never silently drop a check.
   caveat. Tell the user to re-run when connectivity is restored.
 - **No historical data for the ticker:** Script 3 returns
   `NO_HISTORICAL_DATA_FOR_TICKER` — treat as neutral (+20 pts) and say so.
+- **Track record integrity:** every analyzed reco is recorded automatically.
+  Never edit or delete rows in `univest_history.db` directly — the scripts own
+  it. `seed_history.py --fresh` wipes real tracked data; warn the user before
+  running it. If resolution is offline, open recos stay pending and the report
+  says so — never mark a reco WIN/LOSS from memory.
 - **Inverted R:R or entry violation:** This is your highest-confidence
   rejection signal. If the live price slipped above the entry range,
   compute and offer the **limit price that re-aligns R:R to ≥ 1.5**:

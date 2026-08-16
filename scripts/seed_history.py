@@ -1,8 +1,13 @@
-"""Seed the Univest historical track-record database.
+"""Bootstrap the Univest historical track-record database.
 
 Creates `univest_history.db` at the project root (if absent) and loads it
-with sample `trade_recommendations` rows so Script 3 has real data to
-audit. The sample data intentionally spans three scenarios:
+with sample `trade_recommendations` rows so Script 3 has data to audit
+before real recommendations accumulate. These rows are marked `is_seed=1`;
+once the pipeline starts tracking real recos (`scripts/5_track_and_resolve.py`),
+the audit prefers the real, self-tracked record and only falls back to this
+bootstrap data when no real data exists for a ticker.
+
+The sample data intentionally spans three scenarios:
 
   * BHARTIARTL FUT  - >50% win rate but NEGATIVE expectancy (poor R:R) -> reject
   * RELIANCE  FUT   - POSITIVE expectancy                                  -> approve
@@ -16,28 +21,12 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import sqlite3
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import DB_FILE  # noqa: E402
-
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS trade_recommendations (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    symbol          TEXT NOT NULL,
-    instrument_type TEXT NOT NULL,
-    outcome         TEXT NOT NULL CHECK (outcome IN ('WIN', 'LOSS')),
-    pnl_inr         REAL NOT NULL,
-    rr_ratio        REAL,
-    entry_price     REAL,
-    target          REAL,
-    stoploss        REAL,
-    recommended_on  TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_symbol_type ON trade_recommendations (symbol, instrument_type);
-"""
+from db import connect  # noqa: E402
 
 # (symbol, type, outcome, pnl_inr, rr_ratio, entry, target, stoploss, date)
 SAMPLE_ROWS = [
@@ -82,35 +71,36 @@ SAMPLE_ROWS = [
 
 def seed(database: Path, fresh: bool) -> None:
     database.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(database))
-    cursor = conn.cursor()
-    cursor.executescript(SCHEMA)
+    conn = connect(database)
 
     if fresh:
-        cursor.execute("DELETE FROM trade_recommendations")
+        # Wipes tracked recommendations too — only use when you want to restart the loop.
+        conn.execute("DELETE FROM trade_recommendations")
+        conn.commit()
 
-    cursor.execute("SELECT COUNT(*) FROM trade_recommendations")
-    existing = cursor.fetchone()[0]
-    if existing:
-        print(f"Seeding skipped: {database} already has {existing} rows (use --fresh to reseed).")
+    seed_rows = conn.execute("SELECT COUNT(*) FROM trade_recommendations WHERE is_seed=1").fetchone()[0]
+    if seed_rows:
+        print(f"Seeding skipped: {database} already has {seed_rows} seed rows (use --fresh to reseed).")
         conn.close()
         return
 
-    cursor.executemany(
+    conn.executemany(
         """
         INSERT INTO trade_recommendations
-            (symbol, instrument_type, outcome, pnl_inr, rr_ratio, entry_price, target, stoploss, recommended_on)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (symbol, instrument_type, outcome, pnl_inr, rr_ratio, entry_price, target, stoploss,
+             recommended_on, is_seed)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
         """,
         SAMPLE_ROWS,
     )
     conn.commit()
     conn.close()
-    print(f"Seeded {len(SAMPLE_ROWS)} sample trades into {database}")
+    print(f"Seeded {len(SAMPLE_ROWS)} bootstrap trades into {database}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Seed the Univest historical audit database.")
-    parser.add_argument("--fresh", action="store_true", help="Wipe existing rows before seeding")
+    parser = argparse.ArgumentParser(description="Bootstrap the Univest historical audit database.")
+    parser.add_argument("--fresh", action="store_true",
+                        help="Wipe ALL rows (including tracked recos) before seeding")
     args = parser.parse_args()
     seed(DB_FILE, fresh=args.fresh)
