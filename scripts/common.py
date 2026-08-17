@@ -65,6 +65,24 @@ def indian_currency(value: float) -> str:
     return f"₹{value:,.2f}"
 
 
+def wilson_ci(wins: int, n: int, z: float = 1.959963984540054) -> tuple[float, float]:
+    """Wilson 95% confidence interval for a proportion (wins/n).
+
+    Returns (low, high) as raw proportions in [0, 1]. This is the honest
+    uncertainty around an observed win rate: with small samples the interval
+    is wide, and decision rules that gate on the lower bound (see
+    `scripts/4_score_calculator.py`) automatically demand more evidence before
+    calling an edge real.
+    """
+    if n <= 0:
+        return 0.0, 0.0
+    p = wins / n
+    denom = 1 + z * z / n
+    center = (p + z * z / (2 * n)) / denom
+    half = z * (p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5 / denom
+    return max(0.0, center - half), min(1.0, center + half)
+
+
 # ---- Expiry parsing -------------------------------------------------------
 # Univest supplies expiry as a label like "25 AUG" (occasionally with a year
 # or in ISO form). Parsing it into a real date lets the pipeline do two honest

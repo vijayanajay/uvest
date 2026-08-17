@@ -16,18 +16,20 @@ The database is the memory of the whole learning loop:
 Schema is versioned with `PRAGMA user_version`. v1 databases (seed-only,
 no tracking columns) are rebuilt automatically — they contain no
 user-tracked data. v2 databases gain the expiry/costs columns via ALTER
-(v3).
+(v3); v3 databases gain the reco-identity columns (source, re-analysis
+counters) via ALTER (v4).
 """
 
 from __future__ import annotations
 
 import sqlite3
+from datetime import date
 from pathlib import Path
 from typing import Any
 
 from common import DB_FILE, parse_expiry  # noqa: E402
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 SCHEMA = """
 CREATE TABLE trade_recommendations (
@@ -55,6 +57,9 @@ CREATE TABLE trade_recommendations (
     expiry_date     TEXT,
     costs_inr       REAL,
     is_seed         INTEGER NOT NULL DEFAULT 0,
+    source          TEXT,                   -- where the reco came from (univest / other)
+    analysis_count  INTEGER NOT NULL DEFAULT 1,  -- how many times this reco was analyzed
+    last_analyzed_on TEXT,                  -- date of the most recent re-analysis
     UNIQUE (symbol, instrument_type, action, entry_price, target, stoploss)
 );
 CREATE INDEX idx_symbol_type ON trade_recommendations (symbol, instrument_type);
@@ -91,6 +96,13 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE trade_recommendations ADD COLUMN costs_inr REAL")
         conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
         conn.commit()
+        return
+    if version == 3:
+        conn.execute("ALTER TABLE trade_recommendations ADD COLUMN source TEXT")
+        conn.execute("ALTER TABLE trade_recommendations ADD COLUMN analysis_count INTEGER NOT NULL DEFAULT 1")
+        conn.execute("ALTER TABLE trade_recommendations ADD COLUMN last_analyzed_on TEXT")
+        conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
+        conn.commit()
 
 
 def connect(db_path: Path = DB_FILE) -> sqlite3.Connection:
@@ -100,13 +112,25 @@ def connect(db_path: Path = DB_FILE) -> sqlite3.Connection:
 
 
 def upsert_tracked_trade(conn: sqlite3.Connection, data: dict[str, Any],
-                         score: int | None = None, decision: str | None = None) -> tuple[bool, int]:
+                         score: int | None = None, decision: str | None = None) -> tuple[bool, int, dict[str, Any]]:
     """Record (or refresh) the recommendation currently under analysis.
 
-    Returns (was_inserted, row_id). The natural key is the setup itself,
-    so re-analyzing the same reco updates it instead of duplicating.
-    `recommended_on` is preserved on conflict — the outcome window starts
-    from the first time the setup was analyzed.
+    Returns (was_inserted, row_id, identity). A recommendation is identified
+    two ways, checked in order:
+
+    1. APP IDENTITY (when the input carries `recommended_on` — the date the
+       reco was made in Univest or any other app): the row for
+       (symbol, instrument_type, action, expiry, reco date). Re-pasting the
+       same reco on a later day is recognised as the SAME recommendation:
+       live price / score / decision are refreshed, `analysis_count` is
+       incremented, and the original reco date is preserved.
+    2. SETUP IDENTITY (fallback): the natural key of the trade geometry
+       (symbol, instrument_type, action, entry_price, target, stoploss) — so
+       identical setups always merge into one row regardless of paste date.
+
+    On an identity match only the mutable fields are refreshed: the originally
+    recommended contract (entry/target/stoploss) and the reco date are never
+    rewritten, so resolution windows and the track record stay honest.
     """
     symbol = data["symbol"]
     inst = data.get("instrument_type", "FUT")
@@ -121,29 +145,63 @@ def upsert_tracked_trade(conn: sqlite3.Connection, data: dict[str, Any],
     er_max = float(data.get("entry_range_max", entry))
     expiry_text = data.get("expiry")
     expiry_date = parse_expiry(expiry_text)
+    source = data.get("source")
+    today = date.today().isoformat()
+
+    # The app's reco date when the input carries one; otherwise the reco is
+    # dated today. Stored date-only so identity matches are stable across days.
+    reco_date = date.today()
+    if data.get("recommended_on"):
+        try:
+            reco_date = date.fromisoformat(str(data["recommended_on"]).strip()[:10])
+        except ValueError:
+            reco_date = date.today()
 
     # R:R at the recommended entry (not live)
     risk = entry - sl if action == "BUY" else sl - entry
     reward = target - entry if action == "BUY" else entry - target
     rr = round(reward / risk, 2) if risk > 0 else None
 
-    existing = conn.execute(
-        "SELECT id FROM trade_recommendations WHERE symbol=? AND instrument_type=? AND action=? "
-        "AND entry_price=? AND target=? AND stoploss=?",
-        (symbol, inst, action, entry, target, sl),
-    ).fetchone()
+    row_id = None
+    matched_by = None
+    expiry_iso = expiry_date.isoformat() if expiry_date else None
+    if data.get("recommended_on"):
+        # App identity: the same reco (same stock, type, action, contract and
+        # reco date) re-pasted on any later day lands on the same row.
+        row = conn.execute(
+            """
+            SELECT id FROM trade_recommendations
+            WHERE symbol=? AND instrument_type=? AND action=?
+              AND (expiry_date = ? OR (expiry_date IS NULL AND ? IS NULL))
+              AND substr(recommended_on, 1, 10) = ?
+            ORDER BY id LIMIT 1
+            """,
+            (symbol, inst, action, expiry_iso, expiry_iso, reco_date.isoformat()),
+        ).fetchone()
+        if row:
+            row_id, matched_by = row[0], "reco_date"
+    if row_id is None:
+        row = conn.execute(
+            "SELECT id FROM trade_recommendations WHERE symbol=? AND instrument_type=? AND action=? "
+            "AND entry_price=? AND target=? AND stoploss=?",
+            (symbol, inst, action, entry, target, sl),
+        ).fetchone()
+        if row:
+            row_id, matched_by = row[0], "setup"
 
-    if existing:
-        row_id = existing[0]
+    if row_id is not None:
         conn.execute(
             """
             UPDATE trade_recommendations
             SET entry_range_min=?, entry_range_max=?, live_price=?, lot_size=?, margin=?,
-                confidence_score=?, decision=?, rr_ratio=?, expiry=?, expiry_date=?
+                confidence_score=?, decision=?, rr_ratio=?, expiry=?, expiry_date=?,
+                source=COALESCE(source, ?),
+                analysis_count = analysis_count + 1,
+                last_analyzed_on=?
             WHERE id=?
             """,
             (er_min, er_max, live, lot, margin, score, decision, rr, expiry_text,
-             expiry_date.isoformat() if expiry_date else None, row_id),
+             expiry_iso, source, today, row_id),
         )
         inserted = False
     else:
@@ -153,18 +211,33 @@ def upsert_tracked_trade(conn: sqlite3.Connection, data: dict[str, Any],
                 (symbol, instrument_type, action, entry_price, target, stoploss,
                  entry_range_min, entry_range_max, live_price, lot_size, margin,
                  outcome, confidence_score, decision, rr_ratio, recommended_on,
-                 expiry, expiry_date, is_seed)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'OPEN', ?, ?, ?, datetime('now'), ?, ?, 0)
+                 expiry, expiry_date, is_seed, source, analysis_count, last_analyzed_on)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'OPEN', ?, ?, ?, ?, ?, ?, 0, ?, 1, ?)
             """,
             (symbol, inst, action, entry, target, sl, er_min, er_max, live, lot, margin,
-             score, decision, rr, expiry_text,
-             expiry_date.isoformat() if expiry_date else None),
+             score, decision, rr, reco_date.isoformat(), expiry_text, expiry_iso,
+             source, today),
         )
         row_id = cursor.lastrowid
         inserted = True
+        matched_by = "new"
 
     conn.commit()
-    return inserted, row_id
+
+    info = conn.execute(
+        "SELECT recommended_on, source, analysis_count, last_analyzed_on "
+        "FROM trade_recommendations WHERE id=?",
+        (row_id,),
+    ).fetchone()
+    identity = {
+        "recommended_on": info[0],
+        "source": info[1],
+        "analysis_count": info[2],
+        "last_analyzed_on": info[3],
+        "matched_by": matched_by,
+        "is_repeat": (not inserted) and bool(info[2] and info[2] > 1),
+    }
+    return inserted, row_id, identity
 
 
 def _calibration_row(wins: int, losses: int) -> dict[str, Any]:

@@ -148,8 +148,9 @@ def track_and_stats(conn, data: dict[str, Any] | None, score: int | None, decisi
     stats = compute_stats(conn)
 
     newly_tracked = updated = False
+    identity = None
     if data is not None:
-        newly_tracked, _ = upsert_tracked_trade(conn, data, score=score, decision=decision)
+        newly_tracked, _, identity = upsert_tracked_trade(conn, data, score=score, decision=decision)
         updated = not newly_tracked
         stats = compute_stats(conn)  # refresh counts with the new/updated row
 
@@ -160,6 +161,7 @@ def track_and_stats(conn, data: dict[str, Any] | None, score: int | None, decisi
             "newly_tracked": bool(newly_tracked),
             "updated_existing": bool(updated),
         },
+        "identity": identity,
         "resolved_this_run": {
             "count": len(resolved),
             "wins": sum(1 for r in resolved if r["outcome"] == "WIN"),

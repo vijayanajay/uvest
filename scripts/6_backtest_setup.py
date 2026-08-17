@@ -21,8 +21,9 @@ Output contract (script6_out.json):
     symbol, action, rr, stop_atr_ratio, current_atr, window_bars,
     window_origin, period_bars, trend_state,
     sample.overall  : n, target_first, stop_first, settled_at_window_end,
-                      wins, losses, success_rate, win_rate, avg_pnl_inr,
-                      expectancy_inr
+                      wins, losses, success_rate, win_rate,
+                      ci_low, ci_high (Wilson 95% CI on win_rate),
+                      avg_pnl_inr, expectancy_inr
     sample.by_trend : the same shape per 50-EMA state at the signal day
     notes           : caveats (overlapping windows, settlement, costs)
 
@@ -54,6 +55,7 @@ from common import (  # noqa: E402
     estimate_costs,
     fail,
     load_json,
+    wilson_ci,
 )
 
 DEFAULT_WINDOW = 10   # trading bars when the reco has no usable expiry
@@ -191,6 +193,7 @@ def backtest_setup(data: dict[str, Any], bars, window: int, lot: float,
         neu = sum(1 for r in rs if not r["triggered"])
         wins = sum(1 for r in rs if r["outcome"] == "WIN")
         losses = nn - wins
+        ci_low, ci_high = wilson_ci(wins, nn)
         return {
             "n": nn,
             "target_first": tf,
@@ -200,6 +203,8 @@ def backtest_setup(data: dict[str, Any], bars, window: int, lot: float,
             "losses": losses,
             "success_rate": round(tf / nn * 100, 1) if nn else None,
             "win_rate": round(wins / nn * 100, 1) if nn else None,
+            "ci_low": round(ci_low * 100, 1) if nn else None,
+            "ci_high": round(ci_high * 100, 1) if nn else None,
             "avg_pnl_inr": round(sum(r["pnl_inr"] for r in rs) / nn, 2) if nn else 0.0,
             "net_pnl_inr": round(sum(r["pnl_inr"] for r in rs), 2),
         }

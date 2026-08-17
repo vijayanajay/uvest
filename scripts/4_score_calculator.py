@@ -10,6 +10,22 @@ Scoring breakdown (100 pts):
     4. Historical edge ............... 20 pts
     5. Event safety .................. 15 pts (real check: days to expiry)
 
+EMPIRICAL MODE (default when the similar-setup backtest from script6 is
+available and its sample is large enough): the historical-edge check is
+driven by the measured probability of success for this setup *shape* — the
+backtest's win rate, read from the trend-matched bucket when possible —
+gated on its Wilson 95% CI LOWER BOUND clearing the setup's net-of-costs
+break-even win rate (p* = 1/(1+net_rr)). Because the backtest already
+conditions on the 50-EMA trend context and on time-to-expiry (its holding
+window derives from days-to-expiry), those two checks are WAIVED in
+empirical mode to avoid double counting; the sub-3-day expiry policy cap
+still applies. This replaces the rubric opinion with a measured probability:
+GO only when the data rejects the "coin flip" null hypothesis.
+
+FALLBACK MODE (backtest unavailable or sample too small): the original
+rubric — historical edge from the ticker track record (script3), trend and
+event safety scored as before.
+
 Waiver model (no free points): a check that cannot be evaluated — market
 data unavailable, no track record for the ticker, expiry not supplied —
 earns 0 and is labelled `waived`. Waived checks neither add nor subtract
@@ -37,7 +53,24 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import OUT1_FILE, OUT2_FILE, OUT3_FILE, emit_json, fail, flip_prices, indian_currency, load_json  # noqa: E402
+from common import (  # noqa: E402
+    COST_RATE_FUT,
+    COST_RATE_OPT,
+    OUT1_FILE,
+    OUT2_FILE,
+    OUT3_FILE,
+    OUT6_FILE,
+    emit_json,
+    fail,
+    flip_prices,
+    indian_currency,
+    load_json,
+)
+
+# Smallest backtest sample (script6) that may drive the historical-edge check.
+# Below this the empirical win rate is too noisy to score against, and the
+# score falls back to the ticker track record (script3).
+EMPIRICAL_MIN_N = 30
 
 
 def decide(score: float, max_possible: float, days: int | None) -> tuple[str, float]:
@@ -55,10 +88,72 @@ def decide(score: float, max_possible: float, days: int | None) -> tuple[str, fl
     return decision, effective
 
 
-def calculate_score(math_res: dict[str, Any], market_res: dict[str, Any], audit_res: dict[str, Any]) -> dict[str, Any]:
+def net_rr_after_costs(math_res: dict[str, Any], instrument_type: str | None) -> float | None:
+    """Live reward:risk net of modeled transaction costs (per share)."""
+    live = float(math_res["live_price"])
+    sl = float(math_res["stoploss"])
+    target = float(math_res["target"])
+    risk = abs(live - sl)
+    reward = abs(target - live)
+    if risk <= 0 or reward <= 0:
+        return None
+    rate = COST_RATE_OPT if str(instrument_type or "").upper() == "OPT" else COST_RATE_FUT
+    cost_per_share = live * rate
+    net = (reward - cost_per_share) / (risk + cost_per_share)
+    return round(net, 3) if net > 0 else None
+
+
+def break_even_win_rate(math_res: dict[str, Any], instrument_type: str | None) -> float | None:
+    """p* = 1 / (1 + net_rr): the win rate a setup needs (net of costs) for its
+    expectancy to be non-negative. Gating the empirical win rate's CI lower
+    bound against p* is what separates a measured edge from a coin flip."""
+    net = net_rr_after_costs(math_res, instrument_type)
+    return 1.0 / (1.0 + net) if net else None
+
+
+def empirical_context(math_res: dict[str, Any], audit_res: dict[str, Any],
+                      backtest_res: dict[str, Any] | None) -> tuple[bool, dict[str, Any] | None]:
+    """Decide whether the similar-setup backtest (script6) can drive the
+    historical-edge check and package the numbers the score and report need.
+
+    Empirical mode requires a usable backtest payload with a large enough
+    overall sample AND a computable net-of-costs break-even win rate from the
+    live geometry. The base rate is read from the backtest's trend-matched
+    bucket (the reco's own 50-EMA context, which the backtest conditions on),
+    falling back to the overall sample when that bucket is too small.
+    Returns (empirical_mode, context)."""
+    p_star = break_even_win_rate(math_res, audit_res.get("instrument_type"))
+    bt = backtest_res or {}
+    if "error" in bt or p_star is None:
+        return False, None
+    s = bt.get("sample") or {}
+    ov = s.get("overall") or {}
+    if ov.get("n", 0) < EMPIRICAL_MIN_N:
+        return False, None
+    trend_state = bt.get("trend_state")
+    bucket = None
+    if trend_state:
+        b = (s.get("by_trend") or {}).get(trend_state) or {}
+        if b.get("n", 0) >= EMPIRICAL_MIN_N:
+            bucket = b
+    base = bucket or ov
+    return True, {
+        "n": base["n"],
+        "bucket": (f"by_trend:{trend_state}" if base is not ov else "overall"),
+        "trend_state": trend_state,
+        "win_rate": base["win_rate"],
+        "ci_low": base["ci_low"],
+        "ci_high": base["ci_high"],
+        "break_even_win_rate": round(p_star * 100, 1),
+    }
+
+
+def calculate_score(math_res: dict[str, Any], market_res: dict[str, Any], audit_res: dict[str, Any],
+                    backtest_res: dict[str, Any] | None = None) -> dict[str, Any]:
     score = 0
     component_scores: dict[str, Any] = {}
     details: list[dict[str, Any]] = []
+    empirical_mode, empirical = empirical_context(math_res, audit_res, backtest_res)
 
     def record(category: str, key: str, earned: int, maximum: int, reason: str | None = None, waived: bool = False) -> None:
         component_scores[key] = {"earned": earned, "max": maximum, "waived": waived}
@@ -112,14 +207,54 @@ def calculate_score(math_res: dict[str, Any], market_res: dict[str, Any], audit_
             score += 10
             record("VOLATILITY PASS", "volatility", 10, 10)
 
-        if market_res.get("above_50_ema", False):
+        if empirical_mode:
+            # The backtest's trend-matched bucket already conditions on the
+            # 50-EMA context; scoring the raw EMA position again would count
+            # the same evidence twice.
+            record(
+                "TREND (EMBEDDED IN BACKTEST)", "trend", 0, 10,
+                "Trend context is already embedded in the backtest's trend-matched success rate - "
+                "not scored separately (no double counting).",
+                waived=True,
+            )
+        elif market_res.get("above_50_ema", False):
             score += 10
             record("TREND PASS", "trend", 10, 10)
         else:
             record("TREND CONFLICT", "trend", 0, 10, "Stock is trading below its 50 EMA.")
 
-    # 4. Historical Edge Check (Max 20 pts) — no data is waived, never a win
-    if audit_res.get("edge_is_positive", False):
+    # 4. Historical Edge Check (Max 20 pts)
+    #    Empirical mode (script6 available): the measured probability of success
+    #    for this setup SHAPE, gated on its Wilson 95% CI lower bound clearing
+    #    the net-of-costs break-even win rate. Fallback: ticker track record.
+    if empirical_mode and empirical:
+        e = empirical
+        if e["ci_low"] / 100.0 > e["break_even_win_rate"] / 100.0:
+            score += 20
+            record(
+                "EMPIRICAL EDGE CONFIRMED", "historical_edge", 20, 20,
+                f"Similar-setup history wins {e['win_rate']}% of the time "
+                f"(95% CI {e['ci_low']}–{e['ci_high']}%, n={e['n']}, bucket {e['bucket']}) - "
+                f"statistically above the break-even win rate of {e['break_even_win_rate']}% "
+                "(net of costs). The edge is confirmed.",
+            )
+        elif e["win_rate"] / 100.0 > e["break_even_win_rate"] / 100.0:
+            score += 10
+            record(
+                "EMPIRICAL EDGE (UNCONFIRMED)", "historical_edge", 10, 20,
+                f"Similar-setup win rate {e['win_rate']}% "
+                f"(95% CI {e['ci_low']}–{e['ci_high']}%, n={e['n']}) vs break-even "
+                f"{e['break_even_win_rate']}% - positive but NOT statistically confirmed; "
+                "treat it as a coin-flip-plus, not a real edge.",
+            )
+        else:
+            record(
+                "NO EMPIRICAL EDGE", "historical_edge", 0, 20,
+                f"Similar-setup win rate {e['win_rate']}% "
+                f"(95% CI {e['ci_low']}–{e['ci_high']}%, n={e['n']}) is not above the break-even "
+                f"{e['break_even_win_rate']}% - no confirmed edge even before costs.",
+            )
+    elif audit_res.get("edge_is_positive", False):
         score += 20
         record("HISTORICAL EDGE PASS", "historical_edge", 20, 20)
     elif audit_res.get("status") == "NO_HISTORICAL_DATA_FOR_TICKER":
@@ -136,7 +271,23 @@ def calculate_score(math_res: dict[str, Any], market_res: dict[str, Any], audit_
 
     # 5. Event Safety Check (Max 15 pts) — real check: days to expiry
     days = math_res.get("days_to_expiry")
-    if days is None:
+    if empirical_mode:
+        # The backtest's holding window derives from days-to-expiry, so the
+        # measured success rate already reflects the time available. Waive the
+        # points, but keep the hard policy cap below (< 3 days caps the
+        # decision at CONDITIONAL GO) - that rule is risk management, not
+        # probability evidence.
+        cap_note = (
+            " The expiry-day policy cap (< 3 days to expiry) still applies."
+            if days is not None and days < 3 else ""
+        )
+        record(
+            "EVENT SAFETY (EMBEDDED IN BACKTEST)", "event_safety", 0, 15,
+            "Time-to-expiry is already reflected in the backtest's expiry-derived holding window - "
+            "not scored separately (no double counting)." + cap_note,
+            waived=True,
+        )
+    elif days is None:
         record(
             "EVENT SAFETY (NO EXPIRY)", "event_safety", 0, 15,
             "Expiry not specified or unparsable - event-safety check waived rather than assumed clean.",
@@ -172,6 +323,9 @@ def calculate_score(math_res: dict[str, Any], market_res: dict[str, Any], audit_
         "final_confidence_score": score,
         "max_possible_score": max_possible,
         "effective_score": effective,
+        "empirical_mode": empirical_mode,
+        "empirical": empirical,
+        "break_even_win_rate": empirical["break_even_win_rate"] if empirical else None,
         "waived": [d["category"] for d in details if d.get("waived")],
         "decision": decision,
         "rejection_reasons": [d["reason"] for d in details if not d.get("waived")],
@@ -269,8 +423,10 @@ def build_flip_table(math_res: dict[str, Any], market_res: dict[str, Any],
         })
 
     # 4. Trend — the 50-EMA state is a market condition, not an entry choice.
+    #    Waived in empirical mode (embedded in the backtest), so no flip row.
     trend_earned = comp.get("trend", {}).get("earned", 0)
-    if trend_earned < 10 and market_available and market_res.get("ema_50"):
+    if trend_earned < 10 and not comp.get("trend", {}).get("waived", False) \
+            and market_available and market_res.get("ema_50"):
         ema = float(market_res["ema_50"])
         s, d = after(10 - trend_earned)
         rows.append({
@@ -282,14 +438,23 @@ def build_flip_table(math_res: dict[str, Any], market_res: dict[str, Any],
 
     # 5. Historical edge — not fixable by entry price or timing.
     hist_earned = comp.get("historical_edge", {}).get("earned", 0)
-    if hist_earned < 20:
+    if hist_earned < 20 and not comp.get("historical_edge", {}).get("waived", False):
         s, d = after(20 - hist_earned)
-        no_data = any("HISTORICAL" in w for w in score_res.get("waived", []))
-        detail = (
-            "No track record for this ticker yet - the edge check is waived and activates as outcomes accumulate."
-            if no_data else
-            "No entry or timing choice fixes this - tracked recos for this setup have negative expectancy; skip it."
-        )
+        empirical = score_res.get("empirical")
+        if score_res.get("empirical_mode") and empirical:
+            detail = (
+                f"Empirical win rate {empirical['win_rate']}% "
+                f"(95% CI {empirical['ci_low']}–{empirical['ci_high']}%, n={empirical['n']}) vs break-even "
+                f"{empirical['break_even_win_rate']}% - the backtested probability is what it is; "
+                "no entry or timing choice changes it."
+            )
+        else:
+            no_data = any("HISTORICAL" in w for w in score_res.get("waived", []))
+            detail = (
+                "No track record for this ticker yet - the edge check is waived and activates as outcomes accumulate."
+                if no_data else
+                "No entry or timing choice fixes this - tracked recos for this setup have negative expectancy; skip it."
+            )
         rows.append({
             "check": "historical_edge", "label": "Historical edge", "earned": hist_earned, "max": 20,
             "gain": 20 - hist_earned, "kind": "none", "achievable": False, "adjusts_trade": False,
@@ -297,8 +462,9 @@ def build_flip_table(math_res: dict[str, Any], market_res: dict[str, Any],
         })
 
     # 6. Event safety — time decays it; it can only get worse by waiting.
+    #    Waived in empirical mode (embedded in the backtest), so no flip row.
     ev_earned = comp.get("event_safety", {}).get("earned", 0)
-    if ev_earned < 15:
+    if ev_earned < 15 and not comp.get("event_safety", {}).get("waived", False):
         s, d = after(15 - ev_earned)
         detail = (
             "Time-decays: the closer to expiry, the lower this score; it cannot improve by waiting. "
@@ -417,9 +583,13 @@ if __name__ == "__main__":
         math_res = load_json(OUT1_FILE)
         market_res = load_json(OUT2_FILE)
         audit_res = load_json(OUT3_FILE)
+        try:
+            backtest_res = load_json(OUT6_FILE)
+        except (FileNotFoundError, ValueError):
+            backtest_res = None
     except FileNotFoundError as exc:
         fail(f"Missing script output: {exc}. Run scripts 1-3 first (or scripts/run_analysis.py).")
 
-    score_res = calculate_score(math_res, market_res, audit_res)
+    score_res = calculate_score(math_res, market_res, audit_res, backtest_res)
     score_res["flip_table"] = build_flip_table(math_res, market_res, score_res)
     emit_json(score_res)

@@ -1,12 +1,14 @@
-Symbol: MOTILALOFS
-Expiry: 25 AUG
-Type: FUTURES
+Symbol: SYRMA
+Expiry: None
+Type: EQUITY
 Action: BUY
-Entry Price: 906.00
-Entry Range: 904.50 - 907.50
-Live Price: 910.50
-Target: 938.00
-Stoploss: 875.00
-Lot Size: 775
-Margin: 184778.61
+Entry Price: 1489.70
+Entry Range: 1480.00 - 1500.00
+Live Price: 1467.90
+Target: 1572.00
+Stoploss: 1403.90
+Lot Size: 500
+Margin: 744850.00
 App Warning: Trade is outside the entry range. Take caution
+Recommended On: 2026-08-14
+Source: univest

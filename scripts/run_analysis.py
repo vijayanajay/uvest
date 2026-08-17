@@ -141,6 +141,29 @@ def render_report(data: dict[str, Any], math_res: dict[str, Any], market_res: di
         f"*Generated {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} · "
         f"Action: {data.get('action', 'n/a')} · Lot size: {lot_label} · Margin: {indian_currency(data.get('margin', 0))}*",
         "",
+    ]
+
+    # ---- Recommendation identity (same reco re-pasted across days) ---------
+    identity = (track_res or {}).get("identity")
+    if identity:
+        src = identity.get("source") or "univest"
+        rec_on = (identity.get("recommended_on") or "")[:10]
+        rec_label = f"reco dated {rec_on}" if rec_on else "reco date unknown"
+        if identity.get("is_repeat"):
+            lines.append(
+                f"*🪪 Reco identity: **{symbol} {inst} {data.get('action', '')}** · source: {src} · "
+                f"{rec_label} · analyzed **{identity.get('analysis_count', 1)}×** "
+                f"(last {identity.get('last_analyzed_on') or 'today'}) — the same recommendation re-pasted "
+                "on a later day; price/score refreshed, original reco date preserved.*"
+            )
+        else:
+            lines.append(
+                f"*🪪 Reco identity: **{symbol} {inst} {data.get('action', '')}** · source: {src} · "
+                f"{rec_label} · first time this reco is analyzed.*"
+            )
+        lines.append("")
+
+    lines += [
         f"### **FINAL CONFIDENCE SCORE: {score} / {max_possible}**"
         + (f" ({effective}% of available points)" if max_possible < 100 else ""),
         f"### **DECISION: {emoji} {decision}**",
@@ -182,7 +205,14 @@ def render_report(data: dict[str, Any], math_res: dict[str, Any], market_res: di
 
     # ---- Historical audit section ----------------------------------------
     audit_section = ["### 📊 Univest Historical Performance Audit", ""]
-    if audit_res.get("status") == "NO_HISTORICAL_DATA_FOR_TICKER":
+    if score_res.get("empirical_mode"):
+        audit_section += [
+            f"* **`{symbol} {inst}`:** the ticker-level track record is **superseded in empirical mode** — "
+            "the historical-edge check is scored from the measured similar-setup backtest below "
+            "(a real probability, not a rubric opinion). Ticker outcomes still accumulate in the "
+            "learning loop for future calibration.",
+        ]
+    elif audit_res.get("status") == "NO_HISTORICAL_DATA_FOR_TICKER":
         audit_section += [
             f"* **`{symbol} {inst}`:** No resolved recommendations in the track record yet.",
             "* **Verdict:** Historical edge **waived** — no points granted, no penalty assumed. "
@@ -228,7 +258,8 @@ def render_report(data: dict[str, Any], math_res: dict[str, Any], market_res: di
             lines.append(
                 f"* **Overall:** {ov['n']} similar setups replayed · "
                 f"**{ov['success_rate']}%** hit target before stop · "
-                f"**{ov['win_rate']}%** resolved as wins (incl. window-end settlement) · "
+                f"**{ov['win_rate']}%** (95% CI {ov.get('ci_low')}–{ov.get('ci_high')}%) resolved as wins "
+                f"(incl. window-end settlement) · "
                 f"{ov['target_first']} target-first / {ov['stop_first']} stop-first / "
                 f"{ov['settled_at_window_end']} settled · avg P&L {avg_str} · net P&L (all replays) {net_str}"
             )
@@ -237,7 +268,7 @@ def render_report(data: dict[str, Any], math_res: dict[str, Any], market_res: di
                 lines.append(
                     f"* **{trend_state} trend context (matches this reco):** {matched['n']} setups · "
                     f"**{matched['success_rate']}%** hit target before stop · "
-                    f"**{matched['win_rate']}%** wins"
+                    f"**{matched['win_rate']}%** (95% CI {matched.get('ci_low')}–{matched.get('ci_high')}%) wins"
                 )
             other_key = "BEARISH" if trend_state == "BULLISH" else "BULLISH"
             other = by_trend.get(other_key, {})
@@ -248,10 +279,25 @@ def render_report(data: dict[str, Any], math_res: dict[str, Any], market_res: di
                 )
             for note in backtest_res.get("notes", []):
                 lines.append(f"  ⓘ {note}")
+
+            emp = score_res.get("empirical")
+            if score_res.get("empirical_mode") and emp:
+                if emp["ci_low"] > emp["break_even_win_rate"]:
+                    verdict = "above break-even and the CI lower bound clears it — the edge is statistically confirmed."
+                elif emp["win_rate"] > emp["break_even_win_rate"]:
+                    verdict = "above break-even but the CI lower bound does not clear it — positive but NOT confirmed."
+                else:
+                    verdict = "not above break-even — no confirmed edge."
+                lines.append(
+                    f"* **Break-even check:** this setup needs to win **{emp['break_even_win_rate']}%** of the time "
+                    f"(net of costs) to break even. The empirical win rate scored is **{emp['win_rate']}%** "
+                    f"(95% CI {emp['ci_low']}–{emp['ci_high']}%, n={emp['n']}, bucket {emp['bucket']}) — {verdict}"
+                )
             lines.append(
                 "* **How to read this:** the win rate is a measured probability from comparable setups, "
                 "not a rubric opinion — but the sample is correlated (overlapping windows), so treat it as "
-                "evidence, not certainty."
+                "evidence, not certainty. In empirical mode this probability REPLACES the ticker-track-record "
+                "check and the trend/event-safety checks (their signals are embedded in the backtest) are waived."
             )
         else:
             lines.append("* No comparable setups found in the available history.")

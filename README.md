@@ -135,9 +135,20 @@ normalizes it into `current_trade.json`, then runs the pipeline.
   "stoploss": 1939.00,
   "lot_size": 475,
   "margin": 172634.82,
-  "app_warning": "Trade is outside the entry range. Take caution"
+  "app_warning": "Trade is outside the entry range. Take caution",
+  "recommended_on": "2026-08-15",
+  "source": "univest"
 }
 ```
+
+`recommended_on` and `source` are optional. When `recommended_on` is
+provided, the pipeline identifies the recommendation by **(symbol,
+instrument type, action, expiry, reco date)** — so re-pasting the same reco
+from Univest (or any app) on a later day updates the same tracked row
+(refreshing price/score, counting re-analyses) instead of duplicating it.
+Without it, identification falls back to the setup geometry
+(symbol/type/action/entry/target/stoploss), which also merges identical
+re-pastes.
 
 ## What Each Script Does
 
@@ -146,9 +157,9 @@ normalizes it into `current_trade.json`, then runs the pipeline.
 | `1_math_and_rr.py` | Raw & live (slippage-adjusted) R:R, per-lot risk/reward in INR, entry-range violation & inverted-R:R flags |
 | `2_market_data.py` | Yahoo Finance (`yfinance`): 14-day ATR, 50 EMA, trend direction, stop-loss distance vs ATR |
 | `3_historical_audit.py` | SQLite audit: win rate, avg win/loss, net expectancy for symbol + type — **prefers real tracked data, falls back to seeds** |
-| `4_score_calculator.py` | Weighted decision engine: 25 pts R:R, 20 price discipline, 20 technical, 20 historical edge, 15 event safety (real check: days to expiry) — **waiver model**: unevaluable checks score 0 and are labelled, never auto-passed. Also emits the **flip table**: per-check thresholds that would change the decision, conflicts between checks, the best-case entry zone, and the activation price |
-| `5_track_and_resolve.py` | **Learning loop**: resolves open recos vs live prices, records the current reco, reports track-record & missed/avoided stats + **score calibration** (win rate per decision bucket with Wilson CI) |
-| `6_backtest_setup.py` | **Empirical success probability**: replays the current setup — same direction, same R:R, same ATR-relative stop — across 3 years of daily bars using the resolver's trigger rules; reports hit-target-first rate, win rate, and trend-matched vs trend-opposed buckets |
+| `4_score_calculator.py` | Weighted decision engine: 25 pts R:R, 20 price discipline, 20 technical, 20 historical edge, 15 event safety (real check: days to expiry) — **waiver model**: unevaluable checks score 0 and are labelled, never auto-passed. **Empirical mode** (default): when the script-6 backtest is usable, the historical-edge check is scored from the measured win rate gated on its Wilson CI lower bound vs the setup's net-of-costs break-even win rate, and the trend/event-safety checks are waived (their signals are embedded in the backtest). Also emits the **flip table**: per-check thresholds that would change the decision, conflicts between checks, the best-case entry zone, and the activation price |
+| `5_track_and_resolve.py` | **Learning loop**: resolves open recos vs live prices, records the current reco (identified by **stock + instrument + reco date** so re-pasting the same reco on a later day updates the same row), reports track-record & missed/avoided stats + **score calibration** (win rate per decision bucket with Wilson CI) |
+| `6_backtest_setup.py` | **Empirical success probability**: replays the current setup — same direction, same R:R, same ATR-relative stop — across 3 years of daily bars using the resolver's trigger rules; reports hit-target-first rate, win rate **with a Wilson 95% CI**, and trend-matched vs trend-opposed buckets |
 | `watch.py` | **Standing-order monitor**: computes the activation price/zone from `current_trade.json` and polls the live price until the trade triggers (`--loop`) |
 | `seed_history.py` | Bootstraps `univest_history.db` with sample history (only used until real data exists) |
 | `run_analysis.py` | Orchestrates the full blueprint + learning loop and renders `decision_report.md` |
@@ -169,6 +180,20 @@ neither inflate nor penalize the score. Event safety is a real check now:
 sub-3-day expiry **caps the decision at CONDITIONAL GO** (never full size
 into expiry-day whipsaw).
 
+**Empirical mode (statistical gating):** when the similar-setup backtest
+(script 6) succeeds with a large enough sample, the **historical-edge check
+is a measured probability, not a rubric opinion**. The backtest's win rate
+— read from the trend-matched bucket when possible — is gated on its
+**Wilson 95% CI lower bound clearing the setup's net-of-costs break-even
+win rate** `p* = 1/(1 + net_rr)`: CI lower bound > `p*` → 20 pts (edge
+confirmed), win rate > `p*` but CI straddles it → 10 pts (positive but
+unconfirmed), otherwise 0 pts (no edge — the data does not reject the coin
+flip). Because the backtest already conditions on the 50-EMA trend context
+and derives its holding window from days-to-expiry, **trend and event
+safety are waived in empirical mode** (no double counting) — the sub-3-day
+expiry cap still applies. If the backtest fails or its sample is too
+small, the score falls back to the ticker track-record rubric.
+
 ## Decision Support (what raises the chance of success)
 
 Beyond the score, the pipeline answers three questions that matter more than
@@ -183,8 +208,11 @@ distance relative to that day's ATR, enters at the next bar's open (no
 lookahead), and resolves with the exact conservative trigger rules the
 learning loop uses (stop-first on same-bar ambiguity, window-end settlement
 for untriggered candidates). The report shows the hit-target-first rate, the
-win rate including settlement, and the split by trend context — whether the
-reco's own bullish/bearish context historically mattered.
+win rate **with a Wilson 95% CI**, and the split by trend context — whether
+the reco's own bullish/bearish context historically mattered. The report
+also states the setup's **break-even win rate** (net of modeled costs) and
+whether the empirical win rate's CI lower bound clears it — this gating is
+what actually drives the historical-edge score (see *Empirical mode* above).
 
 Caveats the report states out loud: consecutive signal days produce
 **overlapping (correlated)** windows, and the test is of the setup *shape*
@@ -246,6 +274,9 @@ CREATE TABLE trade_recommendations (
     expiry_date TEXT,  -- parsed ISO date, used for expiry settlement
     costs_inr REAL,    -- modeled transaction costs deducted from pnl_inr
     is_seed INTEGER NOT NULL DEFAULT 0, -- 1 = bootstrap data
+    source TEXT,               -- where the reco came from (univest / other)
+    analysis_count INTEGER NOT NULL DEFAULT 1, -- re-pastes of the same reco
+    last_analyzed_on TEXT,     -- most recent re-analysis date
     UNIQUE (symbol, instrument_type, action, entry_price, target, stoploss)
 );
 ```
@@ -257,7 +288,15 @@ Notes:
 * Without `--fresh`, seeding is skipped once bootstrap rows exist, and it
   never touches tracked rows.
 * The unique key means re-analyzing the same setup refreshes its row
-  (live price, score, decision) instead of duplicating it.
+  (live price, score, decision) instead of duplicating it. When the input
+  carries `recommended_on`, the row is first looked up by app identity
+  (stock + instrument + action + expiry + reco date) so a reco re-pasted on
+  a later day is recognised as the **same** recommendation: `analysis_count`
+  increments, `last_analyzed_on` updates, and the report says so. The
+  originally recommended contract (entry/target/stoploss) and reco date are
+  never rewritten on a match, so resolution windows and the track record
+  stay honest; an identical setup always merges into one row regardless of
+  paste date.
 
 ## Notes
 

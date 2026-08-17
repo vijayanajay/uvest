@@ -45,9 +45,9 @@ current_trade.json ──► scripts/1_math_and_rr.py ──► script1_out.json
 | `scripts/1_math_and_rr.py` | Raw + live R:R, per-lot INR risk/reward, entry-range & inverted-R:R flags |
 | `scripts/2_market_data.py` | Live Yahoo Finance data: 14-day ATR, 50 EMA, trend, SL-vs-ATR tightness |
 | `scripts/3_historical_audit.py` | SQLite audit: win rate, avg win/loss, net expectancy — **prefers the real self-tracked record, falls back to seeds** |
-| `scripts/4_score_calculator.py` | Weighted engine: 25 R:R + 20 price discipline + 20 technical + 20 historical edge + 15 event safety. Also emits the **flip table**: per-check thresholds that would change the decision, conflicts between checks, the best-case entry zone, and the activation price |
-| `scripts/5_track_and_resolve.py` | **The learning loop**: resolves open recos against live prices (WIN/LOSS), records the current reco with its score & decision, reports track-record, missed/avoided stats, and **score calibration** (win rate per decision bucket with Wilson CI) |
-| `scripts/6_backtest_setup.py` | **Similar-setup backtest**: replays the current setup (same R:R + ATR-relative stop) across history with the resolver's trigger rules; reports the empirical hit-target-first rate, win rate, and trend-matched vs trend-opposed buckets |
+| `scripts/4_score_calculator.py` | Weighted engine: 25 R:R + 20 price discipline + 20 technical + 20 historical edge + 15 event safety. **Empirical mode** (default): the historical-edge check is scored from the script-6 win rate gated on its CI lower bound vs break-even; trend/event-safety waived. Also emits the **flip table**: per-check thresholds that would change the decision, conflicts between checks, the best-case entry zone, and the activation price |
+| `scripts/5_track_and_resolve.py` | **The learning loop**: resolves open recos against live prices (WIN/LOSS), records the current reco (identified by stock + instrument + reco date so re-pastes update the same row), reports track-record, missed/avoided stats, **reco identity**, and **score calibration** (win rate per decision bucket with Wilson CI) |
+| `scripts/6_backtest_setup.py` | **Similar-setup backtest**: replays the current setup (same R:R + ATR-relative stop) across history with the resolver's trigger rules; reports the empirical hit-target-first rate, win rate **with a Wilson 95% CI**, and trend-matched vs trend-opposed buckets |
 | `scripts/watch.py` | **Standing-order monitor**: computes the activation price/zone from `current_trade.json` and polls the live price until the trade triggers (`--loop`) |
 | `scripts/seed_history.py` | Bootstraps `univest_history.db` with sample history (used only until real data exists) |
 | `scripts/run_analysis.py` | Orchestrates the whole blueprint + learning loop and renders the report |
@@ -74,9 +74,9 @@ you would have made or saved on the calls you skipped.
 | Risk:Reward | 25 | ≥ 1.5 → 25; 1.0–1.5 → 10; < 1.0 → 0 (inverted) |
 | Price discipline | 20 | Live price inside Univest range → 20, else 0 |
 | Volatility | 10 | SL ≥ 1.0 × daily ATR → 10, else 0 |
-| Trend | 10 | Above 50 EMA → 10, else 0 |
-| Historical edge | 20 | Positive expectancy → 20; **no data → 0 (waived)**; negative → 0 |
-| Event safety | 15 | ≥ 5 days to expiry → 15; 3–4 → 10; < 3 → 0 (and **caps decision at CONDITIONAL GO**); no/unparsable expiry → 0 (waived) |
+| Trend | 10 | Above 50 EMA → 10, else 0 — **waived in empirical mode** (embedded in the backtest's trend-matched bucket) |
+| Historical edge | 20 | **Empirical mode (script 6 available, n ≥ 30):** CI lower bound > break-even win rate (net of costs) → 20; win rate > break-even but CI straddles → 10; else 0. Fallback (no backtest): ticker expectancy → 20; **no data → 0 (waived)**; negative → 0 |
+| Event safety | 15 | ≥ 5 days to expiry → 15; 3–4 → 10; < 3 → 0 (and **caps decision at CONDITIONAL GO**); no/unparsable expiry → 0 (waived) — **waived in empirical mode** (the backtest's holding window derives from days-to-expiry; the < 3-day cap still applies) |
 
 **Waiver model (no free points):** any component that cannot be evaluated
 — market data offline, no track record for the ticker, no expiry — earns
@@ -84,6 +84,17 @@ you would have made or saved on the calls you skipped.
 are never penalized. Decision bands apply to the **share of available
 points** (`effective_score`), not a flat total: ≥ 80% → GO, 65–79% →
 CONDITIONAL GO, < 65% → NO-GO.
+
+**Empirical mode (statistical gating):** when script 6's backtest succeeds
+with n ≥ 30, the historical-edge check is a **measured probability** — the
+setup-shape win rate (trend-matched bucket if usable), gated on its
+**Wilson 95% CI lower bound clearing the net-of-costs break-even win rate**
+`p* = 1/(1 + net_rr)`. Trend and event-safety are waived in this mode
+because the backtest already conditions on those signals (no double
+counting); the sub-3-day expiry cap still applies. If the backtest is
+unavailable or too small, fall back to the ticker-track-record rubric
+above. Report the gating explicitly: win rate, CI, break-even, and whether
+the edge is confirmed.
 
 | Effective score | Decision |
 | :--- | :--- |
@@ -153,6 +164,8 @@ must pull back to ≤ ₹1,995.00 for the range check to pass").
 
 ```
 # 🛡️ TRADE VALIDATION REPORT: SYMBOL EXPIRY TYPE
+
+*🪪 Reco identity: SYMBOL TYPE ACTION · source: univest · reco dated YYYY-MM-DD · analyzed N× (last …) — same reco re-pasted on a later day / first time this reco is analyzed* (only when script 5 tracked it)
 
 ### **FINAL CONFIDENCE SCORE: NN / 100**  (or NN / available with waivers, plus effective %)
 ### **DECISION: 🟢/🟡/🔴 DECISION TEXT**
@@ -252,7 +265,19 @@ never silently drop a check.
   certainty — windows overlap (correlated samples), and it tests the setup
   *shape*, not the price level. Never quote the backtest win rate as a
   promise. If script 6 fails (network), say the backtest is unavailable and
-  continue — the score stands alone.
+  continue — the score falls back to the ticker-track-record rubric.
+- **Empirical gating:** when the backtest drives the historical-edge check,
+  quote the win rate, its 95% CI, the break-even win rate (net of costs),
+  and the verdict (confirmed / positive-but-unconfirmed / no edge). A setup
+  whose win rate is above break-even but whose CI lower bound is not is NOT
+  a confirmed edge — say so plainly. Trend and event-safety are waived in
+  this mode; never report them as failing checks.
+- **Reco identity:** if the input carries `recommended_on`, the tracked row
+  is keyed by stock + instrument + action + expiry + reco date. When script
+  5 reports the reco was re-analyzed (`is_repeat`), say the same reco was
+  pasted on a later day and that price/score were refreshed while the
+  original reco date and contract were preserved — do not treat it as a new
+  trade.
 - **Standing-order trigger:** every rejected trade whose price-dependent
   checks are fixable gets an activation zone. Point the user to
   `python scripts/watch.py [--loop]` to monitor the live price, and tell
@@ -286,9 +311,19 @@ Use this shape when writing `current_trade.json`:
   "stoploss": 1939.00,
   "lot_size": 475,
   "margin": 172634.82,
-  "app_warning": "Trade is outside the entry range. Take caution"
+  "app_warning": "Trade is outside the entry range. Take caution",
+  "recommended_on": "2026-08-15",
+  "source": "univest"
 }
 ```
+
+`recommended_on` and `source` are optional. When `recommended_on` is set,
+the reco is identified by **(symbol, instrument type, action, expiry, reco
+date)** — re-pasting the same reco from Univest or any other app on a later
+day updates the same tracked row (refreshing price/score and counting
+re-analyses) instead of duplicating it. Without it, identification falls
+back to the setup geometry. Surface the identity in the report (see
+*Reco identity* in the template) whenever script 5 provides it.
 
 Raw paste accepted as-is (Univest format):
 
