@@ -307,3 +307,59 @@ Notes:
 * `prompt.md` is the ready-to-paste master prompt that drives the entire
   workflow — including the learning loop — in any agentic IDE
   (Antigravity / Cursor / Windsurf / VS Code).
+
+---
+
+## 📡 Daily Screener (`screen_*` — a separate, non-intrusive family)
+
+A second toolset that screens the ~150 most liquid NSE stocks every day
+for **2–4% hit candidates**, using the same statistical principles as the
+pipeline (ATR-based stops, similar-setup backtest, Wilson-CI gating
+against the net-of-costs break-even win rate). It deliberately never
+touches `prompt.md`, `BRD.md`, `current_trade.json`, `script*_out.json`,
+`decision_report.md` or `univest_history.db` — it has its own namespace,
+its own DB and its own prompt (`prompt_daily.md`).
+
+```
+screen_universe.py  ──► screen_universe_out.json   (NSE archive CSVs, vendored fallback)
+screen_stats.py     ──► screen_stats_out.json      (per-stock backtest @ 1W/2W/4W × 2/3/4%)
+screen_rank.py      ──► screen_rank_out.json       (filter + rank + horizon summary)
+run_screen.py       ──► screen_report.md           (orchestrator + report)
+prompt_daily.md         daily sentiment overlay → screen_picks.json
+screen_record.py    ──► screen_history.db          (auto-recorder + learning loop)
+```
+
+### Daily routine
+
+```bash
+# One paste: prompt_daily.md drives the whole routine in the agent —
+# run_screen.py (morning screen) -> sentiment scoring of the top 20 ->
+# screen_picks.json -> screen_record.py --record (record + resolve + learn)
+python scripts/screen_record.py --record       # ...or run the pieces by hand:
+python scripts/run_screen.py --top 20          #    1. morning screen → screen_report.md
+#    2. paste prompt_daily.md into the agent (it runs everything itself)
+```
+
+Defaults (measured, see the report's summary): ranking cell **2 weeks ×
+4% target**, stop **1.5×ATR(14)**; 4-week × 4% as the secondary cell;
+2% targets are excluded from ranking (structurally inverted R:R).
+
+### What it knows and says out loud
+
+* The ranked list is a **filter, not an alpha claim**: per-stock
+  backtested hit rates have ~zero out-of-sample persistence (measured
+  corr ≈ 0), so the sentiment overlay is the discriminator — and
+  `screen_record.py` resolves the **entire top list** every day, making
+  the non-picked rows a free control group that audits whether the
+  sentiment picks actually beat the stats-only baseline.
+* The recorder re-takes the horizon call live: predicted vs realized win
+  rate per (horizon × target) with Wilson CIs, verdict accuracy, and the
+  sentiment audit — after enough resolved picks it will say plainly if
+  the news layer is subtracting value.
+* Every run also writes the **standing learning journal**
+  (`screen_learning.md`): compact one-liners by default, with detail
+  blocks only for ⚠ outliers — picks that contradicted a strong
+  prediction (EDGE CONFIRMED lost / NO EDGE won) or moved wildly past
+  their own target/stop geometry (|P&L| ≥ 5%).
+* Everything is net of modeled transaction costs; bars are cached in
+  `data_cache/` so the morning run is fast after the first download.
