@@ -17,7 +17,9 @@ honest tri-state verdict so the daily prompt never confuses a high hit
 rate with a positive edge.
 
 Output contract (screen_rank_out.json):
-    generated_on, params, summary, top: [rows with full cells matrix]
+    generated_on, params, summary, return_pool (pooled forward-return range
+    over EDGE CONFIRMED BUY names), top: [rows with full cells matrix and
+    the per-horizon forward-return distribution]
 
 Usage:
     python scripts/screen_rank.py --stats screen_stats_out.json
@@ -84,6 +86,54 @@ def summarize(symbols: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]
     return cells
 
 
+def return_pool(symbols: dict[str, Any], horizon: int, hit: float) -> dict[str, Any]:
+    """Pooled forward-return range over the "solid possibility of a rise" set.
+
+    A stock qualifies when it is BUY-direction and its ranking cell is
+    EDGE CONFIRMED (the same gate the daily prompt picks under). Per stock
+    the full 1W/2W/4W return distribution is listed; the pooled line uses
+    exact weighted means / weighted % positive (pooled quantiles would need
+    the raw samples, which are not persisted — per-stock quantiles are in
+    `stocks[].returns`).
+    """
+    key = f"{horizon}:{hit:.1f}"
+    stocks: list[dict[str, Any]] = []
+    for sym, st in symbols.items():
+        if st.get("direction") != "BUY":
+            continue
+        cell = st.get("cells", {}).get(key)
+        if not cell or cell.get("verdict") != "EDGE CONFIRMED":
+            continue
+        rets = st.get("returns") or {}
+        if not rets:
+            continue
+        stocks.append({
+            "symbol": sym,
+            "close": st["close"],
+            "stop_pct": st["stop_pct"],
+            "returns": rets,
+        })
+    horizons: dict[str, Any] = {}
+    for hz in ("5", "10", "20"):
+        n_w = 0
+        wsum = 0.0
+        wpos = 0.0
+        for s in stocks:
+            r = s["returns"].get(hz)
+            if r and r.get("n"):
+                n_w += r["n"]
+                wsum += r["mean"] * r["n"]
+                wpos += r["pct_positive"] * r["n"]
+        if n_w:
+            horizons[hz] = {
+                "n_windows": n_w,
+                "n_stocks": len(stocks),
+                "mean": round(wsum / n_w, 2),
+                "pct_positive": round(wpos / n_w, 1),
+            }
+    return {"qualifying_stocks": len(stocks), "horizons": horizons, "stocks": stocks}
+
+
 def build_rows(symbols: dict[str, Any], horizon: int, hit: float, min_n: int,
                long_only: bool) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
@@ -116,6 +166,7 @@ def build_rows(symbols: dict[str, Any], horizon: int, hit: float, min_n: int,
             "risk": risk_tier(st["stop_pct"]),
             "n": cell["n"],
             "flags": flags,
+            "returns": st.get("returns"),
             "cells": st["cells"],
         })
     return rows
@@ -166,6 +217,7 @@ def main() -> int:
             "cost_rate": stats.get("params", {}).get("cost_rate"),
         },
         "summary": summary,
+        "return_pool": return_pool(symbols, args.horizon, args.hit),
         "note": (
             "Ranking is a filter, not an alpha claim: per-stock hit rates have ~zero "
             "out-of-sample persistence. Use this list to select candidates for the "

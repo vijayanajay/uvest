@@ -322,11 +322,14 @@ its own DB and its own prompt (`prompt_daily.md`).
 
 ```
 screen_universe.py  ──► screen_universe_out.json   (NSE archive CSVs, vendored fallback)
-screen_stats.py     ──► screen_stats_out.json      (per-stock backtest @ 1W/2W/4W × 2/3/4%)
-screen_rank.py      ──► screen_rank_out.json       (filter + rank + horizon summary)
-run_screen.py       ──► screen_report.md           (orchestrator + report)
-prompt_daily.md         daily sentiment overlay → screen_picks.json
-screen_record.py    ──► screen_history.db          (auto-recorder + learning loop)
+screen_regime.py    ──► screen_regime_out.json     (NIFTY 200-DMA trend, VIX, breadth gate)
+screen_stats.py     ──► screen_stats_out.json      (per-stock backtest @ 1W/2W/4W × 2/3/4%
+                                                     + forward-return ranges + NIFTY-regime split)
+screen_rank.py      ──► screen_rank_out.json       (filter + rank + horizon summary
+                                                     + pooled confirmed-edge return range)
+run_screen.py       ──► screen_report.md           (orchestrator + report, regime header)
+prompt_daily.md         daily sentiment + regime + capital overlay → screen_picks.json
+screen_record.py    ──► screen_history.db          (auto-recorder + 5L sizing + learning loop)
 ```
 
 ### Daily routine
@@ -346,12 +349,35 @@ Defaults (measured, see the report's summary): ranking cell **2 weeks ×
 
 ### What it knows and says out loud
 
+* **Market regime as a gate**: `screen_regime.py` fetches NIFTY 50 and
+  India VIX, combines them with the screen's own breadth (share of the
+  universe above its 50-EMA — computed for free from the stats pass) and
+  labels the day RISK-ON / CAUTIOUS / RISK-OFF. `prompt_daily.md` gates
+  on it: max 1 pick (prefer 0) in RISK-OFF, max 2 with halved size in
+  CAUTIOUS. The same NIFTY data conditions every stock's backtest — each
+  cell reports its hit rate split by whether NIFTY was above/below its
+  200-DMA on the signal day, so regime-dependent edges are visible before
+  you trust them.
+* **Range of returns, not just hit rates**: every stock reports the
+  forward-return *distribution* over 1W/2W/4W (median, IQR, P10/P90, %
+  positive — the raw buy-and-hold move of every similar historical
+  window, net of costs), and the report pools it across the EDGE
+  CONFIRMED BUY names. The P10 is the drawdown you size for; the prompt
+  must state it per pick.
 * The ranked list is a **filter, not an alpha claim**: per-stock
   backtested hit rates have ~zero out-of-sample persistence (measured
   corr ≈ 0), so the sentiment overlay is the discriminator — and
   `screen_record.py` resolves the **entire top list** every day, making
   the non-picked rows a free control group that audits whether the
   sentiment picks actually beat the stats-only baseline.
+* **5L capital layer**: `screen_record.py` sizes every pick on a
+  ₹5,00,000 base (configurable in `scripts/common.py`) — risk-first
+  quantity = max(1% risk qty, 30%-of-capital floor qty), so a pick never
+  deploys less than ₹1.5L. It records qty / notional / risk ₹ / deployment
+  % per pick, converts resolved P&L to ₹, and the journal tracks
+  **capital return on 5L** plus **range calibration** (did realized P&L
+  land inside the predicted P10–P90 band?). Portfolio caps: ≤ 100%
+  deployed, ≤ ~1.5% risk per pick, ≤ 2 same-sector picks.
 * The recorder re-takes the horizon call live: predicted vs realized win
   rate per (horizon × target) with Wilson CIs, verdict accuracy, and the
   sentiment audit — after enough resolved picks it will say plainly if

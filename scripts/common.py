@@ -174,6 +174,40 @@ COST_RATE_FUT = 0.0009   # ~0.09% of notional, round-trip
 COST_RATE_OPT = 0.0025   # ~0.25% of notional, round-trip
 
 
+# ---- Capital / position-sizing model (daily screen) -------------------------
+# The screen plans trade size for a fixed capital base. Sizing is risk-first:
+# target risk per pick is RISK_PER_TRADE_PCT of capital, but a pick must deploy
+# at least MIN_DEPLOYMENT_PCT of capital (the user's floor) so positions are
+# meaningful. MAX_RISK_PCT is a soft cap — when the 30% floor would push a pick
+# past it (very wide stops), the recorder sizes to the floor anyway and warns.
+
+CAPITAL_INR = 500_000            # hard capital base — 5L
+RISK_PER_TRADE_PCT = 0.01        # target risk per pick: 1% = ₹5,000
+MIN_DEPLOYMENT_PCT = 0.30        # floor: never deploy less than 30% = ₹1,50,000
+MAX_RISK_PCT = 0.015             # soft per-pick risk cap: 1.5% = ₹7,500
+MAX_TOTAL_DEPLOYMENT_PCT = 1.0   # portfolio cap: total deployed <= 100% of capital
+
+
+def percentile_sorted(sorted_values: list[float], p: float) -> float:
+    """Linear-interpolated percentile of an already-sorted list (0..100).
+
+    Matches numpy's default for a sequence: position = (n-1)*p/100,
+    interpolating between neighbours. Used for forward-return distributions
+    (median, IQR, P10/P90) without pulling numpy into the hot path.
+    """
+    n = len(sorted_values)
+    if n == 0:
+        return 0.0
+    if n == 1:
+        return float(sorted_values[0])
+    pos = (n - 1) * p / 100.0
+    lo = int(pos)
+    frac = pos - lo
+    if lo + 1 >= n:
+        return float(sorted_values[-1])
+    return float(sorted_values[lo] + frac * (sorted_values[lo + 1] - sorted_values[lo]))
+
+
 def estimate_costs(entry_price: float, lot_size: float, instrument_type: str | None) -> float:
     """Model transaction costs for one trade, in INR."""
     if not lot_size or lot_size <= 0:

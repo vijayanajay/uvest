@@ -40,10 +40,11 @@ Pick like your picks are being audited, because they are.
 
 ```
 STEP 0  Run the screen            python scripts/run_screen.py --top 20
-STEP 1  Read the report + last night's learning
+        (also fetches NIFTY/VIX → screen_regime_out.json + regime header)
+STEP 1  Read the report + last night's learning + the regime
 STEP 2  Sentiment-score each of the top 20 (dated evidence only)
-STEP 3  Apply the discipline rules, pick 1–3
-STEP 4  Write screen_picks.json (exact schema below)
+STEP 3  Apply the discipline + regime + capital rules, pick 1–3
+STEP 4  Write screen_picks.json (exact schema below, incl. return_range)
 STEP 5  Record + resolve          python scripts/screen_record.py --record
 STEP 6  Deliver the Daily Pick Report (template below)
 ```
@@ -61,24 +62,32 @@ python scripts/run_screen.py --top 20
 ```
 
 This runs, in order, `screen_universe.py` (NSE universe, vendored
-fallback), `screen_stats.py` (per-stock backtest at 1W/2W/4W × 2/3/4%),
-`screen_rank.py` (filter + rank + horizon summary), and writes
-`screen_report.md`. First run downloads ~2 years of daily bars (a few
-minutes); later runs reuse `data_cache/` and are fast.
+fallback), `screen_regime.py` (NIFTY 200-DMA trend + VIX + breadth gate),
+`screen_stats.py` (per-stock backtest at 1W/2W/4W × 2/3/4% with
+forward-return ranges and the NIFTY-regime split), `screen_rank.py`
+(filter + rank + horizon summary + pooled confirmed-edge return range),
+and writes `screen_report.md` (with the regime header). First run
+downloads ~2 years of daily bars (a few minutes); later runs reuse
+`data_cache/` and are fast.
 
 If the screen errors or scans far fewer stocks than the universe size,
 say so explicitly and continue if possible — never fabricate the list.
 
 ---
 
-## 4. STEP 1 — READ THE REPORT AND LAST NIGHT'S LEARNING
+## 4. STEP 1 — READ THE REPORT, THE REGIME, AND LAST NIGHT'S LEARNING
 
-Read `screen_report.md` and the standing learning document plus the
-recorder's last output:
+Read `screen_report.md`, the regime payload, and the standing learning
+document plus the recorder's last output:
 
-* `screen_report.md` — the top-20 table (P(hit), win %, Wilson CI,
-  expectancy, verdict, risk, flags), the "does any horizon work" summary,
-  and the hit matrix.
+* `screen_report.md` — the **market-regime header** (RISK-ON / CAUTIOUS /
+  RISK-OFF), the top-20 table (P(hit), win %, Wilson CI, expectancy,
+  verdict, risk, flags), the "does any horizon work" summary, the hit
+  matrix, the **range-of-returns table for EDGE CONFIRMED BUY names**
+  (1W/2W/4W median, IQR, P10/P90 — the drawdown you must size for), and
+  the **regime-conditioned P(hit)** split (bull vs bear tape).
+* `screen_regime_out.json` — machine-readable regime: NIFTY trend (BULL /
+  RANGE / BEAR vs 200-DMA), VIX level, breadth % and the overall label.
 * `screen_learning.md` — the **standing learning journal** (updated every
   `screen_record.py` run): track record, calibration per cell, verdict
   accuracy, the sentiment audit, recent resolutions, and ⚠ outlier blocks
@@ -124,7 +133,9 @@ and they cut both ways — volatility into results is risk, not edge.
 
 ---
 
-## 6. STEP 3 — DISCIPLINE RULES (hold the line)
+## 6. STEP 3 — DISCIPLINE + REGIME + CAPITAL RULES (hold the line)
+
+**Stats floor (unchanged):**
 
 * **Never pick a NO EDGE stock**, whatever the news. The stats verdict is
   the floor; sentiment only selects *within* EDGE CONFIRMED / POSITIVE
@@ -135,8 +146,44 @@ and they cut both ways — volatility into results is risk, not edge.
 * Bias toward BUY rows unless you can actually short the SELL row (F&O
   list) — otherwise skip it.
 * If fewer than 1–3 picks survive the rules, **pick fewer**. One honest
-  pick beats three vibes picks.
-* You may pick 0 if nothing survives — say so plainly.
+  pick beats three vibes picks. You may pick 0 if nothing survives — say
+  so plainly.
+
+**Regime gate (from `screen_regime_out.json` / the report header):**
+
+* **RISK-OFF** (NIFTY below its 200-DMA, or breadth < 40%, or VIX HIGH):
+  **max 1 pick, prefer 0**, only EDGE CONFIRMED with LOW/MEDIUM risk, and
+  only if its **regime-conditioned P(hit)** holds up in the bear column —
+  never a regime-dependent name whose edge dies when the tape is down.
+* **CAUTIOUS** (NIFTY in RANGE, or breadth 40–50%): max 2 picks, no
+  HIGH-risk rows. (Per-pick size stays ≥ the 30% floor — the regime lever
+  is pick count, because with 3–5% stops the floor already sets the risk.)
+* **RISK-ON** (BULL + breadth ≥ 50% + VIX ≤ 20): normal rules, up to 3
+  picks.
+* **UNKNOWN** (no NIFTY/VIX data): neutral rules, but say so in the
+  report.
+
+**Capital rules (CAPITAL = ₹5,00,000):**
+
+* **Each pick deploys at least 30% of capital (₹1,50,000) — never less.**
+  The recorder sizes every pick mechanically (risk-first qty = max(1%
+  risk qty, 30% floor qty)); you do not invent a quantity.
+* **Max 3 picks**, and the sum of deployments must stay ≤ 100% of capital
+  — if three 30% floors sum past that with wide stops, drop to 2 picks.
+* **Total stop-loss exposure across picks ≤ ~4.5% of capital** (≈1.5% per
+  pick at 3 picks); if a pick's stop is so wide that 30% deployment would
+  risk > 1.5% of capital, flag it and prefer a narrower-stop name.
+* **Max 2 picks in the same sector** (correlation proxy).
+* Size is a *plan*, not a promise — the recorder prints the execution
+  plan (qty, notional, risk ₹, deployment %) after you record; sanity-
+  check it in STEP 6 against the capital rules above.
+
+**Return-range rule (new):** for every pick, read its **1W/2W/4W forward-
+return range** from the report's range-of-returns table (median, IQR,
+P10/P90). The P10 is the drawdown you are implicitly accepting: never
+pick a name whose P10 at your horizon is worse than −1.5 × your stop %
+unless the dated catalyst is exceptional. State the range in the pick's
+`return_range` (schema below).
 
 ---
 
@@ -153,7 +200,16 @@ and they cut both ways — volatility into results is risk, not edge.
       "hit_pct": 4.0,
       "sentiment_score": 1,
       "sentiment_verdict": "POSITIVE (Q1 beat + raised FY guidance, dated 2026-08-10; order-book commentary strong)",
-      "thesis": "One line: what happens in the next 2 weeks that makes the 4% target hit before the 1.5xATR stop."
+      "thesis": "One line: what happens in the next 2 weeks that makes the 4% target hit before the 1.5xATR stop.",
+      "return_range": {
+        "horizon": "2W",
+        "median": 2.4,
+        "p25": -0.9,
+        "p75": 5.6,
+        "p10": -4.1,
+        "p90": 8.9,
+        "pct_positive": 63.0
+      }
     }
   ]
 }
@@ -161,8 +217,10 @@ and they cut both ways — volatility into results is risk, not edge.
 
 `direction`, `horizon_bars`, `hit_pct` must match the ranking row you are
 picking (the recorder derives entry/stop/target from the screen's close
-and ATR — do not invent prices). If a pick is not in the top list, the
-recorder will warn — don't do it.
+and ATR — do not invent prices). `return_range` must come from the
+report's range-of-returns table for that symbol at the pick's horizon —
+copy the numbers, never estimate them. If a pick is not in the top list,
+the recorder will warn — don't do it.
 
 ---
 
@@ -176,11 +234,17 @@ Read its JSON output. It:
 
 * **resolves** every open pick from earlier days against live bars
   (target-first WIN / stop-first LOSS, conservative same-bar rule,
-  horizon-end settlement for untouched picks, P&L net of modeled costs),
+  horizon-end settlement for untouched picks, P&L net of modeled costs,
+  with ₹ P&L when the pick was sized),
 * **records** today's top list, marking your picks (`is_pick=1`) with
-  their sentiment score, verdict and thesis,
+  their sentiment score, verdict, thesis and predicted return range,
+* **sizes each pick on ₹5,00,000** (risk-first qty = max(1% risk qty,
+  30% floor qty)) and prints the execution plan: qty, notional, risk ₹,
+  % of capital deployed, plus portfolio warnings (total deployment > 100%,
+  combined stop exposure) — copy these numbers into your report verbatim,
 * prints the **learning report**: calibration per (horizon, target),
-  verdict accuracy, and the sentiment-vs-stats audit.
+  range calibration (realized vs predicted P10–P90), verdict accuracy,
+  and the sentiment-vs-stats audit.
 
 Surface the resolved-this-run section in your report — that is the
 "what worked and what didn't" historical learning, and it feeds back into
@@ -193,23 +257,39 @@ tomorrow's selection.
 ```
 # 📰 DAILY PICK REPORT — YYYY-MM-DD
 
+## 🌡️ Market regime
+- RISK-ON / CAUTIOUS / RISK-OFF · NIFTY trend · VIX · breadth % — and one
+  line on what the gate did to today's selection (e.g. "RISK-OFF: capped
+  at 1 pick").
+
 ## ✅ Resolved from earlier picks (what worked / didn't)
-- Symbol → WIN/LOSS (+/-X.XX% net) ... (each row resolved this run)
+- Symbol → WIN/LOSS (+/-X.XX% net, +/-₹) ... (each row resolved this run)
+- Capital headline: realized ₹ P&L and capital return % on ₹5,00,000 from
+  the learning journal.
+- Range calibration: did realized returns land inside the predicted
+  P10–P90 band? (if the journal has resolutions)
 - Calibration: per cell, predicted vs realized win rate (n, CI) — is the
   screen's P(hit) honest?
 - Sentiment audit: picks vs the stats-only control group (n, win rate,
   CI) — did the news overlay add value? State it plainly.
 
 ## 🎯 Today's picks (1–3)
-| Symbol | Dir | Score | Dated catalyst / event flag | Stats verdict it rides | Thesis |
+| Symbol | Dir | Score | Dated catalyst / event flag | Stats verdict it rides | 2W return range (med, IQR, P10) | Thesis |
 ...
 
+## 💰 Execution plan (from screen_record.py --record output — do not invent)
+| Symbol | Entry | Stop% | Qty | Notional ₹ | Risk ₹ | % of 5L deployed |
+...
+- Total deployed / total at risk — flag if either breaks the capital rules
+  (≥30% per pick, ≤100% total, ≤1.5% risk per pick).
+
 ## 🔎 Skips worth watching (top-20 rows you did NOT pick + why)
-- Symbol — NO EDGE / event too close / can't short / better candidates
+- Symbol — NO EDGE / event too close / can't short / regime-dependent
+  edge / better candidates
 
 ## 📝 3-line summary
-- The picks, the strongest dated catalyst among them, and what last
-  night's sentiment audit said (if any).
+- The picks, the strongest dated catalyst among them, what last night's
+  sentiment audit said (if any), and the regime you traded under.
 ```
 
 Render with ₹ formatting where prices appear. If a component was skipped

@@ -19,6 +19,15 @@ imported so the existing pipeline stays untouched):
 Each cell (horizon, hit) reports: n, target-first rate, win rate with a
 Wilson 95% CI, net expectancy, and the "did the market move hit% either
 way" rate — the honesty stat that separates volatility from direction.
+When the regime cache exists (data_cache/NIFTY50.csv, written by
+screen_regime.py), each cell also splits its outcomes by whether NIFTY
+closed above its 200-DMA on the signal day (`regime.bull` / `regime.bear`)
+so the daily prompt can see whether an edge holds in both tapes.
+
+Per stock the payload also carries `returns`: the forward-return
+*distribution* (median, IQR, P10/P90, % positive, best/worst, net of
+costs) for every trend-matched window at 1W/2W/4W — the raw buy-and-hold
+range of returns, separate from the managed stop/target geometry.
 
 The setup's R:R and break-even win rate p* = 1/(1 + net_rr) are derived
 from the stock's CURRENT ATR%, and each cell gets the same tri-state
@@ -45,12 +54,13 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import COST_RATE_FUT, PROJECT_ROOT, emit_json, load_json, wilson_ci  # noqa: E402
+from common import COST_RATE_FUT, PROJECT_ROOT, emit_json, load_json, percentile_sorted, wilson_ci  # noqa: E402
 
 HISTORY_BARS = 50          # bars needed before the EMA(50) is meaningful (matches script 6)
 HORIZONS = [5, 10, 20]     # 1W / 2W / 4W in trading bars
 HIT_LEVELS = [0.02, 0.03, 0.04]
 CACHE_DIR = PROJECT_ROOT / "data_cache"
+NIFTY_CACHE = CACHE_DIR / "NIFTY50.csv"   # written by screen_regime.py each morning
 
 
 # ---- bars: cache + batched download ---------------------------------------
@@ -105,6 +115,33 @@ def download_bars(symbols: list[str], period: str) -> dict[str, Any]:
     return got
 
 
+# ---- market regime conditioning (NIFTY 50 close vs 200-DMA) -----------------
+def load_nifty_regime_state() -> dict | None:
+    """NIFTY close-vs-200DMA state per date from the regime cache.
+
+    Returns {date: True/False} — True when NIFTY closed above its 200-DMA
+    (bull tape that day) — or None when the cache is missing. The cache is
+    written by scripts/screen_regime.py each morning; without it the
+    per-cell regime split is simply skipped (never fatal).
+    """
+    if not NIFTY_CACHE.exists():
+        return None
+    import pandas as pd
+
+    try:
+        df = pd.read_csv(NIFTY_CACHE, parse_dates=["Date"], index_col="Date")
+        close = df["Close"]
+        dma200 = close.rolling(200).mean()
+        state: dict = {}
+        for ts, c in close.items():
+            m = dma200.loc[ts]
+            if m == m:  # 200-DMA needs 200 bars of history; skip NaNs
+                state[ts.date()] = bool(c > m)
+        return state or None
+    except Exception:
+        return None
+
+
 # ---- indicators (same definitions as script 2 / script 6) ------------------
 def indicators(df):
     import pandas as pd
@@ -120,13 +157,26 @@ def indicators(df):
 
 
 # ---- the replay -------------------------------------------------------------
-def replay_stock(symbol: str, df, k: float) -> dict[str, Any] | None:
-    """Backtest the 2-4% hit shape for one stock. Returns the stats payload."""
+def replay_stock(symbol: str, df, k: float, nifty_state: dict | None = None) -> dict[str, Any] | None:
+    """Backtest the 2-4% hit shape for one stock. Returns the stats payload.
+
+    Besides the per-cell hit/miss stats it now also reports:
+
+    * forward-return distributions per horizon (`returns`): the raw
+      buy-and-hold net return of every trend-matched window (entry at next
+      open, exit at horizon close, net of costs) — the honest "what range of
+      returns over 1/2/4 weeks" answer, separate from the managed
+      stop/target geometry;
+    * per-cell regime split (`cells[...].regime`): the same outcomes bucketed
+      by whether NIFTY closed above its 200-DMA on the signal day — does the
+      edge hold in both tapes?
+    """
     atr_s, ema_s = indicators(df)
     opens = df["Open"].tolist()
     highs = df["High"].tolist()
     lows = df["Low"].tolist()
     closes = df["Close"].tolist()
+    dates = list(df.index)
     n = len(df)
     if n < HISTORY_BARS + HORIZONS[-1] + 1:
         return None
@@ -142,10 +192,14 @@ def replay_stock(symbol: str, df, k: float) -> dict[str, Any] | None:
     direction = "BUY" if bullish else "SELL"
 
     cells: dict[str, dict[str, Any]] = {}
+    fwd_by_hz: dict[int, list[float]] = {hz: [] for hz in HORIZONS}
     for hz in HORIZONS:
         # Single pass per signal day per horizon; all hit levels resolved
         # from the same window scan (stop/target prices differ only by hit).
         agg: dict[float, list[tuple[bool, bool, float, bool]]] = {h: [] for h in HIT_LEVELS}
+        regime_agg: dict[float, dict[str, list]] = {
+            h: {"bull": [], "bear": []} for h in HIT_LEVELS
+        }
         for d in range(HISTORY_BARS - 1, n - hz):
             atr_d = atr_s.iloc[d]
             if not atr_d or atr_d <= 0:
@@ -188,6 +242,18 @@ def replay_stock(symbol: str, df, k: float) -> dict[str, Any] | None:
                             tgt_bar[h] = j
 
             final_close = float(closes[d + hz])
+            # Raw forward return of the window (market's move, not the
+            # managed outcome) — the basis of the 1/2/4-week return range.
+            fwd = ((final_close - entry) / entry if direction == "BUY"
+                   else (entry - final_close) / entry) - COST_RATE_FUT
+            fwd_by_hz[hz].append(fwd)
+
+            regime_key = None
+            if nifty_state is not None:
+                st = nifty_state.get(dates[d].date())
+                if st is not None:
+                    regime_key = "bull" if st else "bear"
+
             for h in HIT_LEVELS:
                 if tgt_bar[h] is not None and (stop_bar is None or tgt_bar[h] < stop_bar):
                     outcome, triggered, final = True, True, tgt[h]
@@ -197,7 +263,10 @@ def replay_stock(symbol: str, df, k: float) -> dict[str, Any] | None:
                     outcome, triggered, final = final_close > entry, False, final_close
                 gross = (final - entry) / entry if direction == "BUY" else (entry - final) / entry
                 moved = (hi_max >= entry * (1 + h)) or (lo_min <= entry * (1 - h))
-                agg[h].append((outcome, triggered, gross - COST_RATE_FUT, moved))
+                rec = (outcome, triggered, gross - COST_RATE_FUT, moved)
+                agg[h].append(rec)
+                if regime_key is not None:
+                    regime_agg[h][regime_key].append(rec)
 
         for h in HIT_LEVELS:
             recs = agg[h]
@@ -216,7 +285,7 @@ def replay_stock(symbol: str, df, k: float) -> dict[str, Any] | None:
                 verdict = "POSITIVE BUT UNCONFIRMED"
             else:
                 verdict = "NO EDGE"
-            cells[f"{hz}:{h * 100:.1f}"] = {
+            cell: dict[str, Any] = {
                 "n": nn,
                 "target_first": tf,
                 "stop_first": sum(1 for r in recs if r[1] and not r[0]),
@@ -232,6 +301,41 @@ def replay_stock(symbol: str, df, k: float) -> dict[str, Any] | None:
                 "p_star": round(p_star * 100, 1),
                 "verdict": verdict,
             }
+            regime_stats: dict[str, Any] = {}
+            for bucket in ("bull", "bear"):
+                rrecs = regime_agg[h][bucket]
+                rn = len(rrecs)
+                if rn == 0:
+                    continue
+                rwins = sum(1 for r in rrecs if r[0])
+                regime_stats[bucket] = {
+                    "n": rn,
+                    "target_first": sum(1 for r in rrecs if r[1] and r[0]),
+                    "wins": rwins,
+                    "avg_pnl_pct": round(sum(r[2] for r in rrecs) / rn * 100, 2),
+                }
+            if regime_stats:
+                cell["regime"] = regime_stats
+            cells[f"{hz}:{h * 100:.1f}"] = cell
+
+    returns: dict[str, Any] = {}
+    for hz in HORIZONS:
+        vals = sorted(fwd_by_hz[hz])
+        nn = len(vals)
+        if nn == 0:
+            continue
+        returns[str(hz)] = {
+            "n": nn,
+            "median": round(percentile_sorted(vals, 50) * 100, 2),
+            "p25": round(percentile_sorted(vals, 25) * 100, 2),
+            "p75": round(percentile_sorted(vals, 75) * 100, 2),
+            "p10": round(percentile_sorted(vals, 10) * 100, 2),
+            "p90": round(percentile_sorted(vals, 90) * 100, 2),
+            "pct_positive": round(sum(1 for v in vals if v > 0) / nn * 100, 1),
+            "mean": round(sum(vals) / nn * 100, 2),
+            "best": round(vals[-1] * 100, 2),
+            "worst": round(vals[0] * 100, 2),
+        }
 
     return {
         "symbol": symbol,
@@ -240,6 +344,7 @@ def replay_stock(symbol: str, df, k: float) -> dict[str, Any] | None:
         "trend": "BULLISH" if bullish else "BEARISH",
         "direction": direction,
         "stop_pct": round(k * atr_pct * 100, 2),
+        "returns": returns,
         "cells": cells,
     }
 
@@ -274,6 +379,8 @@ def main() -> int:
     downloaded = download_bars(missing, args.period) if missing else {}
     bars = {**downloaded, **cached}
 
+    nifty_state = load_nifty_regime_state()
+
     stats: dict[str, Any] = {}
     skipped: list[dict[str, str]] = []
     for s in symbols:
@@ -281,7 +388,7 @@ def main() -> int:
         if df is None:
             skipped.append({"symbol": s, "reason": "no price data"})
             continue
-        res = replay_stock(s, df, args.stop_atr)
+        res = replay_stock(s, df, args.stop_atr, nifty_state)
         if res is None:
             skipped.append({"symbol": s, "reason": "insufficient history"})
             continue
@@ -297,6 +404,7 @@ def main() -> int:
             "hit_levels": [h * 100 for h in HIT_LEVELS],
             "cost_rate": COST_RATE_FUT,
             "long_only": False,
+            "nifty_regime_split": nifty_state is not None,
         },
         "scanned": len(stats),
         "skipped": skipped,

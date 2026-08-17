@@ -36,6 +36,7 @@ PYTHON = sys.executable
 UNIVERSE_OUT = PROJECT_ROOT / "screen_universe_out.json"
 STATS_OUT = PROJECT_ROOT / "screen_stats_out.json"
 RANK_OUT = PROJECT_ROOT / "screen_rank_out.json"
+REGIME_OUT = PROJECT_ROOT / "screen_regime_out.json"
 REPORT_FILE = PROJECT_ROOT / "screen_report.md"
 
 for stream in (sys.stdout, sys.stderr):
@@ -68,7 +69,18 @@ def _cell_sort(item: tuple[str, Any]) -> tuple[int, float]:
     return int(hz), float(hit)
 
 
-def render_report(universe: dict[str, Any], stats: dict[str, Any], rank: dict[str, Any]) -> str:
+REGIME_EMOJI = {"RISK-ON": "🟢", "CAUTIOUS": "🟡", "RISK-OFF": "🔴", "UNKNOWN": "⚪"}
+
+
+def _fmt_range(r: dict[str, Any] | None) -> str:
+    """Compact "median (IQR), P10/P90" string from a returns dict."""
+    if not r or not r.get("n"):
+        return "–"
+    return f"{r['median']:+}% ({r['p25']:+}…{r['p75']:+}) · P10/P90 {r['p10']:+}/{r['p90']:+}%"
+
+
+def render_report(universe: dict[str, Any], stats: dict[str, Any], rank: dict[str, Any],
+                  regime: dict[str, Any]) -> str:
     params = rank.get("params", {})
     hz, hit = params.get("horizon", 10), params.get("hit", 4.0)
     lines = [
@@ -82,6 +94,33 @@ def render_report(universe: dict[str, Any], stats: dict[str, Any], rank: dict[st
         "",
         "---",
         "",
+    ]
+    # Market regime header — the gate the daily prompt applies.
+    ov = regime.get("overall", {})
+    nif = regime.get("nifty", {})
+    vix = regime.get("vix", {})
+    brd = regime.get("breadth", {})
+    label = ov.get("label", "UNKNOWN")
+    emoji = REGIME_EMOJI.get(label, "⚪")
+    regime_bits = [
+        f"NIFTY {nif.get('trend', 'UNKNOWN')}",
+        f"VIX {vix.get('regime', 'UNKNOWN')}",
+        f"breadth {brd.get('pct', '?')}%" if brd.get("pct") is not None else "breadth n/a",
+    ]
+    lines.append("### 🌡️ Market regime (the gate)")
+    lines.append("")
+    lines.append(f"**{emoji} {label}** · " + " · ".join(regime_bits))
+    if ov.get("reasons"):
+        lines.append(f"*Risk-off flags: {'; '.join(ov['reasons'])}.*")
+    if label == "RISK-OFF":
+        lines.append("*Gate: max 1 pick, prefer 0, only EDGE CONFIRMED with LOW/MEDIUM risk — see prompt_daily.md.*")
+    elif label == "CAUTIOUS":
+        lines.append("*Gate: max 2 picks, no HIGH-risk rows (size stays >= the 30% floor — the regime lever is pick count).*")
+
+    elif label == "UNKNOWN":
+        lines.append("*Regime data unavailable — prompt falls back to neutral rules.*")
+    lines += ["", "---", ""]
+    lines += [
         "### 🎯 Does any horizon work statistically? (measured on today's universe)",
         "",
         "| cell | windows | stocks | hit-first % | win % | CI low | expectancy % | confirmed edges |",
@@ -134,10 +173,75 @@ def render_report(universe: dict[str, Any], stats: dict[str, Any], rank: dict[st
                 c = cells.get(f"{h}:{hp:.1f}")
                 vals.append(f"{round(c['target_first'] / c['n'] * 100, 1)}" if c else "–")
         lines.append(f"| {r['symbol']} | " + " | ".join(vals) + " |")
+    lines += ["", "---", ""]
+
+    # Range of returns — the distribution over 1/2/4 weeks for the names the
+    # prompt may actually buy (EDGE CONFIRMED + BUY).
+    pool = rank.get("return_pool", {})
     lines += [
+        "### 📈 Range of returns (1W / 2W / 4W) — EDGE CONFIRMED BUY names",
         "",
-        "---",
+    ]
+    if pool.get("qualifying_stocks"):
+        lines += [
+            "| Symbol | Close | 1W median (IQR) · P10/P90 | 2W median (IQR) · P10/P90 | 4W median (IQR) · P10/P90 |",
+            "| :-- | --: | --: | --: | --: |",
+        ]
+        for s in pool.get("stocks", []):
+            r5, r10, r20 = s["returns"].get("5"), s["returns"].get("10"), s["returns"].get("20")
+            lines.append(
+                f"| {s['symbol']} | {indian_currency(s['close'])} | {_fmt_range(r5)} | {_fmt_range(r10)} | {_fmt_range(r20)} |"
+            )
+        lines.append("")
+        pool_bits = []
+        for hkey, label in (("5", "1W"), ("10", "2W"), ("20", "4W")):
+            ph = pool.get("horizons", {}).get(hkey)
+            if ph:
+                pool_bits.append(f"{label}: mean {ph['mean']:+.2f}% · {ph['pct_positive']}% positive ({ph['n_windows']} windows)")
+        if pool_bits:
+            lines.append(f"*Pooled across {pool.get('qualifying_stocks')} confirmed-edge BUY names — " + "; ".join(pool_bits) + ".*")
+        lines.append("")
+        lines.append(
+            "*Reading: these are the raw buy-and-hold moves of every similar historical window "
+            "(net of costs) — the *range* the stock actually travels over each horizon, separate "
+            "from the managed stop/target geometry. P10 is the drawdown you should size for.*"
+        )
+    else:
+        lines.append("_No EDGE CONFIRMED BUY names this screen — nothing qualifies as a 'solid possibility of a rise'._")
+    lines += ["", "---", ""]
+
+    # Regime-conditioned hit rates at the ranking cell.
+    lines += [
+        f"### 🔄 Regime-conditioned P(hit) — ranking cell {hz}-bar × {hit}%, NIFTY vs 200-DMA",
         "",
+        "| Symbol | P(hit) | bull n | bull hit% | bear n | bear hit% |",
+        "| :-- | --: | --: | --: | --: | --: |",
+    ]
+    any_regime = False
+    for r in rank.get("top", [])[:10]:
+        cell = r.get("cells", {}).get(f"{hz}:{hit:.1f}")
+        reg = (cell or {}).get("regime") or {}
+        if not reg:
+            continue
+        any_regime = True
+        bull, bear = reg.get("bull"), reg.get("bear")
+        bull_txt = f"{bull['n']} | {round(bull['target_first'] / bull['n'] * 100, 1)}" if bull else "– | –"
+        bear_txt = f"{bear['n']} | {round(bear['target_first'] / bear['n'] * 100, 1)}" if bear else "– | –"
+        lines.append(f"| {r['symbol']} | {r['p_hit']} | {bull_txt} | {bear_txt} |")
+    lines.append("")
+    if not any_regime:
+        lines.append(
+            "_No regime split available (NIFTY cache missing — run scripts/screen_regime.py first). "
+            "The per-cell regime data lives in screen_stats_out.json once it is._"
+        )
+    else:
+        lines.append(
+            "*Reading: does the edge survive in both tapes? A row whose bull hit% is strong but whose "
+            "bear hit% collapses is a regime-dependent name — in RISK-OFF the prompt must not trust it.*"
+        )
+    lines += ["", "---", ""]
+
+    lines += [
         "### ⚠️ How to read this list (the honest caveats)",
         "",
         "* **It is a filter, not an alpha claim.** Per-stock backtested hit rates have ~zero "
@@ -186,6 +290,10 @@ def main() -> int:
         print(f"❌ {universe['error']}", file=sys.stderr)
         return 1
 
+    # Market regime first: fetches NIFTY/VIX and writes the NIFTY cache that
+    # the stats pass conditions its per-stock backtest on.
+    regime = run_step("scripts/screen_regime.py", REGIME_OUT, "market regime")
+
     stats_args = ["--universe", str(UNIVERSE_OUT), "--stop-atr", str(args.stop_atr),
                   "--period", args.period]
     if args.limit:
@@ -206,8 +314,16 @@ def main() -> int:
         print(f"❌ {rank['error']}", file=sys.stderr)
         return 1
 
+    # Refresh the regime payload now that today's breadth is computed.
+    regime = run_step("scripts/screen_regime.py", REGIME_OUT, "market regime (breadth)")
+    ov = regime.get("overall", {})
+    print(f"  · regime: {ov.get('label', 'UNKNOWN')} · "
+          f"NIFTY {regime.get('nifty', {}).get('trend', '?')} · "
+          f"VIX {regime.get('vix', {}).get('regime', '?')} · "
+          f"breadth {regime.get('breadth', {}).get('pct', '?')}%")
+
     print("\nRendering report")
-    report = render_report(universe, stats, rank)
+    report = render_report(universe, stats, rank, regime)
     REPORT_FILE.write_text(report, encoding="utf-8")
     print(report)
 

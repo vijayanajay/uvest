@@ -37,6 +37,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import math
 import sqlite3
 import sys
 from datetime import date
@@ -44,7 +45,18 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import COST_RATE_FUT, PROJECT_ROOT, emit_json, load_json, wilson_ci  # noqa: E402
+from common import (  # noqa: E402
+    CAPITAL_INR,
+    COST_RATE_FUT,
+    MAX_RISK_PCT,
+    MAX_TOTAL_DEPLOYMENT_PCT,
+    MIN_DEPLOYMENT_PCT,
+    PROJECT_ROOT,
+    RISK_PER_TRADE_PCT,
+    emit_json,
+    load_json,
+    wilson_ci,
+)
 
 DB_FILE = PROJECT_ROOT / "screen_history.db"
 RANK_FILE = PROJECT_ROOT / "screen_rank_out.json"
@@ -78,6 +90,18 @@ CREATE TABLE IF NOT EXISTS screen_picks (
     outcome             TEXT NOT NULL DEFAULT 'OPEN' CHECK (outcome IN ('OPEN','WIN','LOSS')),
     pnl_pct             REAL,
     resolved_on         TEXT,
+    -- 5L capital layer: sizing at record time, INR P&L at resolution
+    notional            REAL,
+    qty                 INTEGER,
+    risk_amount         REAL,
+    deployment_pct      REAL,
+    risk_pct            REAL,
+    pnl_inr             REAL,
+    -- predicted forward-return range (from the screen's distribution)
+    fwd_median          REAL,
+    fwd_p10             REAL,
+    fwd_p90             REAL,
+    fwd_pct_positive    REAL,
     UNIQUE (pick_date, symbol)
 );
 CREATE INDEX IF NOT EXISTS idx_screen_open ON screen_picks (outcome);
@@ -87,23 +111,83 @@ CREATE INDEX IF NOT EXISTS idx_screen_open ON screen_picks (outcome);
 def connect() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_FILE))
     conn.executescript(SCHEMA)
-    # v1 databases predate sample_n / ci_high; add them in place so journals
-    # can judge prediction strength (n and the CI range) instead of trusting
-    # a verdict blindly.
+    # v1 databases predate sample_n / ci_high; v2 predates the capital layer
+    # (notional/qty/risk/pnl_inr) and the forward-return range columns. Add
+    # them in place so journals can judge prediction strength and capital
+    # return instead of trusting a verdict blindly.
     cols = {r[1] for r in conn.execute("PRAGMA table_info(screen_picks)")}
-    if "sample_n" not in cols:
-        conn.execute("ALTER TABLE screen_picks ADD COLUMN sample_n INTEGER")
-    if "ci_high" not in cols:
-        conn.execute("ALTER TABLE screen_picks ADD COLUMN ci_high REAL")
+    for col, ddl in (
+        ("sample_n", "INTEGER"),
+        ("ci_high", "REAL"),
+        ("notional", "REAL"),
+        ("qty", "INTEGER"),
+        ("risk_amount", "REAL"),
+        ("deployment_pct", "REAL"),
+        ("risk_pct", "REAL"),
+        ("pnl_inr", "REAL"),
+        ("fwd_median", "REAL"),
+        ("fwd_p10", "REAL"),
+        ("fwd_p90", "REAL"),
+        ("fwd_pct_positive", "REAL"),
+    ):
+        if col not in cols:
+            conn.execute(f"ALTER TABLE screen_picks ADD COLUMN {col} {ddl}")
     conn.commit()
     return conn
+
+
+# ---- position sizing (5L capital, risk-first with a 30% floor) -------------
+def size_position(entry: float, stop_pct: float) -> dict[str, Any]:
+    """Risk-first quantity for a pick on CAPITAL_INR.
+
+    qty = max(risk-based qty, 30%-floor qty), so a pick never deploys less
+    than MIN_DEPLOYMENT_PCT of capital. The floor usually binds: 1% risk /
+    ~4% stop is only ~25% deployment, so the floor lifts deployment to 30%
+    (₹1.5L) and effective risk to ~1.2% of capital. Returns {} for inputs
+    that cannot be sized (defensive — the caller skips sizing).
+    """
+    if entry <= 0 or stop_pct <= 0:
+        return {}
+    risk_per_share = entry * stop_pct / 100.0
+    qty_risk = int(CAPITAL_INR * RISK_PER_TRADE_PCT // risk_per_share)
+    qty_floor = math.ceil(CAPITAL_INR * MIN_DEPLOYMENT_PCT / entry)
+    qty = max(qty_risk, qty_floor)
+    notional = qty * entry
+    return {
+        "qty": qty,
+        "notional": round(notional, 2),
+        "risk_amount": round(qty * risk_per_share, 2),
+        "deployment_pct": round(notional / CAPITAL_INR * 100.0, 1),
+        "risk_pct": round(qty * risk_per_share / CAPITAL_INR * 100.0, 2),
+        "floor_applied": qty_floor > qty_risk,
+        "risk_per_share": round(risk_per_share, 2),
+    }
+
+
+def sizing_warnings(sized: list[dict[str, Any]]) -> list[str]:
+    """Portfolio-level warnings across today's picks (deployment / risk caps)."""
+    warnings: list[str] = []
+    total_deploy = sum(s.get("deployment_pct", 0.0) for s in sized)
+    total_risk = sum(s.get("risk_pct", 0.0) for s in sized)
+    if total_deploy > MAX_TOTAL_DEPLOYMENT_PCT * 100.0:
+        worst = max(sized, key=lambda s: s.get("stop_pct", 0))
+        warnings.append(
+            f"picks would deploy {total_deploy:.0f}% of capital (cap {MAX_TOTAL_DEPLOYMENT_PCT * 100:.0f}%) — "
+            f"drop one pick, ideally {worst.get('symbol')} (widest stop {worst.get('stop_pct')}%)."
+        )
+    if total_risk > MAX_RISK_PCT * 100.0 * len(sized) and len(sized) > 1:
+        warnings.append(
+            f"combined stop-loss exposure {total_risk:.1f}% of capital across {len(sized)} picks — "
+            "above the 1.5%/pick comfort band; prefer fewer picks."
+        )
+    return warnings
 
 
 # ---- resolution -------------------------------------------------------------
 def resolve_open(conn: sqlite3.Connection, offline: bool) -> list[dict[str, Any]]:
     rows = conn.execute(
         "SELECT id, symbol, direction, entry_price, target_price, stop_price, "
-        "pick_date, horizon_bars, hit_pct FROM screen_picks WHERE outcome='OPEN'"
+        "pick_date, horizon_bars, hit_pct, notional FROM screen_picks WHERE outcome='OPEN'"
     ).fetchall()
     if not rows:
         return []
@@ -131,7 +215,7 @@ def resolve_open(conn: sqlite3.Connection, offline: bool) -> list[dict[str, Any]
         ]
 
         for r in recs:
-            rid, sym, direction, entry, target, sl, pick_on, hz, hit_pct = r
+            rid, sym, direction, entry, target, sl, pick_on, hz, hit_pct, notional = r
             try:
                 pick_day = date.fromisoformat(pick_on[:10])
             except ValueError:
@@ -176,13 +260,15 @@ def resolve_open(conn: sqlite3.Connection, offline: bool) -> list[dict[str, Any]
             gross_pct = ((final - entry) / entry if direction == "BUY"
                          else (entry - final) / entry)
             pnl = round(gross_pct * 100 - COST_RATE_FUT * 100, 3)
+            pnl_inr = round(pnl / 100.0 * notional, 2) if notional else None
             conn.execute(
-                "UPDATE screen_picks SET outcome=?, pnl_pct=?, resolved_on=? WHERE id=?",
-                (outcome, pnl, date.today().isoformat(), rid),
+                "UPDATE screen_picks SET outcome=?, pnl_pct=?, pnl_inr=?, resolved_on=? WHERE id=?",
+                (outcome, pnl, pnl_inr, date.today().isoformat(), rid),
             )
             resolved.append({
                 "symbol": sym, "direction": direction, "outcome": outcome,
-                "pnl_pct": pnl, "final_price": round(final, 2), "resolved_on": date.today().isoformat(),
+                "pnl_pct": pnl, "pnl_inr": pnl_inr, "notional": notional,
+                "final_price": round(final, 2), "resolved_on": date.today().isoformat(),
             })
     conn.commit()
     return resolved
@@ -199,13 +285,13 @@ def record_today(conn: sqlite3.Connection, rank: dict[str, Any], picks: dict[str
     recorded = 0
     updated = 0
     warnings: list[str] = []
+    sized_picks: list[dict[str, Any]] = []
     for row in top:
         sym = row["symbol"]
-        if sym not in pick_map and sym not in [p.get("symbol") for p in picks.get("picks", [])]:
-            pass
         direction = row["direction"]
         entry = row["close"]
-        stop_pct = row["stop_pct"] / 100.0
+        stop_pct_pct = row["stop_pct"]
+        stop_pct = stop_pct_pct / 100.0
         hit_pct = hit / 100.0
         stop = entry * (1 - stop_pct) if direction == "BUY" else entry * (1 + stop_pct)
         target = entry * (1 + hit_pct) if direction == "BUY" else entry * (1 - hit_pct)
@@ -220,6 +306,31 @@ def record_today(conn: sqlite3.Connection, rank: dict[str, Any], picks: dict[str
         sentiment_verdict = p.get("sentiment_verdict") if p else None
         thesis = p.get("thesis") if p else None
 
+        # 5L capital layer: size only what the prompt actually picked. The
+        # rest of the list is the free control group — no sizing, no qty.
+        sizing: dict[str, Any] = {}
+        fwd_cols: dict[str, Any] = {}
+        if is_pick:
+            sizing = size_position(entry, stop_pct_pct)
+            rr = p.get("return_range") or {}
+            if rr.get("median") is not None:
+                fwd_cols = {
+                    "fwd_median": rr.get("median"),
+                    "fwd_p10": rr.get("p10"),
+                    "fwd_p90": rr.get("p90"),
+                    "fwd_pct_positive": rr.get("pct_positive"),
+                }
+            else:
+                r = (row.get("returns") or {}).get(str(horizon))
+                if r:
+                    fwd_cols = {
+                        "fwd_median": r.get("median"),
+                        "fwd_p10": r.get("p10"),
+                        "fwd_p90": r.get("p90"),
+                        "fwd_pct_positive": r.get("pct_positive"),
+                    }
+            sized_picks.append({"symbol": sym, "stop_pct": stop_pct_pct, **sizing})
+
         existing = conn.execute(
             "SELECT id FROM screen_picks WHERE pick_date=? AND symbol=?",
             (today, sym),
@@ -229,11 +340,16 @@ def record_today(conn: sqlite3.Connection, rank: dict[str, Any], picks: dict[str
                 """UPDATE screen_picks SET direction=?, horizon_bars=?, hit_pct=?, entry_price=?,
                    stop_price=?, target_price=?, atr_pct=?, rr=?, predicted_hit_pct=?,
                    predicted_win_pct=?, ci_low=?, ci_high=?, sample_n=?, verdict=?, risk=?,
-                   is_pick=?, sentiment_score=?, sentiment_verdict=?, thesis=? WHERE id=?""",
+                   is_pick=?, sentiment_score=?, sentiment_verdict=?, thesis=?, notional=?,
+                   qty=?, risk_amount=?, deployment_pct=?, risk_pct=?, fwd_median=?,
+                   fwd_p10=?, fwd_p90=?, fwd_pct_positive=? WHERE id=?""",
                 (direction, horizon, hit, entry, stop, target, row["atr_pct"], row["rr"],
                  row["p_hit"], row["win_rate"], row["ci_low"], ci_high, sample_n,
                  row["verdict"], row["risk"], is_pick, sentiment_score, sentiment_verdict,
-                 thesis, existing[0]),
+                 thesis, sizing.get("notional"), sizing.get("qty"), sizing.get("risk_amount"),
+                 sizing.get("deployment_pct"), sizing.get("risk_pct"), fwd_cols.get("fwd_median"),
+                 fwd_cols.get("fwd_p10"), fwd_cols.get("fwd_p90"), fwd_cols.get("fwd_pct_positive"),
+                 existing[0]),
             )
             updated += 1
         else:
@@ -241,11 +357,15 @@ def record_today(conn: sqlite3.Connection, rank: dict[str, Any], picks: dict[str
                 """INSERT INTO screen_picks (pick_date, symbol, direction, horizon_bars, hit_pct,
                    entry_price, stop_price, target_price, atr_pct, rr, predicted_hit_pct,
                    predicted_win_pct, ci_low, ci_high, sample_n, verdict, risk, is_pick,
-                   sentiment_score, sentiment_verdict, thesis) VALUES
-                   (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   sentiment_score, sentiment_verdict, thesis, notional, qty, risk_amount,
+                   deployment_pct, risk_pct, fwd_median, fwd_p10, fwd_p90, fwd_pct_positive)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (today, sym, direction, horizon, hit, entry, stop, target, row["atr_pct"],
                  row["rr"], row["p_hit"], row["win_rate"], row["ci_low"], ci_high, sample_n,
-                 row["verdict"], row["risk"], is_pick, sentiment_score, sentiment_verdict, thesis),
+                 row["verdict"], row["risk"], is_pick, sentiment_score, sentiment_verdict, thesis,
+                 sizing.get("notional"), sizing.get("qty"), sizing.get("risk_amount"),
+                 sizing.get("deployment_pct"), sizing.get("risk_pct"), fwd_cols.get("fwd_median"),
+                 fwd_cols.get("fwd_p10"), fwd_cols.get("fwd_p90"), fwd_cols.get("fwd_pct_positive")),
             )
             recorded += 1
 
@@ -255,8 +375,19 @@ def record_today(conn: sqlite3.Connection, rank: dict[str, Any], picks: dict[str
         if p.get("symbol") not in top_symbols:
             warnings.append(f"pick {p.get('symbol')} is not in today's top list — not recorded as picked")
 
+    sizing_payload: dict[str, Any] = {
+        "capital_inr": CAPITAL_INR,
+        "risk_per_trade_inr": round(CAPITAL_INR * RISK_PER_TRADE_PCT, 2),
+        "min_deployment_inr": round(CAPITAL_INR * MIN_DEPLOYMENT_PCT, 2),
+        "per_pick": sized_picks,
+        "total_deployment_pct": round(sum(s.get("deployment_pct", 0.0) for s in sized_picks), 1),
+        "total_risk_pct": round(sum(s.get("risk_pct", 0.0) for s in sized_picks), 2),
+    }
+    sizing_payload["warnings"] = sizing_warnings(sized_picks)
+    warnings += sizing_payload["warnings"]
+
     conn.commit()
-    return {"recorded": recorded, "updated": updated, "warnings": warnings}
+    return {"recorded": recorded, "updated": updated, "warnings": warnings, "sizing": sizing_payload}
 
 
 # ---- learning report ---------------------------------------------------------
@@ -334,11 +465,12 @@ def _resolved_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     cols = ["pick_date", "symbol", "direction", "horizon_bars", "hit_pct", "entry_price",
             "stop_price", "target_price", "predicted_hit_pct", "predicted_win_pct", "ci_low",
             "ci_high", "sample_n", "verdict", "risk", "is_pick", "sentiment_score",
-            "sentiment_verdict", "thesis", "outcome", "pnl_pct", "resolved_on"]
+            "sentiment_verdict", "thesis", "outcome", "pnl_pct", "pnl_inr", "resolved_on"]
     rows = conn.execute(
         "SELECT pick_date, symbol, direction, horizon_bars, hit_pct, entry_price, stop_price, "
         "target_price, predicted_hit_pct, predicted_win_pct, ci_low, ci_high, sample_n, verdict, "
-        "risk, is_pick, sentiment_score, sentiment_verdict, thesis, outcome, pnl_pct, resolved_on "
+        "risk, is_pick, sentiment_score, sentiment_verdict, thesis, outcome, pnl_pct, pnl_inr, "
+        "resolved_on "
         "FROM screen_picks WHERE outcome IN ('WIN','LOSS') ORDER BY resolved_on DESC, id DESC"
     ).fetchall()
     return [dict(zip(cols, r)) for r in rows]
@@ -392,6 +524,14 @@ def render_learning_journal(conn: sqlite3.Connection) -> str:
     avg_pnl = sum(r["pnl_pct"] or 0 for r in rows) / resolved_n if resolved_n else None
     avg_s = f"{avg_pnl:+.2f}%" if avg_pnl is not None else "n/a"
 
+    realized_inr = conn.execute(
+        "SELECT COALESCE(SUM(pnl_inr), 0) FROM screen_picks WHERE outcome IN ('WIN','LOSS') AND pnl_inr IS NOT NULL"
+    ).fetchone()[0]
+    cap_ret = realized_inr / CAPITAL_INR * 100.0
+    n_inr = conn.execute(
+        "SELECT COUNT(*) FROM screen_picks WHERE outcome IN ('WIN','LOSS') AND pnl_inr IS NOT NULL"
+    ).fetchone()[0]
+
     lines = [
         "# 📚 Screen Learning Journal",
         "",
@@ -400,6 +540,8 @@ def render_learning_journal(conn: sqlite3.Connection) -> str:
         "",
         "## Track record",
         f"- Overall win rate: **{wr}** · avg P&L: **{avg_s}** per resolved pick",
+        f"- **Capital: ₹{CAPITAL_INR:,.0f}** · realized ₹ P&L: **{realized_inr:+,.0f}** "
+        f"({n_inr} sized resolutions) · **capital return {cap_ret:+.2f}%**",
         "",
         "## Calibration — predicted vs realized win rate",
         "",
@@ -442,13 +584,29 @@ def render_learning_journal(conn: sqlite3.Connection) -> str:
     lines.append("")
 
     lines += ["## Recent resolutions", "",
-              "| resolved | symbol | dir | outcome | pnl% | predicted P(hit) | verdict |",
-              "| :-- | :-- | :-- | :-- | --: | --: | :-- |"]
+              "| resolved | symbol | dir | outcome | pnl% | pnl ₹ | predicted P(hit) | verdict |",
+              "| :-- | :-- | :-- | :-- | --: | --: | --: | :-- |"]
     for r in rows[:10]:
         star = "★ " if r["is_pick"] else ""
+        inr = f"{r.get('pnl_inr'):+,.0f}" if r.get("pnl_inr") is not None else "—"
         lines.append(f"| {r['resolved_on']} | {star}{r['symbol']} | {r['direction']} | {r['outcome']} | "
-                     f"{r['pnl_pct']:+.2f} | {r['predicted_hit_pct']} | {r['verdict']} |")
+                     f"{r['pnl_pct']:+.2f} | {inr} | {r['predicted_hit_pct']} | {r['verdict']} |")
     lines.append("")
+
+    # Range calibration: did realized P&L land inside the predicted band?
+    range_rows = conn.execute(
+        "SELECT pnl_pct, fwd_p10, fwd_p90 FROM screen_picks "
+        "WHERE outcome IN ('WIN','LOSS') AND fwd_p10 IS NOT NULL AND fwd_p90 IS NOT NULL AND pnl_pct IS NOT NULL"
+    ).fetchall()
+    if range_rows:
+        inside = sum(1 for p, lo, hi in range_rows if lo <= p <= hi)
+        lines += ["## Range calibration — realized vs predicted P10–P90 band", ""]
+        lines.append(
+            f"- Realized P&L landed inside the predicted forward-return P10–P90 band: "
+            f"**{inside}/{len(range_rows)} ({inside / len(range_rows) * 100:.0f}%)** "
+            "— the screen's return ranges are honest if this stays high."
+        )
+        lines.append("")
 
     outliers = [r for r in rows if outlier_kind(r)]
     if outliers:
@@ -462,7 +620,9 @@ def render_learning_journal(conn: sqlite3.Connection) -> str:
                          f"win {r['predicted_win_pct']}% (CI {r['ci_low']}–{r['ci_high']}, {n_txt})")
             lines.append(f"- Outcome: **{r['outcome']}** · {r['pnl_pct']:+.2f}% net")
             if r["is_pick"]:
-                lines.append(f"- Sentiment pick ({r['sentiment_score']:+d}): {r['thesis']}")
+                score = r.get("sentiment_score")
+                score_txt = f"{int(score):+d}" if score is not None else "?"
+                lines.append(f"- Sentiment pick ({score_txt}): {r['thesis']}")
             lines.append(f"- {_OUTLIER_NOTES.get(kind, '')}")
             lines.append("")
         if len(outliers) > 5:
@@ -516,6 +676,9 @@ def main() -> int:
         total = conn.execute("SELECT COUNT(*) FROM screen_picks").fetchone()[0]
         open_n = conn.execute("SELECT COUNT(*) FROM screen_picks WHERE outcome='OPEN'").fetchone()[0]
         resolved_n = conn.execute("SELECT COUNT(*) FROM screen_picks WHERE outcome IN ('WIN','LOSS')").fetchone()[0]
+        realized_inr = conn.execute(
+            "SELECT COALESCE(SUM(pnl_inr), 0) FROM screen_picks WHERE outcome IN ('WIN','LOSS') AND pnl_inr IS NOT NULL"
+        ).fetchone()[0]
 
         journal = render_learning_journal(conn)
         JOURNAL_FILE.write_text(journal, encoding="utf-8")
@@ -533,6 +696,9 @@ def main() -> int:
                 "total_recorded": total,
                 "open": open_n,
                 "resolved": resolved_n,
+                "realized_pnl_inr": round(realized_inr, 2),
+                "capital_return_pct": round(realized_inr / CAPITAL_INR * 100.0, 2),
+                "capital_inr": CAPITAL_INR,
             },
             "calibration": calibration(conn),
             "sentiment_audit": sentiment_audit(conn),
