@@ -133,6 +133,10 @@ def connect() -> sqlite3.Connection:
         ("fwd_p10", "REAL"),
         ("fwd_p90", "REAL"),
         ("fwd_pct_positive", "REAL"),
+        # Stage 2 self-learning v0.1: 3-field autopsy
+        ("p_calibrated", "REAL"),
+        ("final_price", "REAL"),
+        ("barrier_sequence", "TEXT"),
     ):
         if col not in cols:
             conn.execute(f"ALTER TABLE screen_picks ADD COLUMN {col} {ddl}")
@@ -229,6 +233,7 @@ def resolve_open(conn: sqlite3.Connection, offline: bool) -> list[dict[str, Any]
 
             outcome: str | None = None
             final: float | None = None
+            barrier_seq: str | None = None
             bars_after = 0
             for day, low, high, _close in bars:
                 if day <= pick_day:
@@ -239,16 +244,20 @@ def resolve_open(conn: sqlite3.Connection, offline: bool) -> list[dict[str, Any]
                 if direction == "SELL":
                     if high >= sl:           # price rose to the stop first
                         outcome, final = "LOSS", sl
+                        barrier_seq = f"stop:day{bars_after}"
                         break
                     if low <= target:
                         outcome, final = "WIN", target
+                        barrier_seq = f"target:day{bars_after}"
                         break
                 else:
                     if low <= sl:            # stop first (conservative)
                         outcome, final = "LOSS", sl
+                        barrier_seq = f"stop:day{bars_after}"
                         break
                     if high >= target:
                         outcome, final = "WIN", target
+                        barrier_seq = f"target:day{bars_after}"
                         break
 
             if outcome is None:
@@ -260,14 +269,17 @@ def resolve_open(conn: sqlite3.Connection, offline: bool) -> list[dict[str, Any]
                 final = after[-1][3]
                 gross = (final - entry) if direction == "BUY" else (entry - final)
                 outcome = "WIN" if gross > 0 else "LOSS"
+                barrier_seq = f"vertical:day{hz}"
 
             gross_pct = ((final - entry) / entry if direction == "BUY"
                          else (entry - final) / entry)
             pnl = round(gross_pct * 100 - COST_RATE_FUT * 100, 3)
             pnl_inr = round(pnl / 100.0 * notional, 2) if notional else None
             conn.execute(
-                "UPDATE screen_picks SET outcome=?, pnl_pct=?, pnl_inr=?, resolved_on=? WHERE id=?",
-                (outcome, pnl, pnl_inr, date.today().isoformat(), rid),
+                "UPDATE screen_picks SET outcome=?, pnl_pct=?, pnl_inr=?, resolved_on=?, "
+                "final_price=?, barrier_sequence=? WHERE id=?",
+                (outcome, pnl, pnl_inr, date.today().isoformat(),
+                 round(final, 2) if final else None, barrier_seq, rid),
             )
             resolved.append({
                 "symbol": sym, "direction": direction, "outcome": outcome,
@@ -339,6 +351,10 @@ def record_today(conn: sqlite3.Connection, rank: dict[str, Any], picks: dict[str
             "SELECT id FROM screen_picks WHERE pick_date=? AND symbol=?",
             (today, sym),
         ).fetchone()
+        # p_calibrated: proxy from backtest win rate; overwritten by ML model
+        # when daily_inference.py integrates with this pipeline.
+        p_cal = row.get("win_rate")
+
         if existing:
             conn.execute(
                 """UPDATE screen_picks SET direction=?, horizon_bars=?, hit_pct=?, entry_price=?,
@@ -346,14 +362,14 @@ def record_today(conn: sqlite3.Connection, rank: dict[str, Any], picks: dict[str
                    predicted_win_pct=?, ci_low=?, ci_high=?, sample_n=?, verdict=?, risk=?,
                    is_pick=?, sentiment_score=?, sentiment_verdict=?, thesis=?, notional=?,
                    qty=?, risk_amount=?, deployment_pct=?, risk_pct=?, fwd_median=?,
-                   fwd_p10=?, fwd_p90=?, fwd_pct_positive=? WHERE id=?""",
+                   fwd_p10=?, fwd_p90=?, fwd_pct_positive=?, p_calibrated=? WHERE id=?""",
                 (direction, horizon, hit, entry, stop, target, row["atr_pct"], row["rr"],
                  row["p_hit"], row["win_rate"], row["ci_low"], ci_high, sample_n,
                  row["verdict"], row["risk"], is_pick, sentiment_score, sentiment_verdict,
                  thesis, sizing.get("notional"), sizing.get("qty"), sizing.get("risk_amount"),
                  sizing.get("deployment_pct"), sizing.get("risk_pct"), fwd_cols.get("fwd_median"),
                  fwd_cols.get("fwd_p10"), fwd_cols.get("fwd_p90"), fwd_cols.get("fwd_pct_positive"),
-                 existing[0]),
+                 p_cal, existing[0]),
             )
             updated += 1
         else:
@@ -362,14 +378,16 @@ def record_today(conn: sqlite3.Connection, rank: dict[str, Any], picks: dict[str
                    entry_price, stop_price, target_price, atr_pct, rr, predicted_hit_pct,
                    predicted_win_pct, ci_low, ci_high, sample_n, verdict, risk, is_pick,
                    sentiment_score, sentiment_verdict, thesis, notional, qty, risk_amount,
-                   deployment_pct, risk_pct, fwd_median, fwd_p10, fwd_p90, fwd_pct_positive)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   deployment_pct, risk_pct, fwd_median, fwd_p10, fwd_p90, fwd_pct_positive,
+                   p_calibrated)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (today, sym, direction, horizon, hit, entry, stop, target, row["atr_pct"],
                  row["rr"], row["p_hit"], row["win_rate"], row["ci_low"], ci_high, sample_n,
                  row["verdict"], row["risk"], is_pick, sentiment_score, sentiment_verdict, thesis,
                  sizing.get("notional"), sizing.get("qty"), sizing.get("risk_amount"),
                  sizing.get("deployment_pct"), sizing.get("risk_pct"), fwd_cols.get("fwd_median"),
-                 fwd_cols.get("fwd_p10"), fwd_cols.get("fwd_p90"), fwd_cols.get("fwd_pct_positive")),
+                 fwd_cols.get("fwd_p10"), fwd_cols.get("fwd_p90"), fwd_cols.get("fwd_pct_positive"),
+                 p_cal),
             )
             recorded += 1
 
@@ -469,12 +487,13 @@ def _resolved_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     cols = ["pick_date", "symbol", "direction", "horizon_bars", "hit_pct", "entry_price",
             "stop_price", "target_price", "predicted_hit_pct", "predicted_win_pct", "ci_low",
             "ci_high", "sample_n", "verdict", "risk", "is_pick", "sentiment_score",
-            "sentiment_verdict", "thesis", "outcome", "pnl_pct", "pnl_inr", "resolved_on"]
+            "sentiment_verdict", "thesis", "outcome", "pnl_pct", "pnl_inr", "resolved_on",
+            "p_calibrated", "final_price", "barrier_sequence"]
     rows = conn.execute(
         "SELECT pick_date, symbol, direction, horizon_bars, hit_pct, entry_price, stop_price, "
         "target_price, predicted_hit_pct, predicted_win_pct, ci_low, ci_high, sample_n, verdict, "
         "risk, is_pick, sentiment_score, sentiment_verdict, thesis, outcome, pnl_pct, pnl_inr, "
-        "resolved_on "
+        "resolved_on, p_calibrated, final_price, barrier_sequence "
         "FROM screen_picks WHERE outcome IN ('WIN','LOSS') ORDER BY resolved_on DESC, id DESC"
     ).fetchall()
     return [dict(zip(cols, r)) for r in rows]
@@ -588,14 +607,36 @@ def render_learning_journal(conn: sqlite3.Connection) -> str:
     lines.append("")
 
     lines += ["## Recent resolutions", "",
-              "| resolved | symbol | dir | outcome | pnl% | pnl ₹ | predicted P(hit) | verdict |",
-              "| :-- | :-- | :-- | :-- | --: | --: | --: | :-- |"]
+              "| resolved | symbol | dir | outcome | pnl% | barrier | final ₹ | verdict |",
+              "| :-- | :-- | :-- | :-- | --: | :-- | --: | :-- |"]
     for r in rows[:10]:
         star = "★ " if r["is_pick"] else ""
-        inr = f"{r.get('pnl_inr'):+,.0f}" if r.get("pnl_inr") is not None else "—"
+        barrier = r.get("barrier_sequence") or "—"
+        final = f"{r['final_price']:,.0f}" if r.get("final_price") else "—"
         lines.append(f"| {r['resolved_on']} | {star}{r['symbol']} | {r['direction']} | {r['outcome']} | "
-                     f"{r['pnl_pct']:+.2f} | {inr} | {r['predicted_hit_pct']} | {r['verdict']} |")
+                     f"{r['pnl_pct']:+.2f} | {barrier} | {final} | {r['verdict']} |")
     lines.append("")
+
+    # Autopsy summary: barrier distribution
+    barrier_rows = conn.execute(
+        "SELECT barrier_sequence, outcome FROM screen_picks "
+        "WHERE barrier_sequence IS NOT NULL AND outcome IN ('WIN','LOSS')"
+    ).fetchall()
+    if barrier_rows:
+        from collections import Counter
+        barrier_types = Counter()
+        barrier_wins = Counter()
+        for bs, outcome in barrier_rows:
+            btype = bs.split(":")[0] if bs else "unknown"
+            barrier_types[btype] += 1
+            if outcome == "WIN":
+                barrier_wins[btype] += 1
+        lines += ["## Autopsy — barrier distribution", ""]
+        for btype in sorted(barrier_types, key=lambda x: -barrier_types[x]):
+            n = barrier_types[btype]
+            w = barrier_wins.get(btype, 0)
+            lines.append(f"- **{btype}:** {n} resolved · {w}/{n} wins ({w/n*100:.0f}%)")
+        lines.append("")
 
     # Range calibration: did realized P&L land inside the predicted band?
     range_rows = conn.execute(
