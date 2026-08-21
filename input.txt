@@ -1,14 +1,14 @@
-Symbol: SYRMA
+Symbol: USHAMART
 Expiry: None
 Type: EQUITY
 Action: BUY
-Entry Price: 1489.70
-Entry Range: 1480.00 - 1500.00
-Live Price: 1467.90
-Target: 1572.00
-Stoploss: 1403.90
-Lot Size: 500
-Margin: 744850.00
-App Warning: Trade is outside the entry range. Take caution
-Recommended On: 2026-08-14
+Entry Price: 500.45
+Entry Range: 498.00 - 503.00
+Live Price: 500.70
+Target: 528.00
+Stoploss: 480.70
+Lot Size: 1000
+Margin: 500450.00
+App Warning: None
+Recommended On: 2026-08-18
 Source: univest

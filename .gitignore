@@ -238,3 +238,4 @@ screen_history.db
 screen_learning.md
 data_cache/
 screen_regime_out.json
+*.json

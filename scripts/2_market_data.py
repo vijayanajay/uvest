@@ -31,6 +31,7 @@ def fetch_market_context(symbol: str, sl_price: float, entry_price: float) -> di
     # Append .NS for Indian Stock Exchange on yfinance
     ticker = yf.Ticker(f"{symbol}.NS")
     df = ticker.history(period="60d", interval="1d")
+    df = df.dropna(subset=["Close", "High", "Low"])
 
     if df.empty:
         fail(f"Failed to fetch ticker data for {symbol}.NS")

@@ -37,6 +37,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import math
 import sqlite3
 import sys
@@ -62,6 +63,9 @@ DB_FILE = PROJECT_ROOT / "screen_history.db"
 RANK_FILE = PROJECT_ROOT / "screen_rank_out.json"
 PICKS_FILE = PROJECT_ROOT / "screen_picks.json"
 JOURNAL_FILE = PROJECT_ROOT / "screen_learning.md"
+LEDGER_FILE = PROJECT_ROOT / "screen_recos_ledger.json"
+STOCK_MEMORY_FILE = PROJECT_ROOT / "screen_stock_memory.json"
+MAX_LEDGER_DAYS = 30
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS screen_picks (
@@ -644,6 +648,299 @@ def record_stats(conn: sqlite3.Connection) -> dict[str, Any]:
     }
 
 
+# ---- lesson extraction ------------------------------------------------------
+def extract_lesson(row: dict[str, Any]) -> str:
+    """Generate a 1-line learning note for a resolved pick.
+
+    Matches outcome x sentiment to produce a causal link the prompt can
+    consume.  Also notes range calibration (did realized P&L land inside
+    the predicted P10-P90 band?).
+    """
+    score = row.get("sentiment_score")
+    outcome = row["outcome"]
+    pnl = row.get("pnl_pct") or 0.0
+    thesis = row.get("thesis") or "no thesis recorded"
+    verdict = row.get("verdict") or "unknown"
+
+    # range calibration
+    fwd_p10 = row.get("fwd_p10")
+    fwd_p90 = row.get("fwd_p90")
+    range_note = ""
+    if fwd_p10 is not None and fwd_p90 is not None:
+        if fwd_p10 <= pnl <= fwd_p90:
+            range_note = " P&L inside predicted band."
+        else:
+            side = "above" if pnl > fwd_p90 else "below"
+            range_note = f" P&L {side} predicted band ({fwd_p10:+.1f}–{fwd_p90:+.1f}%)."
+
+    # outlier note if applicable
+    outlier = outlier_kind(row)
+    if outlier:
+        return f"{outlier.replace('_', ' ').title()}: {thesis}{range_note} {_OUTLIER_NOTES.get(outlier, '')}"
+
+    # outcome x sentiment matrix
+    if score is not None and score > 0:
+        if outcome == "WIN":
+            return f"Sentiment correctly identified catalyst: {thesis}{range_note}"
+        else:
+            return f"Sentiment thesis did not materialize: {thesis}{range_note}"
+    elif score is not None and score < 0:
+        if outcome == "WIN":
+            return f"Contrarian: sentiment was negative but stats held ({thesis}){range_note}"
+        else:
+            return f"Both sentiment and stats were against this; review why it was in top list.{range_note}"
+    else:
+        # neutral / no sentiment scored
+        if outcome == "WIN":
+            return f"Stats-only pick won; no sentiment edge, no sentiment drag.{range_note}"
+        else:
+            return f"Stats-only pick drifted; verify if regime was misread.{range_note}"
+
+
+# ---- recos ledger -----------------------------------------------------------
+def update_recos_ledger(conn: sqlite3.Connection) -> dict[str, Any]:
+    """Append today's resolutions to the recos ledger ring buffer.
+
+    The ledger is a JSON file with a 'history' array, one entry per day.
+    Each day has its picks (is_pick=1 rows resolved this run) with
+    outcomes, P&L, and extracted lessons, plus a control-group summary.
+    Older than MAX_LEDGER_DAYS entries are trimmed.
+    """
+    today = date.today().isoformat()
+
+    # Load existing ledger or start fresh
+    if LEDGER_FILE.exists():
+        try:
+            ledger = json.loads(LEDGER_FILE.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            ledger = {"history": []}
+    else:
+        ledger = {"history": []}
+
+    # Fetch all rows resolved today
+    resolved_today = conn.execute(
+        "SELECT pick_date, symbol, direction, is_pick, sentiment_score, sentiment_verdict, "
+        "thesis, verdict, outcome, pnl_pct, pnl_inr, resolved_on, notional, "
+        "fwd_median, fwd_p10, fwd_p90, fwd_pct_positive, entry_price, "
+        "stop_price, target_price, sample_n, ci_low, ci_high "
+        "FROM screen_picks WHERE resolved_on=? AND outcome IN ('WIN','LOSS') "
+        "ORDER BY is_pick DESC, id",
+        (today,),
+    ).fetchall()
+
+    if not resolved_today:
+        # Still write the file so the prompt can always read it
+        LEDGER_FILE.write_text(
+            json.dumps(ledger, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        return {"updated": False, "reason": "no resolutions today", "ledger_days": len(ledger["history"])}
+
+    cols = [
+        "pick_date", "symbol", "direction", "is_pick", "sentiment_score",
+        "sentiment_verdict", "thesis", "verdict", "outcome", "pnl_pct",
+        "pnl_inr", "resolved_on", "notional", "fwd_median", "fwd_p10",
+        "fwd_p90", "fwd_pct_positive", "entry_price", "stop_price",
+        "target_price", "sample_n", "ci_low", "ci_high",
+    ]
+    resolved_dicts = [dict(zip(cols, r)) for r in resolved_today]
+
+    picks_entries = []
+    for r in resolved_dicts:
+        if not r["is_pick"]:
+            continue
+        lesson = extract_lesson(r)
+        inr = round(r["pnl_inr"], 2) if r["pnl_inr"] is not None else None
+        picks_entries.append({
+            "symbol": r["symbol"],
+            "direction": r["direction"],
+            "picked_on": r["pick_date"],
+            "sentiment_score": int(r["sentiment_score"]) if r["sentiment_score"] is not None else None,
+            "thesis": r["thesis"],
+            "verdict": r["verdict"],
+            "entry_price": r["entry_price"],
+            "target_price": r["target_price"],
+            "stop_price": r["stop_price"],
+            "outcome": r["outcome"],
+            "pnl_pct": round(r["pnl_pct"], 2) if r["pnl_pct"] is not None else None,
+            "pnl_inr": inr,
+            "lesson": lesson,
+        })
+
+    # Control-group summary (non-pick rows resolved today)
+    control_rows = [r for r in resolved_dicts if not r["is_pick"]]
+    c_wins = sum(1 for r in control_rows if r["outcome"] == "WIN")
+    c_n = len(control_rows)
+    control_summary = {
+        "n": c_n,
+        "wins": c_wins,
+        "win_rate": round(c_wins / c_n * 100, 1) if c_n else None,
+        "avg_pnl_pct": round(
+            sum(r["pnl_pct"] or 0 for r in control_rows) / c_n, 2
+        ) if c_n else None,
+    }
+
+    # Read regime if available
+    regime_label = None
+    regime_file = PROJECT_ROOT / "screen_regime_out.json"
+    if regime_file.exists():
+        try:
+            regime_data = json.loads(regime_file.read_text(encoding="utf-8"))
+            regime_label = regime_data.get("overall", {}).get("label")
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    day_entry = {
+        "date": today,
+        "regime": regime_label,
+        "picks": picks_entries,
+        "control_summary": control_summary,
+    }
+
+    # Upsert: replace any existing entry for today, otherwise append
+    ledger["history"] = [
+        e for e in ledger["history"] if e.get("date") != today
+    ]
+    ledger["history"].append(day_entry)
+
+    # Trim to MAX_LEDGER_DAYS
+    ledger["history"] = ledger["history"][-MAX_LEDGER_DAYS:]
+
+    LEDGER_FILE.write_text(
+        json.dumps(ledger, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return {
+        "updated": True,
+        "picks_logged": len(picks_entries),
+        "control_n": c_n,
+        "ledger_days": len(ledger["history"]),
+    }
+
+
+# ---- stock memory -----------------------------------------------------------
+def update_stock_memory(conn: sqlite3.Connection) -> dict[str, Any]:
+    """Rebuild the per-stock reliability cache from all screen_picks rows.
+
+    For every stock that has ever appeared in the screen, accumulate:
+    - appearances in top 20
+    - pick record (is_pick=1) with win rate and avg P&L
+    - control record (is_pick=0) with win rate and avg P&L
+    - edge vs control delta
+    - last pick info (date, outcome, lesson)
+    - verdict accuracy per bucket
+    """
+    # Load existing memory or start fresh
+    if STOCK_MEMORY_FILE.exists():
+        try:
+            memory = json.loads(STOCK_MEMORY_FILE.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            memory = {}
+    else:
+        memory = {}
+
+    # Get all rows (resolved or open)
+    all_rows = conn.execute(
+        "SELECT symbol, direction, is_pick, sentiment_score, thesis, verdict, "
+        "outcome, pnl_pct, pnl_inr, pick_date, resolved_on, "
+        "entry_price, stop_price, target_price, notional, "
+        "fwd_p10, fwd_p90, sample_n "
+        "FROM screen_picks ORDER BY pick_date, id"
+    ).fetchall()
+
+    cols = [
+        "symbol", "direction", "is_pick", "sentiment_score", "thesis",
+        "verdict", "outcome", "pnl_pct", "pnl_inr", "pick_date",
+        "resolved_on", "entry_price", "stop_price", "target_price",
+        "notional", "fwd_p10", "fwd_p90", "sample_n",
+    ]
+    rows = [dict(zip(cols, r)) for r in all_rows]
+
+    # Group by symbol
+    by_symbol: dict[str, list[dict]] = {}
+    for r in rows:
+        by_symbol.setdefault(r["symbol"], []).append(r)
+
+    for symbol, stock_rows in by_symbol.items():
+        appearances = len(stock_rows)
+
+        # Pick record (is_pick=1, resolved)
+        pick_resolved = [r for r in stock_rows if r["is_pick"] and r["outcome"] in ("WIN", "LOSS")]
+        pick_wins = sum(1 for r in pick_resolved if r["outcome"] == "WIN")
+        pick_n = len(pick_resolved)
+        pick_record = {
+            "wins": pick_wins,
+            "losses": pick_n - pick_wins,
+            "win_rate": round(pick_wins / pick_n * 100, 1) if pick_n else None,
+            "avg_pnl_pct": round(
+                sum(r["pnl_pct"] or 0 for r in pick_resolved) / pick_n, 2
+            ) if pick_n else None,
+        }
+
+        # Control record (is_pick=0, resolved)
+        ctrl_resolved = [r for r in stock_rows if not r["is_pick"] and r["outcome"] in ("WIN", "LOSS")]
+        ctrl_wins = sum(1 for r in ctrl_resolved if r["outcome"] == "WIN")
+        ctrl_n = len(ctrl_resolved)
+        control_record = {
+            "wins": ctrl_wins,
+            "losses": ctrl_n - ctrl_wins,
+            "win_rate": round(ctrl_wins / ctrl_n * 100, 1) if ctrl_n else None,
+            "avg_pnl_pct": round(
+                sum(r["pnl_pct"] or 0 for r in ctrl_resolved) / ctrl_n, 2
+            ) if ctrl_n else None,
+        }
+
+        # Edge vs control
+        edge_vs_control = None
+        if pick_record["win_rate"] is not None and control_record["win_rate"] is not None:
+            edge_vs_control = round(pick_record["win_rate"] - control_record["win_rate"], 1)
+
+        # Last pick info
+        pick_rows = [r for r in stock_rows if r["is_pick"]]
+        last_pick = pick_rows[-1] if pick_rows else None
+        last_pick_info = None
+        if last_pick:
+            lesson = extract_lesson(last_pick) if last_pick["outcome"] in ("WIN", "LOSS") else None
+            last_pick_info = {
+                "date": last_pick["pick_date"],
+                "outcome": last_pick["outcome"],
+                "pnl_pct": round(last_pick["pnl_pct"], 2) if last_pick.get("pnl_pct") is not None else None,
+                "lesson": lesson,
+            }
+
+        # Verdict accuracy (resolved picks only)
+        verdict_acc: dict[str, dict] = {}
+        for verdict_label in ("EDGE CONFIRMED", "POSITIVE BUT UNCONFIRMED", "NO EDGE"):
+            v_rows = [r for r in pick_resolved if r["verdict"] == verdict_label]
+            if v_rows:
+                v_wins = sum(1 for r in v_rows if r["outcome"] == "WIN")
+                verdict_acc[verdict_label] = {
+                    "n": len(v_rows),
+                    "win_rate": round(v_wins / len(v_rows) * 100, 1),
+                }
+
+        memory[symbol] = {
+            "appearances_in_top20": appearances,
+            "times_picked": len(pick_rows),
+            "pick_record": pick_record,
+            "control_record": control_record,
+            "edge_vs_control_pct": edge_vs_control,
+            "last_pick_date": last_pick["pick_date"] if last_pick else None,
+            "last_outcome": last_pick["outcome"] if last_pick else None,
+            "last_lesson": last_pick_info.get("lesson") if last_pick_info else None,
+            "verdict_accuracy": verdict_acc if verdict_acc else None,
+        }
+
+    STOCK_MEMORY_FILE.write_text(
+        json.dumps(memory, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return {
+        "stocks_tracked": len(memory),
+        "stocks_with_picks": sum(1 for v in memory.values() if v["times_picked"] > 0),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Record and resolve the daily screen's picks.")
     parser.add_argument("--record", action="store_true", help="Record today's top list (+ screen_picks.json if present)")
@@ -683,6 +980,9 @@ def main() -> int:
         journal = render_learning_journal(conn)
         JOURNAL_FILE.write_text(journal, encoding="utf-8")
 
+        ledger_result = update_recos_ledger(conn)
+        memory_result = update_stock_memory(conn)
+
         payload = {
             "generated_on": date.today().isoformat(),
             "resolved_this_run": {
@@ -704,6 +1004,8 @@ def main() -> int:
             "sentiment_audit": sentiment_audit(conn),
             "verdict_accuracy": verdict_accuracy(conn),
             "learning_journal": str(JOURNAL_FILE.relative_to(PROJECT_ROOT)),
+            "recos_ledger": ledger_result,
+            "stock_memory": memory_result,
         }
         emit_json(payload)
     finally:

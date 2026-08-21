@@ -73,7 +73,10 @@ def load_optional(path: Path) -> dict[str, Any] | None:
 def fetch_bars(symbol: str, period: str):
     import yfinance as yf
 
-    return yf.Ticker(f"{symbol}.NS").history(period=period, interval="1d")
+    bars = yf.Ticker(f"{symbol}.NS").history(period=period, interval="1d")
+    if bars is not None and not bars.empty:
+        bars = bars.dropna(subset=["Close", "High", "Low", "Open"])
+    return bars
 
 
 def indicators(df):

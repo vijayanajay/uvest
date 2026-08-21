@@ -97,6 +97,18 @@ document plus the recorder's last output:
   readable JSON: **calibration** (predicted vs realized win rate per
   horizon × target, with CIs), **sentiment audit** (did sentiment picks
   beat the stats-only control group?), and **verdict accuracy**.
+* `screen_recos_ledger.json` — the **daily recos diary**: the last 30 days
+  of picks with their outcomes, P&L, and extracted lessons. Read the last
+  7 days. For any stock in today's top-20 that was picked before, note
+  whether it won or lost, what the lesson was, and whether today's
+  circumstances are materially different.
+* `screen_stock_memory.json` — the **per-stock reliability cache**:
+  accumulated stats for every stock that has appeared in the top-20,
+  including pick win rate vs control win rate, edge vs control delta,
+  last pick outcome and lesson, and verdict accuracy. For any stock in
+  today's top-20 with prior history, factor in this memory — a stock that
+  consistently contradicts its verdict across appearances is a red flag
+  the screen's P(hit) cannot see.
 
 **If the sentiment audit says picks are underperforming the list, say so
 in today's report and weight the stats columns above sentiment this
@@ -130,6 +142,15 @@ score — put `0` and say "no dated evidence found".** Flag explicitly any
 scheduled event (results, board meeting, ex-dividend) that falls inside
 the holding window: events are the one thing the statistics cannot see,
 and they cut both ways — volatility into results is risk, not edge.
+
+**Stock memory (from `screen_stock_memory.json`):** for any stock in the
+top-20 that has prior history, check its memory entry. If it was picked
+before and lost, you must explicitly address why today is different before
+giving it a positive score. If it has a high edge_vs_control_pct, that
+is a positive signal the screen's P(hit) does not capture. If its
+verdict_accuracy shows a pattern of contradicting its verdict, treat that
+as a red flag. The lesson from its last pick is the most actionable
+context you have — use it.
 
 ---
 
@@ -273,8 +294,15 @@ tomorrow's selection.
 - Sentiment audit: picks vs the stats-only control group (n, win rate,
   CI) — did the news overlay add value? State it plainly.
 
+## 📚 Historical context (from screen_recos_ledger.json + screen_stock_memory.json)
+- For each pick today that has prior history: last picked on DATE → OUTCOME
+  (P&L%), lesson: "..."
+- For any stock with a negative edge_vs_control_pct: flag it — the screen
+  may be over-optimistic on this name.
+- Last 7 days summary: N picks, W wins, L losses, regime transitions.
+
 ## 🎯 Today's picks (1–3)
-| Symbol | Dir | Score | Dated catalyst / event flag | Stats verdict it rides | 2W return range (med, IQR, P10) | Thesis |
+| Symbol | Dir | Score | Dated catalyst / event flag | Stats verdict it rides | 2W return range (med, IQR, P10) | Prior history | Thesis |
 ...
 
 ## 💰 Execution plan (from screen_record.py --record output — do not invent)
