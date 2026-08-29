@@ -54,11 +54,15 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import COST_RATE_FUT, PROJECT_ROOT, emit_json, load_json, percentile_sorted, wilson_ci  # noqa: E402
+from common import (  # noqa: E402
+    COST_RATE_FUT, PROJECT_ROOT, emit_json, load_json, percentile_sorted, wilson_ci,
+    get_sector, compute_rsi, compute_macd, compute_bollinger, compute_volume_surge,
+    momentum_composite,
+)
 
 HISTORY_BARS = 50          # bars needed before the EMA(50) is meaningful (matches script 6)
-HORIZONS = [5, 10, 20]     # 1W / 2W / 4W in trading bars
-HIT_LEVELS = [0.02, 0.03, 0.04]
+HORIZONS = [2, 3, 5, 10, 20]   # 2D / 3D / 1W / 2W / 4W in trading bars
+HIT_LEVELS = [0.01, 0.02, 0.03, 0.04]  # 1% / 2% / 3% / 4% — 1% captures the 0.5-1% daily target
 CACHE_DIR = PROJECT_ROOT / "data_cache"
 NIFTY_CACHE = CACHE_DIR / "NIFTY50.csv"   # written by screen_regime.py each morning
 
@@ -142,6 +146,44 @@ def load_nifty_regime_state() -> dict | None:
         return None
 
 
+def load_nifty_close_series():
+    """Load NIFTY close series for relative strength benchmarking."""
+    if not NIFTY_CACHE.exists():
+        return None
+    import pandas as pd
+
+    try:
+        df = pd.read_csv(NIFTY_CACHE, parse_dates=["Date"], index_col="Date")
+        return df["Close"].sort_index()
+    except Exception:
+        return None
+
+
+def compute_relative_strength(df, nifty_close) -> dict[str, float]:
+    """Compute rolling Relative Strength (RS) over 20 and 50 bars vs NIFTY 50."""
+    if nifty_close is None or len(df) < 50:
+        return {"rs_20": 0.0, "rs_50": 0.0}
+    try:
+        stock_close = df["Close"]
+        common_dates = stock_close.index.intersection(nifty_close.index)
+        if len(common_dates) < 50:
+            return {"rs_20": 0.0, "rs_50": 0.0}
+        s_aligned = stock_close.loc[common_dates]
+        n_aligned = nifty_close.loc[common_dates]
+
+        s_ret20 = (s_aligned.iloc[-1] / s_aligned.iloc[-21] - 1.0) if len(s_aligned) >= 21 else 0.0
+        n_ret20 = (n_aligned.iloc[-1] / n_aligned.iloc[-21] - 1.0) if len(n_aligned) >= 21 else 0.0
+        rs_20 = (s_ret20 - n_ret20) * 100.0
+
+        s_ret50 = (s_aligned.iloc[-1] / s_aligned.iloc[-51] - 1.0) if len(s_aligned) >= 51 else 0.0
+        n_ret50 = (n_aligned.iloc[-1] / n_aligned.iloc[-51] - 1.0) if len(n_aligned) >= 51 else 0.0
+        rs_50 = (s_ret50 - n_ret50) * 100.0
+
+        return {"rs_20": round(rs_20, 2), "rs_50": round(rs_50, 2)}
+    except Exception:
+        return {"rs_20": 0.0, "rs_50": 0.0}
+
+
 # ---- indicators (same definitions as script 2 / script 6) ------------------
 def indicators(df):
     import pandas as pd
@@ -156,21 +198,45 @@ def indicators(df):
     return atr, ema
 
 
-# ---- the replay -------------------------------------------------------------
-def replay_stock(symbol: str, df, k: float, nifty_state: dict | None = None) -> dict[str, Any] | None:
-    """Backtest the 2-4% hit shape for one stock. Returns the stats payload.
+def momentum_indicators(df):
+    """Compute RSI, MACD, Bollinger, Volume surge from a bar DataFrame.
 
-    Besides the per-cell hit/miss stats it now also reports:
-
-    * forward-return distributions per horizon (`returns`): the raw
-      buy-and-hold net return of every trend-matched window (entry at next
-      open, exit at horizon close, net of costs) — the honest "what range of
-      returns over 1/2/4 weeks" answer, separate from the managed
-      stop/target geometry;
-    * per-cell regime split (`cells[...].regime`): the same outcomes bucketed
-      by whether NIFTY closed above its 200-DMA on the signal day — does the
-      edge hold in both tapes?
+    Returns a dict with the latest values of each indicator, ready to
+    feed into momentum_composite(). Returns None on insufficient data.
     """
+    import pandas as pd
+
+    if df is None or len(df) < 50:
+        return None
+    close = df["Close"]
+    volume = df["Volume"] if "Volume" in df.columns else pd.Series(0, index=df.index)
+
+    rsi_s = compute_rsi(close, 14)
+    macd_line, signal_line, histogram = compute_macd(close)
+    bb_mid, bb_upper, bb_lower, bb_width = compute_bollinger(close)
+    vol_ratio_s = compute_volume_surge(volume)
+
+    # Compute rolling average of BB width for squeeze detection
+    bb_width_avg = bb_width.rolling(50).mean()
+
+    rsi_val = float(rsi_s.iloc[-1]) if rsi_s.iloc[-1] == rsi_s.iloc[-1] else 50.0
+    macd_hist_val = float(histogram.iloc[-1]) if histogram.iloc[-1] == histogram.iloc[-1] else 0.0
+    bb_width_val = float(bb_width.iloc[-1]) if bb_width.iloc[-1] == bb_width.iloc[-1] else 5.0
+    bb_width_avg_val = float(bb_width_avg.iloc[-1]) if pd.notna(bb_width_avg.iloc[-1]) else bb_width_val
+    vol_ratio_val = float(vol_ratio_s.iloc[-1]) if vol_ratio_s.iloc[-1] == vol_ratio_s.iloc[-1] else 1.0
+
+    return {
+        "rsi": round(rsi_val, 1),
+        "macd_histogram": round(macd_hist_val, 4),
+        "bollinger_width": round(bb_width_val, 2),
+        "bollinger_width_avg": round(bb_width_avg_val, 2),
+        "volume_ratio": round(vol_ratio_val, 2),
+    }
+
+
+# ---- the replay -------------------------------------------------------------
+def replay_stock(symbol: str, df, k: float, nifty_state: dict | None = None, nifty_close: pd.Series | None = None) -> dict[str, Any] | None:
+    """Backtest the setup shape for one stock including Triple Barrier Method evaluation."""
     atr_s, ema_s = indicators(df)
     opens = df["Open"].tolist()
     highs = df["High"].tolist()
@@ -190,16 +256,32 @@ def replay_stock(symbol: str, df, k: float, nifty_state: dict | None = None) -> 
     atr_pct = atr_now / close_now
     bullish = close_now > ema_now
     direction = "BUY" if bullish else "SELL"
+    rs = compute_relative_strength(df, nifty_close)
+
+    # Momentum / mean-reversion indicators
+    mom = momentum_indicators(df)
+    if mom is not None:
+        composite = momentum_composite(
+            rsi=mom["rsi"], macd_hist=mom["macd_histogram"],
+            bb_width=mom["bollinger_width"], bb_width_avg=mom["bollinger_width_avg"],
+            vol_ratio=mom["volume_ratio"], ema_bullish=bullish,
+            atr_pct=float(atr_pct),
+        )
+    else:
+        composite = {"score": 50.0, "direction": "NEUTRAL", "components": {}}
 
     cells: dict[str, dict[str, Any]] = {}
     fwd_by_hz: dict[int, list[float]] = {hz: [] for hz in HORIZONS}
+    tb_by_hz: dict[int, list[tuple[int, float]]] = {hz: [] for hz in HORIZONS}
+
     for hz in HORIZONS:
-        # Single pass per signal day per horizon; all hit levels resolved
-        # from the same window scan (stop/target prices differ only by hit).
+        # Single pass per signal day per horizon
         agg: dict[float, list[tuple[bool, bool, float, bool]]] = {h: [] for h in HIT_LEVELS}
         regime_agg: dict[float, dict[str, list]] = {
             h: {"bull": [], "bear": []} for h in HIT_LEVELS
         }
+        pt_mult = 2.0  # Dynamic Triple Barrier: Target = 2.0 x ATR
+
         for d in range(HISTORY_BARS - 1, n - hz):
             atr_d = atr_s.iloc[d]
             if not atr_d or atr_d <= 0:
@@ -207,7 +289,7 @@ def replay_stock(symbol: str, df, k: float, nifty_state: dict | None = None) -> 
             ema_d = float(ema_s.iloc[d])
             close_d = float(closes[d])
             if (direction == "BUY" and close_d <= ema_d) or (direction == "SELL" and close_d >= ema_d):
-                continue  # only the trend-matched bucket, like script 4's empirical mode
+                continue  # only the trend-matched bucket
 
             entry = float(opens[d + 1])
             if entry != entry or entry <= 0:
@@ -216,16 +298,40 @@ def replay_stock(symbol: str, df, k: float, nifty_state: dict | None = None) -> 
             stop = entry - risk if direction == "BUY" else entry + risk
             tgt = {h: entry * (1 + h) if direction == "BUY" else entry * (1 - h) for h in HIT_LEVELS}
 
+            # Triple Barrier calculation
+            tb_target = entry + pt_mult * float(atr_d) if direction == "BUY" else entry - pt_mult * float(atr_d)
+            tb_stop = entry - k * float(atr_d) if direction == "BUY" else entry + k * float(atr_d)
+            tb_outcome = 0  # 1 = WIN (upper barrier), -1 = LOSS (lower barrier), 0 = TIME-OUT (vertical barrier)
+
             stop_bar: int | None = None
             tgt_bar: dict[float, int | None] = {h: None for h in HIT_LEVELS}
             hi_max = entry
             lo_min = entry
+            tb_resolved = False
+
             for j in range(d + 1, d + hz + 1):
                 lo, hi = lows[j], highs[j]
                 if lo != lo or hi != hi:
                     continue
                 hi_max = max(hi_max, hi)
                 lo_min = min(lo_min, lo)
+
+                if not tb_resolved:
+                    if direction == "BUY":
+                        if lo <= tb_stop:
+                            tb_outcome = -1
+                            tb_resolved = True
+                        elif hi >= tb_target:
+                            tb_outcome = 1
+                            tb_resolved = True
+                    else:
+                        if hi >= tb_stop:
+                            tb_outcome = -1
+                            tb_resolved = True
+                        elif lo <= tb_target:
+                            tb_outcome = 1
+                            tb_resolved = True
+
                 if direction == "BUY":
                     if lo <= stop:            # stop first (conservative on same-bar ambiguity)
                         stop_bar = j
@@ -242,11 +348,10 @@ def replay_stock(symbol: str, df, k: float, nifty_state: dict | None = None) -> 
                             tgt_bar[h] = j
 
             final_close = float(closes[d + hz])
-            # Raw forward return of the window (market's move, not the
-            # managed outcome) — the basis of the 1/2/4-week return range.
             fwd = ((final_close - entry) / entry if direction == "BUY"
                    else (entry - final_close) / entry) - COST_RATE_FUT
             fwd_by_hz[hz].append(fwd)
+            tb_by_hz[hz].append((tb_outcome, fwd))
 
             regime_key = None
             if nifty_state is not None:
@@ -318,6 +423,31 @@ def replay_stock(symbol: str, df, k: float, nifty_state: dict | None = None) -> 
                 cell["regime"] = regime_stats
             cells[f"{hz}:{h * 100:.1f}"] = cell
 
+    triple_barrier: dict[str, Any] = {}
+    for hz in HORIZONS:
+        recs = tb_by_hz[hz]
+        tb_n = len(recs)
+        if tb_n == 0:
+            continue
+        tb_wins = sum(1 for r in recs if r[0] == 1)
+        tb_losses = sum(1 for r in recs if r[0] == -1)
+        tb_timeouts = sum(1 for r in recs if r[0] == 0)
+        ci_low, ci_high = wilson_ci(tb_wins, tb_n)
+        triple_barrier[str(hz)] = {
+            "n": tb_n,
+            "pt_mult": 2.0,
+            "sl_mult": k,
+            "wins": tb_wins,
+            "losses": tb_losses,
+            "timeouts": tb_timeouts,
+            "win_rate": round(tb_wins / tb_n * 100, 1),
+            "loss_rate": round(tb_losses / tb_n * 100, 1),
+            "timeout_rate": round(tb_timeouts / tb_n * 100, 1),
+            "ci_low": round(ci_low * 100, 1),
+            "ci_high": round(ci_high * 100, 1),
+            "avg_pnl_pct": round(sum(r[1] for r in recs) / tb_n * 100, 2),
+        }
+
     returns: dict[str, Any] = {}
     for hz in HORIZONS:
         vals = sorted(fwd_by_hz[hz])
@@ -344,7 +474,20 @@ def replay_stock(symbol: str, df, k: float, nifty_state: dict | None = None) -> 
         "trend": "BULLISH" if bullish else "BEARISH",
         "direction": direction,
         "stop_pct": round(k * atr_pct * 100, 2),
+        "rs_20": rs["rs_20"],
+        "rs_50": rs["rs_50"],
+        "sector": get_sector(symbol),
+        "momentum": {
+            "composite_score": composite["score"],
+            "direction": composite["direction"],
+            "rsi": mom["rsi"] if mom else None,
+            "macd_histogram": mom["macd_histogram"] if mom else None,
+            "volume_ratio": mom["volume_ratio"] if mom else None,
+            "bollinger_width": mom["bollinger_width"] if mom else None,
+            "components": composite["components"],
+        },
         "returns": returns,
+        "triple_barrier": triple_barrier,
         "cells": cells,
     }
 
@@ -380,6 +523,7 @@ def main() -> int:
     bars = {**downloaded, **cached}
 
     nifty_state = load_nifty_regime_state()
+    nifty_close = load_nifty_close_series()
 
     stats: dict[str, Any] = {}
     skipped: list[dict[str, str]] = []
@@ -388,7 +532,7 @@ def main() -> int:
         if df is None:
             skipped.append({"symbol": s, "reason": "no price data"})
             continue
-        res = replay_stock(s, df, args.stop_atr, nifty_state)
+        res = replay_stock(s, df, args.stop_atr, nifty_state, nifty_close)
         if res is None:
             skipped.append({"symbol": s, "reason": "insufficient history"})
             continue

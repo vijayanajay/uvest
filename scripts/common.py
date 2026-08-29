@@ -215,3 +215,254 @@ def estimate_costs(entry_price: float, lot_size: float, instrument_type: str | N
     notional = entry_price * lot_size
     rate = COST_RATE_OPT if (instrument_type or "").upper() == "OPT" else COST_RATE_FUT
     return round(notional * rate, 2)
+
+
+# ---- Sector mapping for NSE-150 stocks ------------------------------------
+# Approximate sector classification for ranking and rotation analysis.
+# Used by screen_stats.py to compute sector-level RS vs NIFTY.
+
+SECTOR_MAP: dict[str, str] = {
+    # Banks & Financial Services
+    "HDFCBANK": "BANKS", "ICICIBANK": "BANKS", "KOTAKBANK": "BANKS",
+    "SBIN": "BANKS", "AXISBANK": "BANKS", "INDUSINDBK": "BANKS",
+    "BANDHANBNK": "BANKS", "FEDERALBNK": "BANKS", "IDFCFIRSTB": "BANKS",
+    "PNB": "BANKS", "BANKBARODA": "BANKS", "CANBK": "BANKS",
+    "AUBANK": "BANKS", "MUTHOOTFIN": "BANKS", "HDFCLIFE": "BANKS",
+    "SBILIFE": "BANKS", "BAJFINANCE": "BANKS", "BAJAJFINSV": "BANKS",
+    "CHOLAFIN": "BANKS", "SRIRAMFIN": "BANKS", "ABFRL": "BANKS",
+    # IT & Technology
+    "TCS": "IT", "INFY": "IT", "WIPRO": "IT", "TECHM": "IT",
+    "HCLTECH": "IT", "LTIM": "IT", "MPHASIS": "IT", "COFORGE": "IT",
+    "PERSISTENT": "IT", "COGNIZANT": "IT", "LTTS": "IT", "DATAPATTNS": "IT",
+    # Oil, Gas & Energy
+    "RELIANCE": "ENERGY", "ONGC": "ENERGY", "IOC": "ENERGY",
+    "BPCL": "ENERGY", "HINDPETRO": "ENERGY", "GAIL": "ENERGY",
+    "ADANIGREEN": "ENERGY", "ADANIPORTS": "ENERGY", "TATAPOWER": "ENERGY",
+    "NTPC": "ENERGY", "POWERGRID": "ENERGY", "ADANIENSOL": "ENERGY",
+    # Metals & Mining
+    "TATASTEEL": "METALS", "JSWSTEEL": "METALS", "HINDALCO": "METALS",
+    "VEDL": "METALS", "NMDC": "METALS", "COALINDIA": "METALS",
+    "SAIL": "METALS", "JSPL": "METALS", "HINDZINC": "METALS",
+    # Automobiles
+    "MARUTI": "AUTO", "M&M": "AUTO", "TATAMOTORS": "AUTO",
+    "BAJAJ-AUTO": "AUTO", "HEROMOTOCO": "AUTO", "TVSMOTOR": "AUTO",
+    "EICHERMOT": "AUTO", "ASHOKLEY": "AUTO", "TATAELXSI": "AUTO",
+    "MOTHERSON": "AUTO", "SUNDRMFAST": "AUTO", "SONACOMS": "AUTO",
+    "OLECTRA": "AUTO", "MRF": "AUTO", "BOSCHLTD": "AUTO",
+    # Consumer Goods (Staples + Discretionary)
+    "ITC": "CONS", "HUL": "CONS", "NESTLEIND": "CONS",
+    "BRITANNIA": "CONS", "DABUR": "CONS", "MARICO": "CONS",
+    "COLPAL": "CONS", "EMAMILTD": "CONS", "VBL": "CONS",
+    "TATACONSUM": "CONS", "UBER": "CONS", "RADICO": "CONS",
+    # Pharma & Healthcare
+    "SUNPHARMA": "PHARMA", "DRREDDY": "PHARMA", "CIPLA": "PHARMA",
+    "DIVISLAB": "PHARMA", "TORNTPHARM": "PHARMA", "AUROPHARMA": "PHARMA",
+    "LALPATHLAB": "PHARMA", "ALKEM": "PHARMA", "GLENMARK": "PHARMA",
+    "IPCALAB": "PHARMA", "ZYDUSLIFE": "PHARMA", "BIOCON": "PHARMA",
+    # Real Estate
+    "DLF": "REALESTATE", "GODREJPROP": "REALESTATE", "OBEROIRLTY": "REALESTATE",
+    "PRESTIGE": "REALESTATE", "BRIGADE": "REALESTATE", "SOBHA": "REALESTATE",
+    "LODHA": "REALESTATE",
+    # Infrastructure & Capital Goods
+    "LT": "INFRA", "ADANIENT": "INFRA", "SIEMENS": "INFRA",
+    "ABB": "INFRA", "BHEL": "INFRA", "THERMAX": "INFRA",
+    "CUMMINSIND": "INFRA", "HONAUT": "INFRA", "TATACOMM": "INFRA",
+    # Telecom
+    "BHARTIARTL": "TELECOM", "IDEA": "TELECOM",
+    # Insurance
+    "ICICIPRULI": "INSURANCE", "SBILIFE": "INSURANCE", "HDFCLIFE": "INSURANCE",
+    # Media & Entertainment
+    "ZOMATO": "MEDIA", "NYKAA": "MEDIA", "DELHIVERY": "MEDIA",
+    # Chemicals
+    "UPL": "CHEMICALS", "DEEPAKNTR": "CHEMICALS", "SRF": "CHEMICALS",
+    "ATUL": "CHEMICALS", "NAVINFLUOR": "CHEMICALS", "TTKHEALTH": "CHEMICALS",
+    "FLUOROCHEM": "CHEMICALS", "CLEAN": "CHEMICALS",
+    # Miscellaneous / Conglomerates
+    "TATAPOWER": "POWER", "ADANIGREEN": "POWER", "NTPC": "POWER",
+    "POWERGRID": "POWER",
+    # Textiles
+    "GRASIM": "CEMENT", "ULTRACEMCO": "CEMENT", "AMBUJACEM": "CEMENT",
+    "ACC": "CEMENT", "SHREECEM": "CEMENT",
+}
+
+
+def get_sector(symbol: str) -> str:
+    """Return the sector for a symbol, or 'OTHERS' if unknown."""
+    return SECTOR_MAP.get(symbol.upper(), "OTHERS")
+
+
+# ---- Technical indicators for momentum/mean-reversion signals --------------
+# All functions take a pandas DataFrame with columns Open, High, Low, Close, Volume.
+# They are intentionally standalone (not class-based) for easy embedding.
+
+def compute_rsi(close_series, period: int = 14):
+    """RSI (Relative Strength Index) over `period` bars.
+
+    Returns a Series aligned to the input. Classic Wilder smoothing
+    (EWM with alpha=1/period).
+    """
+    delta = close_series.diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.ewm(alpha=1.0 / period, min_periods=period, adjust=False).mean()
+    avg_loss = loss.ewm(alpha=1.0 / period, min_periods=period, adjust=False).mean()
+    rs = avg_gain / avg_loss.replace(0, float("nan"))
+    rsi = 100.0 - (100.0 / (1.0 + rs))
+    return rsi
+
+
+def compute_macd(close_series, fast: int = 12, slow: int = 26, signal: int = 9):
+    """MACD line, signal line, and histogram.
+
+    Returns (macd_line, signal_line, histogram) as Series.
+    """
+    ema_fast = close_series.ewm(span=fast, adjust=False).mean()
+    ema_slow = close_series.ewm(span=slow, adjust=False).mean()
+    macd_line = ema_fast - ema_slow
+    signal_line = macd_line.ewm(span=signal, adjust=False).mean()
+    histogram = macd_line - signal_line
+    return macd_line, signal_line, histogram
+
+
+def compute_bollinger(close_series, period: int = 20, num_std: float = 2.0):
+    """Bollinger Bands: middle (SMA), upper, lower, bandwidth (%).
+
+    Bandwidth = (upper - lower) / middle — a volatility-expansion measure.
+    Returns (middle, upper, lower, bandwidth) as Series.
+    """
+    middle = close_series.rolling(period).mean()
+    std = close_series.rolling(period).std()
+    upper = middle + num_std * std
+    lower = middle - num_std * std
+    bandwidth = ((upper - lower) / middle.replace(0, float("nan"))) * 100.0
+    return middle, upper, lower, bandwidth
+
+
+def compute_volume_surge(volume_series, period: int = 20):
+    """Volume ratio vs its `period`-bar moving average.
+
+    Returns a Series: volume_ratio = current_vol / avg_vol.
+    Values > 2.0 are considered significant surges.
+    """
+    avg_vol = volume_series.rolling(period).mean()
+    return volume_series / avg_vol.replace(0, float("nan"))
+
+
+def momentum_composite(rsi: float, macd_hist: float, bb_width: float,
+                       bb_width_avg: float, vol_ratio: float, ema_bullish: bool,
+                       atr_pct: float) -> dict[str, Any]:
+    """Composite momentum / mean-reversion signal (0–100).
+
+    Components and weights:
+        RSI position (0-25): extreme RSI (<30 or >70) for mean-reversion;
+            neutral RSI (40-60) with momentum is best for trend-following.
+        MACD histogram (0-25): positive and rising = strong momentum.
+        Bollinger squeeze (0-20): low bandwidth = volatility expansion imminent.
+        Volume surge (0-15): >1.5x average = institutional interest.
+        Trend alignment (0-15): close > EMA50 = trend support.
+
+    Returns {score, direction, components}.
+    """
+    score = 0.0
+    components: dict[str, dict[str, Any]] = {}
+
+    # 1. RSI signal (0-25)
+    rsi_score = 0.0
+    rsi_dir = "NEUTRAL"
+    if rsi >= 70:
+        rsi_score = 5.0  # overbought — risky for BUY
+        rsi_dir = "OVERBOUGHT"
+    elif rsi <= 30:
+        rsi_score = 25.0  # oversold — mean-reversion BUY signal
+        rsi_dir = "OVERSOLD"
+    elif 50 <= rsi <= 60:
+        rsi_score = 20.0  # healthy momentum zone
+        rsi_dir = "BULLISH"
+    elif rsi > 60:
+        rsi_score = 15.0  # strong but approaching overbought
+        rsi_dir = "STRONG_BULL"
+    elif rsi < 40:
+        rsi_score = 8.0  # weak — possible accumulation
+        rsi_dir = "WEAK"
+    else:
+        rsi_score = 12.0  # 40-50: neutral
+        rsi_dir = "NEUTRAL"
+    score += rsi_score
+    components["rsi"] = {"value": round(rsi, 1), "signal": rsi_dir, "points": round(rsi_score, 1)}
+
+    # 2. MACD histogram signal (0-25)
+    macd_score = 0.0
+    macd_dir = "NEUTRAL"
+    if macd_hist > 0:
+        macd_score = min(25.0, 15.0 + abs(macd_hist) * 2.0)
+        macd_dir = "BULLISH"
+    elif macd_hist < 0:
+        macd_score = max(0.0, 10.0 - abs(macd_hist) * 2.0)
+        macd_dir = "BEARISH"
+    else:
+        macd_score = 12.0
+        macd_dir = "NEUTRAL"
+    score += macd_score
+    components["macd"] = {"histogram": round(macd_hist, 4), "signal": macd_dir, "points": round(macd_score, 1)}
+
+    # 3. Bollinger squeeze (0-20) — low bandwidth = volatility expansion imminent
+    bb_score = 0.0
+    bb_dir = "NORMAL"
+    if bb_width_avg > 0:
+        bb_ratio = bb_width / bb_width_avg
+        if bb_ratio < 0.7:
+            bb_score = 20.0  # strong squeeze
+            bb_dir = "SQUEEZE"
+        elif bb_ratio < 0.85:
+            bb_score = 14.0  # mild squeeze
+            bb_dir = "TIGHTENING"
+        elif bb_ratio > 1.5:
+            bb_score = 5.0  # expanded — less likely to break out
+            bb_dir = "EXPANDED"
+        else:
+            bb_score = 10.0
+            bb_dir = "NORMAL"
+    else:
+        bb_score = 10.0  # no history, neutral
+    score += bb_score
+    components["bollinger"] = {"width": round(bb_width, 2), "signal": bb_dir, "points": round(bb_score, 1)}
+
+    # 4. Volume surge (0-15)
+    vol_score = 0.0
+    vol_dir = "NORMAL"
+    if vol_ratio >= 2.5:
+        vol_score = 15.0
+        vol_dir = "SURGE"
+    elif vol_ratio >= 1.5:
+        vol_score = 12.0
+        vol_dir = "ABOVE_AVG"
+    elif vol_ratio >= 1.0:
+        vol_score = 8.0
+        vol_dir = "NORMAL"
+    else:
+        vol_score = 3.0
+        vol_dir = "LOW"
+    score += vol_score
+    components["volume"] = {"ratio": round(vol_ratio, 2), "signal": vol_dir, "points": round(vol_score, 1)}
+
+    # 5. Trend alignment (0-15)
+    trend_score = 15.0 if ema_bullish else 3.0
+    trend_dir = "BULLISH" if ema_bullish else "BEARISH"
+    score += trend_score
+    components["trend"] = {"above_ema50": ema_bullish, "signal": trend_dir, "points": round(trend_score, 1)}
+
+    final_score = round(min(100.0, max(0.0, score)), 1)
+
+    # Direction: BUY if bullish consensus (trend + RSI not overbought + MACD positive)
+    if ema_bullish and macd_hist > 0 and rsi < 75:
+        direction = "BUY"
+    elif not ema_bullish and macd_hist < 0 and rsi > 25:
+        direction = "SELL"
+    else:
+        direction = "NEUTRAL"
+
+    return {
+        "score": final_score,
+        "direction": direction,
+        "components": components,
+    }
