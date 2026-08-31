@@ -40,8 +40,11 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import INPUT_FILE, emit_json, estimate_costs, load_json  # noqa: E402
+from common import INPUT_FILE, PROJECT_ROOT, emit_json, estimate_costs, load_json  # noqa: E402
 from db import compute_calibration, compute_stats, connect, upsert_tracked_trade  # noqa: E402
+
+# Regime file written by screen_regime.py each morning; read to tag new rows.
+_REGIME_FILE = PROJECT_ROOT / "screen_regime_out.json"
 
 
 def resolve_open_trades(conn, offline: bool = False) -> tuple[list[dict[str, Any]], str]:
@@ -142,6 +145,27 @@ def resolve_open_trades(conn, offline: bool = False) -> tuple[list[dict[str, Any
     return resolved, "ok" if resolved else "no_triggers"
 
 
+def _load_regime() -> dict[str, Any] | None:
+    """Load today's regime snapshot for regime tagging.
+
+    Returns a dict with keys vix_regime, nifty_trend, breadth_regime
+    suitable for passing to upsert_tracked_trade, or None if the file
+    is missing or malformed.
+    """
+    try:
+        r = load_json(_REGIME_FILE)
+    except (FileNotFoundError, ValueError, OSError):
+        return None
+    nifty = r.get("nifty", {})
+    vix = r.get("vix", {})
+    overall = r.get("overall", {})
+    return {
+        "vix_regime": vix.get("regime"),
+        "nifty_trend": nifty.get("trend"),
+        "breadth_regime": overall.get("label"),
+    }
+
+
 def track_and_stats(conn, data: dict[str, Any] | None, score: int | None, decision: str | None,
                     offline: bool) -> dict[str, Any]:
     resolved, res_status = resolve_open_trades(conn, offline=offline)
@@ -150,7 +174,10 @@ def track_and_stats(conn, data: dict[str, Any] | None, score: int | None, decisi
     newly_tracked = updated = False
     identity = None
     if data is not None:
-        newly_tracked, _, identity = upsert_tracked_trade(conn, data, score=score, decision=decision)
+        regime = _load_regime()
+        newly_tracked, _, identity = upsert_tracked_trade(
+            conn, data, score=score, decision=decision, regime=regime,
+        )
         updated = not newly_tracked
         stats = compute_stats(conn)  # refresh counts with the new/updated row
 

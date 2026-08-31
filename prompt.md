@@ -60,6 +60,11 @@ python scripts/4_score_calculator.py > script4_out.json
 # Step 10: Learning Loop — Record Reco & Resolve Past Trades (MANDATORY)
 python scripts/5_track_and_resolve.py --score <FINAL_SCORE> --decision "<DECISION_STRING>" > script5_out.json
 
+# Step 11: System Self-Audit (Weekly — the system argues with itself)
+#   Validates edge significance, regime robustness, and threshold calibration.
+#   Writes thresholds.json (consumed by 4_score_calculator.py on future runs).
+python scripts/7_walkforward_validator.py --no-write  # --no-write on trade runs; omit for weekly calibration
+
 # (Alternative: run entire Workflow A automated via: python scripts/run_analysis.py)
 ```
 
@@ -119,7 +124,7 @@ python scripts/screen_record.py --record
 | **Mean Reversion Safety** | `screen_mean_reversion.py` | • **Drawdown > 5% (CRASH):** Override verdict to `NOT_A_DIP`.<br>• **Downtrend Dip:** Dip in downtrend is a TRAP (`NOT_A_DIP`); dip in uptrend is a GIFT. |
 | **Expiry Day Cap** | `current_trade.json` / `common.py` | • $<3$ days to expiry scores 0 on event safety and **caps decision at CONDITIONAL GO** (avoids expiry-day gamma whipsaw). |
 | **Capital Rules (₹5L)** | `screen_record.py` | • Sizing = $\max(1\%\text{ risk qty}, 30\%\text{ capital floor qty})$.<br>• Max 3 concurrent picks, total portfolio stop risk $\le 4.5\%$, max 2 same-sector picks. |
-| **Decision Scoring Bands** | `4_score_calculator.py` | Applied to **effective score** (% of available un-waived points):<br>• **$\ge 80\%$:** 🟢 **GO (EXECUTE FULL SIZE)**<br>• **$65–79\%$:** 🟡 **CONDITIONAL GO (REDUCE SIZE 50%)**<br>• **$< 65\%$:** 🔴 **NO-GO (REJECT)** |
+| **Decision Scoring Bands** | `4_score_calculator.py` | Applied to **effective score** (% of available un-waived points). Thresholds are **dynamic** — loaded from `thresholds.json` (written by `7_walkforward_validator.py`), falling back to fixed 80%/65% defaults. The score calculator reports which thresholds were active.<br>• **≥ 80% (GO threshold):** 🟢 **GO (EXECUTE FULL SIZE)**<br>• **65–79% (CONDITIONAL threshold):** 🟡 **CONDITIONAL GO (REDUCE SIZE 50%)**<br>• **< 65%:** 🔴 **NO-GO (REJECT)** |
 | **Waiver Model** | `4_score_calculator.py` | Any check that cannot be evaluated earns **0 points and is marked `waived`**. Waived points are subtracted from `max_possible_score`. Missing data never inflates and never penalizes a score. |
 
 ---
@@ -147,6 +152,33 @@ The learning loop is the self-calibrating memory of the system. **You must run a
    - Records today's full ranked list as the **control group** to audit whether selected picks beat the baseline.
    - Updates `screen_learning.md` with calibration per horizon/target cell and outlier autopsy blocks.
    - Updates `screen_stock_memory.json` (per-stock reliability, win rates, and prior lessons).
+
+---
+
+## 4A. 🔬 THE SELF-AUDIT LOOP (Weekly — the system argues with itself)
+
+> **Run weekly (e.g., every Friday) or after 10+ new resolutions accumulate.**
+> This is NOT per-trade — it calibrates the system that runs on every trade.
+
+```bash
+# Full self-audit: permutation test + regime audit + threshold calibration + WF weights
+python scripts/7_walkforward_validator.py
+```
+
+**What it does:**
+1. **Edge Significance Test** — shuffles trade dates 10,000 times. If actual Sharpe/Calmar is below the 95th percentile of random, the "edge" is indistinguishable from luck. Prints: `EDGE SIGNIFICANT: p=0.03 (REAL)` or `p=0.34 (LUCK)`.
+2. **Regime-Stratified Audit** — splits outcomes by VIX regime, NIFTY trend, breadth. Flags: `REGIME MISMATCH: Edge = -₹1,200/trade in current regime`.
+3. **Bayesian Threshold Calibration** — computes optimal GO/COND/NO-GO thresholds from historical decision accuracy. Writes `thresholds.json` consumed by `4_score_calculator.py`.
+4. **Walk-Forward Weight Optimization** — time-series CV of scoring weights. Reports OOS Calmar for each candidate.
+
+**Outputs:**
+- `thresholds.json` — self-calibrating gates for the score calculator
+- `validator_report.md` — human-readable self-audit report
+- JSON to stdout with full diagnostic payload
+
+**Regime tagging:** Every trade tracked by `5_track_and_resolve.py` is now tagged with its market regime at entry time (VIX regime, NIFTY 200-DMA trend, breadth regime from `screen_regime_out.json`). This feeds the regime audit.
+
+**The null hypothesis:** the system must prove its edge is real, not assumed. If the permutation test says LUCK, the system should tighten its own gates (raise thresholds, reduce sizing) until the edge is confirmed or the system admits defeat.
 
 ---
 

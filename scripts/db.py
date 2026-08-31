@@ -29,7 +29,7 @@ from typing import Any
 
 from common import DB_FILE, parse_expiry  # noqa: E402
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 SCHEMA = """
 CREATE TABLE trade_recommendations (
@@ -60,6 +60,9 @@ CREATE TABLE trade_recommendations (
     source          TEXT,                   -- where the reco came from (univest / other)
     analysis_count  INTEGER NOT NULL DEFAULT 1,  -- how many times this reco was analyzed
     last_analyzed_on TEXT,                  -- date of the most recent re-analysis
+    vix_regime      TEXT,                   -- LOW / NORMAL / HIGH at time of entry
+    nifty_trend     TEXT,                   -- BULL / RANGE / BEAR vs 200-DMA at entry
+    breadth_regime  TEXT,                   -- RISK_ON / CAUTIOUS / RISK_OFF at entry
     UNIQUE (symbol, instrument_type, action, entry_price, target, stoploss)
 );
 CREATE INDEX idx_symbol_type ON trade_recommendations (symbol, instrument_type);
@@ -103,6 +106,13 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE trade_recommendations ADD COLUMN last_analyzed_on TEXT")
         conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
         conn.commit()
+        return
+    if version == 4:
+        conn.execute("ALTER TABLE trade_recommendations ADD COLUMN vix_regime TEXT")
+        conn.execute("ALTER TABLE trade_recommendations ADD COLUMN nifty_trend TEXT")
+        conn.execute("ALTER TABLE trade_recommendations ADD COLUMN breadth_regime TEXT")
+        conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
+        conn.commit()
 
 
 def connect(db_path: Path = DB_FILE) -> sqlite3.Connection:
@@ -112,7 +122,8 @@ def connect(db_path: Path = DB_FILE) -> sqlite3.Connection:
 
 
 def upsert_tracked_trade(conn: sqlite3.Connection, data: dict[str, Any],
-                         score: int | None = None, decision: str | None = None) -> tuple[bool, int, dict[str, Any]]:
+                         score: int | None = None, decision: str | None = None,
+                         regime: dict[str, Any] | None = None) -> tuple[bool, int, dict[str, Any]]:
     """Record (or refresh) the recommendation currently under analysis.
 
     Returns (was_inserted, row_id, identity). A recommendation is identified
@@ -132,6 +143,12 @@ def upsert_tracked_trade(conn: sqlite3.Connection, data: dict[str, Any],
     recommended contract (entry/target/stoploss) and the reco date are never
     rewritten, so resolution windows and the track record stay honest.
     """
+    # Regime context at time of entry — passed in by the caller (5_track_and_resolve.py)
+    # so the validator can later audit performance by regime.
+    vix_regime = (regime or {}).get("vix_regime")
+    nifty_trend = (regime or {}).get("nifty_trend")
+    breadth_regime = (regime or {}).get("breadth_regime")
+
     symbol = data["symbol"]
     inst = data.get("instrument_type", "FUT")
     action = data.get("action", "BUY")
@@ -197,11 +214,14 @@ def upsert_tracked_trade(conn: sqlite3.Connection, data: dict[str, Any],
                 confidence_score=?, decision=?, rr_ratio=?, expiry=?, expiry_date=?,
                 source=COALESCE(source, ?),
                 analysis_count = analysis_count + 1,
-                last_analyzed_on=?
+                last_analyzed_on=?,
+                vix_regime=COALESCE(?, vix_regime),
+                nifty_trend=COALESCE(?, nifty_trend),
+                breadth_regime=COALESCE(?, breadth_regime)
             WHERE id=?
             """,
             (er_min, er_max, live, lot, margin, score, decision, rr, expiry_text,
-             expiry_iso, source, today, row_id),
+             expiry_iso, source, today, vix_regime, nifty_trend, breadth_regime, row_id),
         )
         inserted = False
     else:
@@ -211,12 +231,13 @@ def upsert_tracked_trade(conn: sqlite3.Connection, data: dict[str, Any],
                 (symbol, instrument_type, action, entry_price, target, stoploss,
                  entry_range_min, entry_range_max, live_price, lot_size, margin,
                  outcome, confidence_score, decision, rr_ratio, recommended_on,
-                 expiry, expiry_date, is_seed, source, analysis_count, last_analyzed_on)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'OPEN', ?, ?, ?, ?, ?, ?, 0, ?, 1, ?)
+                 expiry, expiry_date, is_seed, source, analysis_count, last_analyzed_on,
+                 vix_regime, nifty_trend, breadth_regime)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'OPEN', ?, ?, ?, ?, ?, ?, 0, ?, 1, ?, ?, ?, ?)
             """,
             (symbol, inst, action, entry, target, sl, er_min, er_max, live, lot, margin,
              score, decision, rr, reco_date.isoformat(), expiry_text, expiry_iso,
-             source, today),
+             source, today, vix_regime, nifty_trend, breadth_regime),
         )
         row_id = cursor.lastrowid
         inserted = True
@@ -340,4 +361,58 @@ def compute_stats(conn: sqlite3.Connection) -> dict[str, Any]:
             "missed_profit_inr": round(sum(t[1] for t in rejected_wins), 2),
             "avoided_losses_inr": round(abs(sum(t[1] for t in rejected_losses)), 2),
         },
+    }
+
+
+def compute_regime_audit(conn: sqlite3.Connection) -> dict[str, Any]:
+    """Regime-stratified performance audit for the walk-forward validator.
+
+    Splits all resolved tracked outcomes by their stored regime tags
+    (vix_regime, nifty_trend, breadth_regime) and reports win rate,
+    expectancy, and sample size per regime bucket. The validator uses
+    this to flag regime mismatches: e.g., a setup with positive edge
+    only in BULL+LOW_VIX but currently running in RANGE+HIGH_VIX.
+    """
+    rows = conn.execute(
+        """SELECT outcome, pnl_inr, decision,
+                  vix_regime, nifty_trend, breadth_regime
+           FROM trade_recommendations
+           WHERE is_seed=0 AND outcome IN ('WIN', 'LOSS')"""
+    ).fetchall()
+    if not rows:
+        return {"by_vix": {}, "by_nifty": {}, "by_breadth": {}, "total_resolved": 0}
+
+    def _bucket(rows_subset: list[tuple]) -> dict[str, Any]:
+        wins = sum(1 for r in rows_subset if r[0] == "WIN")
+        losses = sum(1 for r in rows_subset if r[0] == "LOSS")
+        n = wins + losses
+        if n == 0:
+            return {"n": 0, "wins": 0, "losses": 0, "win_rate": None,
+                    "expectancy": None, "net_pnl": 0.0}
+        wr = wins / n
+        avg_w = sum(r[1] for r in rows_subset if r[0] == "WIN") / wins if wins else 0.0
+        avg_l = abs(sum(r[1] for r in rows_subset if r[0] == "LOSS") / losses) if losses else 0.0
+        exp = (wr * avg_w) - ((1 - wr) * avg_l)
+        return {
+            "n": n, "wins": wins, "losses": losses,
+            "win_rate": round(wr * 100, 1),
+            "expectancy": round(exp, 2),
+            "net_pnl": round(sum(r[1] for r in rows_subset), 2),
+        }
+
+    by_vix: dict[str, list] = {}
+    by_nifty: dict[str, list] = {}
+    by_breadth: dict[str, list] = {}
+    for r in rows:
+        outcome, pnl, decision, vix, nifty, breadth = r
+        row_data = (outcome, pnl, decision)
+        by_vix.setdefault(vix or "UNKNOWN", []).append(row_data)
+        by_nifty.setdefault(nifty or "UNKNOWN", []).append(row_data)
+        by_breadth.setdefault(breadth or "UNKNOWN", []).append(row_data)
+
+    return {
+        "by_vix": {k: _bucket(v) for k, v in sorted(by_vix.items())},
+        "by_nifty": {k: _bucket(v) for k, v in sorted(by_nifty.items())},
+        "by_breadth": {k: _bucket(v) for k, v in sorted(by_breadth.items())},
+        "total_resolved": len(rows),
     }

@@ -60,6 +60,7 @@ from common import (  # noqa: E402
     OUT2_FILE,
     OUT3_FILE,
     OUT6_FILE,
+    PROJECT_ROOT,
     emit_json,
     fail,
     flip_prices,
@@ -72,14 +73,59 @@ from common import (  # noqa: E402
 # score falls back to the ticker track record (script3).
 EMPIRICAL_MIN_N = 30
 
+# Thresholds file written by 7_walkforward_validator.py after calibration.
+_THRESHOLDS_FILE = PROJECT_ROOT / "thresholds.json"
 
-def decide(score: float, max_possible: float, days: int | None) -> tuple[str, float]:
+# Default decision bands — used when thresholds.json is absent or stale.
+_DEFAULT_GO_THRESHOLD = 80.0
+_DEFAULT_COND_THRESHOLD = 65.0
+
+
+def _load_thresholds() -> tuple[float, float]:
+    """Load Bayesian-calibrated decision thresholds.
+
+    Returns (go_threshold, cond_threshold) as effective-score percentages.
+    Falls back to the fixed defaults if the file is missing, corrupt,
+    or has a ``_generated_on`` older than 90 days (stale calibration).
+    """
+    try:
+        t = load_json(_THRESHOLDS_FILE)
+    except (FileNotFoundError, ValueError, OSError):
+        return _DEFAULT_GO_THRESHOLD, _DEFAULT_COND_THRESHOLD
+    # Guard against stale thresholds — re-calibrate periodically.
+    gen = t.get("_generated_on")
+    if gen:
+        try:
+            from datetime import date as _date
+            gen_date = _date.fromisoformat(str(gen)[:10])
+            age_days = (_date.today() - gen_date).days
+            if age_days > 90:
+                return _DEFAULT_GO_THRESHOLD, _DEFAULT_COND_THRESHOLD
+        except (ValueError, TypeError):
+            pass
+    go = float(t.get("go_threshold", _DEFAULT_GO_THRESHOLD))
+    cond = float(t.get("cond_threshold", _DEFAULT_COND_THRESHOLD))
+    # Sanity clamp — never let thresholds go below 50 or above 95.
+    go = max(50.0, min(95.0, go))
+    cond = max(40.0, min(go - 1, cond))  # cond must be < go
+    return go, cond
+
+
+def decide(score: float, max_possible: float, days: int | None,
+            go_threshold: float | None = None,
+            cond_threshold: float | None = None) -> tuple[str, float]:
     """Map a raw score to a decision using the share-of-available-points bands,
-    with the expiry-day veto (sub-3-day expiry never allows full size)."""
+    with the expiry-day veto (sub-3-day expiry never allows full size).
+
+    When go_threshold / cond_threshold are None the Bayesian-calibrated
+    values from thresholds.json are used (with fallback to 80/65).
+    """
+    if go_threshold is None or cond_threshold is None:
+        go_threshold, cond_threshold = _load_thresholds()
     effective = round(score / max_possible * 100, 1) if max_possible > 0 else 0.0
-    if effective >= 80:
+    if effective >= go_threshold:
         decision = "GO (EXECUTE FULL SIZE)"
-    elif effective >= 65:
+    elif effective >= cond_threshold:
         decision = "CONDITIONAL GO (REDUCE SIZE 50%)"
     else:
         decision = "NO-GO (REJECT)"
@@ -314,10 +360,13 @@ def calculate_score(math_res: dict[str, Any], market_res: dict[str, Any], audit_
         )
 
     # Decision — bands applied to the share of AVAILABLE points. Waived checks
-    # grant nothing and are not penalized either.
+    # grant nothing and are not penalized either. Thresholds are loaded from
+    # thresholds.json (written by 7_walkforward_validator.py) with fallback
+    # to the fixed 80/65 defaults.
     waived_max = sum(d["max"] for d in details if d.get("waived"))
     max_possible = 100 - waived_max
-    decision, effective = decide(score, max_possible, days)
+    go_th, cond_th = _load_thresholds()
+    decision, effective = decide(score, max_possible, days, go_th, cond_th)
 
     return {
         "final_confidence_score": score,
@@ -331,6 +380,11 @@ def calculate_score(math_res: dict[str, Any], market_res: dict[str, Any], audit_
         "rejection_reasons": [d["reason"] for d in details if not d.get("waived")],
         "rejection_details": details,
         "component_scores": component_scores,
+        "thresholds_active": {
+            "go_threshold": go_th,
+            "cond_threshold": cond_th,
+            "source": "thresholds.json" if _THRESHOLDS_FILE.exists() else "defaults",
+        },
     }
 
 
@@ -365,9 +419,13 @@ def build_flip_table(math_res: dict[str, Any], market_res: dict[str, Any],
     fp = flip_prices(sl, target, rmin, rmax)
     p15, p10 = fp["rr_1_5_price"], fp["rr_1_0_price"]
 
+    th = score_res.get("thresholds_active", {})
+    go_th = th.get("go_threshold")
+    cond_th = th.get("cond_threshold")
+
     def after(gain: int) -> tuple[int, str]:
         s = score + gain
-        d, _ = decide(s, max_possible, days)
+        d, _ = decide(s, max_possible, days, go_th, cond_th)
         return s, d
 
     rows: list[dict[str, Any]] = []
