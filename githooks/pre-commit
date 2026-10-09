@@ -1,10 +1,16 @@
 #!/bin/sh
-# UVEST pre-commit hook — runs the full invariant & gate suite.
+# UVEST pre-commit hook — runs the full invariant & gate suite, then the
+# behavioral evals scorecard.
 #
 # Tracked in githooks/ and activated via `git config core.hooksPath githooks`
-# (run scripts/setup_hooks.sh once per clone). Failing the suite blocks the
+# (run scripts/setup_hooks.sh once per clone). Failing either blocks the
 # commit, treating spec drift like a build failure — capital-risk invariants
-# must never ship on a broken baseline.
+# and eval-gate regressions must never ship on a broken baseline.
+
+# Anchor to the repo root, wherever git invokes us from, so `python tests/...`
+# paths resolve correctly under submodules, worktrees, and unusual cwd.
+REPO_ROOT=$(git rev-parse --show-toplevel) || exit 1
+cd "$REPO_ROOT" || exit 1
 
 echo "🛡️  UVEST invariant suite (pre-commit)..."
 python tests/run_all_tests.py
@@ -17,6 +23,20 @@ if [ $status -ne 0 ]; then
     echo "   Bypass deliberately with: git commit --no-verify"
     exit $status
 fi
-
 echo "✅ Invariant suite passed."
+
+echo ""
+echo "📊 UVEST behavioral evals scorecard (pre-commit)..."
+python tests/run_evals.py
+evals_status=$?
+
+if [ $evals_status -ne 0 ]; then
+    echo ""
+    echo "❌ Pre-commit blocked: eval-gate regression detected (exit $evals_status)."
+    echo "   Behavioral evals must pass before committing."
+    echo "   Bypass deliberately with: git commit --no-verify"
+    exit $evals_status
+fi
+echo "✅ Evals scorecard passed."
+
 exit 0
