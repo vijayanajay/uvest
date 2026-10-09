@@ -103,7 +103,7 @@ class TestGoldenDatasetContract(unittest.TestCase):
                 self.assertIsNotNone(pledge, f"{trade['trade_id']}: pledge missing")
                 self.assertGreater(pledge, 25.0, f"{trade['trade_id']}: pledge not > 25%")
             elif cls_name == "inverted_rr":
-                rr = out.get("out_1_math_and_rr.json", {}).get("risk_reward_ratio")
+                rr = out.get("out_1_math.json", {}).get("live_rr")
                 self.assertIsNotNone(rr, f"{trade['trade_id']}: R:R missing")
                 self.assertLess(rr, 1.0, f"{trade['trade_id']}: R:R not < 1.0")
             elif cls_name == "earnings_hazard":
@@ -126,7 +126,7 @@ class TestGoldenDatasetContract(unittest.TestCase):
             if trade.get("trade_class") != "clean_bullish":
                 continue
             out = trade.get("script_outputs", {})
-            rr = out.get("out_1_math_and_rr.json", {}).get("risk_reward_ratio")
+            rr = out.get("out_1_math.json", {}).get("live_rr")
             pledge = out.get("out_6_fundamental.json", {}).get("promoter_pledge_pct")
             tight = out.get("out_2_market.json", {}).get("is_tight_sl")
             self.assertGreater(rr, 1.0, f"{trade['trade_id']}: clean trade has R:R <= 1.0")

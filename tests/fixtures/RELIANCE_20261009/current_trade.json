@@ -1,0 +1,21 @@
+{
+  "symbol": "RELIANCE",
+  "exchange": "NSE",
+  "instrument_type": "FUT",
+  "action": "BUY",
+  "entry_price": 2980.0,
+  "entry_range_min": 2975.0,
+  "entry_range_max": 2985.0,
+  "live_price": 2988.2,
+  "target": 3120.0,
+  "stoploss": 2910.0,
+  "lot_size": 250,
+  "source": "univest",
+  "app_warning": null,
+  "recommended_date": "2026-10-09",
+  "gatekeeper": {
+    "ban_status": false,
+    "asm_gsm_flagged": false,
+    "margin_exposure_inr": 747050.0
+  }
+}

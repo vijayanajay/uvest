@@ -1,0 +1,8 @@
+Symbol: RELIANCE
+Type: FUT
+Entry Range: 2975.00-2985.00
+Live Price: 2988.20
+Stoploss: 2910.00
+Target: 3120.00
+Lot Size: 250
+Recommended Date: 2026-10-09

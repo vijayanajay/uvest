@@ -31,15 +31,28 @@
             "stop_loss": 2704.0,
             "target_price": 2915.0,
             "script_outputs": {
-                "out_0_ingest_reco.json": { "instrument": "FUT" },
-                "out_1_math_and_rr.json": { "risk_reward_ratio": 2.01 },
-                "out_2_market.json": { "atr_14": 34.5, "is_tight_sl": false },
-                "out_6_fundamental.json": { "promoter_pledge_pct": 0.0, "days_to_earnings": 28 }
+                "out_2_market.json": {
+                    "atr_14": 34.5,
+                    "is_tight_sl": false
+                },
+                "out_6_fundamental.json": {
+                    "promoter_pledge_pct": 0.0,
+                    "days_to_earnings": 28
+                },
+                "current_trade.json": {
+                    "type": "FUT"
+                },
+                "out_1_math.json": {
+                    "live_rr": 2.01
+                }
             },
-            "forward_prices_22d": { "min": 2690.0, "max": 2930.0 },
+            "forward_prices_22d": {
+                "min": 2690.0,
+                "max": 2930.0
+            },
             "cone_p10": 2650.0,
             "cone_p90": 2950.0,
-            "market_mae_pct": 1.10,
+            "market_mae_pct": 1.1,
             "limit_mae_pct": 0.65,
             "predicted_direction": 1,
             "actual_direction": 1,
@@ -58,16 +71,29 @@
             "stop_loss": 474.0,
             "target_price": 498.0,
             "script_outputs": {
-                "out_0_ingest_reco.json": { "instrument": "FUT" },
-                "out_1_math_and_rr.json": { "risk_reward_ratio": 0.90 },
-                "out_2_market.json": { "atr_14": 12.8, "is_tight_sl": false },
-                "out_6_fundamental.json": { "promoter_pledge_pct": 0.0, "days_to_earnings": 34 }
+                "out_2_market.json": {
+                    "atr_14": 12.8,
+                    "is_tight_sl": false
+                },
+                "out_6_fundamental.json": {
+                    "promoter_pledge_pct": 0.0,
+                    "days_to_earnings": 34
+                },
+                "current_trade.json": {
+                    "type": "FUT"
+                },
+                "out_1_math.json": {
+                    "live_rr": 0.9
+                }
             },
-            "forward_prices_22d": { "min": 452.0, "max": 505.0 },
+            "forward_prices_22d": {
+                "min": 452.0,
+                "max": 505.0
+            },
             "cone_p10": 440.0,
             "cone_p90": 515.0,
-            "market_mae_pct": 2.70,
-            "limit_mae_pct": 3.20,
+            "market_mae_pct": 2.7,
+            "limit_mae_pct": 3.2,
             "predicted_direction": 1,
             "actual_direction": 0,
             "reported_numbers_match_json": true,
@@ -85,16 +111,29 @@
             "stop_loss": 303.0,
             "target_price": 342.0,
             "script_outputs": {
-                "out_0_ingest_reco.json": { "instrument": "FUT" },
-                "out_1_math_and_rr.json": { "risk_reward_ratio": 1.85 },
-                "out_2_market.json": { "atr_14": 11.7, "is_tight_sl": false },
-                "out_6_fundamental.json": { "promoter_pledge_pct": 54.2, "days_to_earnings": 40 }
+                "out_2_market.json": {
+                    "atr_14": 11.7,
+                    "is_tight_sl": false
+                },
+                "out_6_fundamental.json": {
+                    "promoter_pledge_pct": 54.2,
+                    "days_to_earnings": 40
+                },
+                "current_trade.json": {
+                    "type": "FUT"
+                },
+                "out_1_math.json": {
+                    "live_rr": 1.85
+                }
             },
-            "forward_prices_22d": { "min": 268.0, "max": 325.0 },
+            "forward_prices_22d": {
+                "min": 268.0,
+                "max": 325.0
+            },
             "cone_p10": 250.0,
             "cone_p90": 340.0,
-            "market_mae_pct": 6.50,
-            "limit_mae_pct": 3.10,
+            "market_mae_pct": 6.5,
+            "limit_mae_pct": 3.1,
             "predicted_direction": 1,
             "actual_direction": 0,
             "reported_numbers_match_json": true,
@@ -112,16 +151,29 @@
             "stop_loss": 795.0,
             "target_price": 890.0,
             "script_outputs": {
-                "out_0_ingest_reco.json": { "instrument": "FUT" },
-                "out_1_math_and_rr.json": { "risk_reward_ratio": 2.17 },
-                "out_2_market.json": { "atr_14": 15.1, "is_tight_sl": false },
-                "out_6_fundamental.json": { "promoter_pledge_pct": 2.1, "days_to_earnings": 41 }
+                "out_2_market.json": {
+                    "atr_14": 15.1,
+                    "is_tight_sl": false
+                },
+                "out_6_fundamental.json": {
+                    "promoter_pledge_pct": 2.1,
+                    "days_to_earnings": 41
+                },
+                "current_trade.json": {
+                    "type": "FUT"
+                },
+                "out_1_math.json": {
+                    "live_rr": 2.17
+                }
             },
-            "forward_prices_22d": { "min": 780.0, "max": 900.0 },
+            "forward_prices_22d": {
+                "min": 780.0,
+                "max": 900.0
+            },
             "cone_p10": 755.0,
             "cone_p90": 915.0,
-            "market_mae_pct": 1.40,
-            "limit_mae_pct": 0.90,
+            "market_mae_pct": 1.4,
+            "limit_mae_pct": 0.9,
             "predicted_direction": 1,
             "actual_direction": 1,
             "reported_numbers_match_json": true,
@@ -139,16 +191,29 @@
             "stop_loss": 1640.0,
             "target_price": 1700.0,
             "script_outputs": {
-                "out_0_ingest_reco.json": { "instrument": "FUT" },
-                "out_1_math_and_rr.json": { "risk_reward_ratio": 3.00 },
-                "out_2_market.json": { "atr_14": 22.0, "is_tight_sl": true },
-                "out_6_fundamental.json": { "promoter_pledge_pct": 0.0, "days_to_earnings": 52 }
+                "out_2_market.json": {
+                    "atr_14": 22.0,
+                    "is_tight_sl": true
+                },
+                "out_6_fundamental.json": {
+                    "promoter_pledge_pct": 0.0,
+                    "days_to_earnings": 52
+                },
+                "current_trade.json": {
+                    "type": "FUT"
+                },
+                "out_1_math.json": {
+                    "live_rr": 3.0
+                }
             },
-            "forward_prices_22d": { "min": 1600.0, "max": 1710.0 },
+            "forward_prices_22d": {
+                "min": 1600.0,
+                "max": 1710.0
+            },
             "cone_p10": 1575.0,
             "cone_p90": 1725.0,
             "market_mae_pct": 0.95,
-            "limit_mae_pct": 0.40,
+            "limit_mae_pct": 0.4,
             "predicted_direction": 1,
             "actual_direction": 1,
             "reported_numbers_match_json": true,

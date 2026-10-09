@@ -8,6 +8,7 @@ pipeline contract drifts between any of its mirrors —
   3. ``prompt.md`` §2 execution pipeline bash block
   4. ``docs/tickets/INDEX.md`` ticket rows and test seams
   5. The sliced ticket files themselves
+  6. ``tests/evals/golden_dataset.json`` per-stage payload keys (below)
 
 Zero-dependency, fast, and network-free (Kailash Nadh style): a broken doc link
 or a renamed script must fail the build, not a code review.
@@ -15,6 +16,7 @@ or a renamed script must fail the build, not a code review.
 
 from __future__ import annotations
 
+import json
 import re
 import unittest
 from pathlib import Path
@@ -48,6 +50,12 @@ INDEX_ROW_RE = re.compile(
     r"\|\s*`(?P<seam>tests/[0-9a-z_]+\.py)`\s*\|\s*(?P<priority>[^|]*?)\s*\|\s*$",
     re.MULTILINE,
 )
+# BRD §9 "Script Inventory" payload column: | `script.py` | in | ops | `fields` |
+PAYLOAD_ROW_RE = re.compile(
+    r"^\|\s*`([0-9a-z_]+\.py)`\s*\|\s*.*?\|\s*.*?\|\s*(.+?)\s*\|\s*$",
+    re.MULTILINE,
+)
+DATASET_FILE = ROOT_DIR / "tests" / "evals" / "golden_dataset.json"
 TICKET_ID_RE = re.compile(r"`([A-Z]+-\d+)`")
 TEST_SEAM_RE = re.compile(r"\*\*Test Seam:\*\*\s*`(tests/[0-9a-z_]+\.py)`")
 TARGET_SCRIPT_RE = re.compile(r"\*\*Target Script:\*\*\s*`(scripts/[0-9a-z_]+\.py)`")
@@ -130,6 +138,21 @@ class TestContractConsistency(unittest.TestCase):
         cls.index_rows = INDEX_ROW_RE.findall(cls.index)
         if not cls.index_rows:
             raise AssertionError("docs/tickets/INDEX.md ticket rows could not be parsed")
+
+        # Frozen payload-field inventory: every field the contract says a script
+        # may emit, keyed by the AUTHENTIC contract artifact name (from the §9.1
+        # canonical table, not re-derived — slugs like out_2_market.json don't
+        # follow the script stem). Payload fields come from the §9 "Script
+        # Inventory" payload column, listed in backticks: `field_a`, `field_b`…
+        cls.payload_fields: dict[str, set[str]] = {}
+        for _stage, script, artifact, _seam, _ticket in rows:
+            artifact_name = artifact.strip().strip("`")
+            # §9.1 rows keyed `scripts/N_foo.py`; §9 inventory rows keyed bare
+            # `N_foo.py` — normalize to the basename before lookup.
+            payload_cell = dict(PAYLOAD_ROW_RE.findall(cls.brd)).get(Path(script).name)
+            cls.payload_fields[artifact_name] = set(
+                re.findall(r"`([A-Za-z_][A-Za-z0-9_]*)`", payload_cell or "")
+            )
 
     @classmethod
     def contract_docs(cls) -> list[Path]:
@@ -331,7 +354,37 @@ class TestContractConsistency(unittest.TestCase):
                 f"{files[0].name} seam is not derived from its target script",
             )
 
-    # ------------------------------------------------------------ prompt test
+    # ------------------------------------------------------------- eval dataset
+
+    def test_golden_dataset_payload_keys_exist_in_contract(self):
+        """Every `script_outputs` artifact and field in the golden dataset must be
+        declared in the frozen contract inventory (BRD §9 Script Inventory).
+
+        Dataset records encode 'what a stage would emit' for historical trades.
+        A hand-typed key that the contract never froze (e.g. a phantom
+        `risk_reward_ratio` when stage 1 actually emits `raw_rr`/`live_rr`)
+        would grade a universe no script can ever produce — caught here, at
+        freeze time, rather than the first time a real replay lands.
+        """
+        if not DATASET_FILE.exists():
+            self.skipTest("golden dataset not yet frozen")
+        dataset = json.loads(DATASET_FILE.read_text(encoding="utf-8"))
+        for trade in dataset.get("trades", []):
+            tid = trade.get("trade_id", "<?>")
+            for artifact, payload in trade.get("script_outputs", {}).items():
+                self.assertIn(
+                    artifact,
+                    self.payload_fields,
+                    f"{tid}: script_outputs names artifact {artifact}, "
+                    "which the BRD contract table does not declare",
+                )
+                for field in payload:
+                    self.assertIn(
+                        field,
+                        self.payload_fields[artifact],
+                        f"{tid}: {artifact}.{field} is not a frozen contract payload field "
+                        f"(declared: {sorted(self.payload_fields[artifact])})",
+                    )
 
     def test_prompt_integrity_required_scripts_are_canonical(self):
         """The prompt integrity suite must not require scripts the contract lacks."""

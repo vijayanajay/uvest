@@ -97,8 +97,20 @@ def class_breaker_observed(trade: dict) -> bool:
     breaker = BREAKER_BY_CLASS[cls]
     outputs = trade.get("script_outputs", {})
     if breaker == "inverted_risk_reward":
-        rr = outputs.get("out_1_math_and_rr.json", {}).get("risk_reward_ratio")
-        return rr is not None and rr < 1.0
+        # Stage 1 (TICK-002) emits BOTH frozen fields: `raw_rr` at the
+        # recommended band midpoint, `live_rr` at the executable price. The
+        # breaker is a property of each, not just one — a raw_rr < 1.0 record
+        # can never recover at any execution price, while live_rr < 1.0 means
+        # the slippage has already eaten the edge. Either trips (OR per the
+        # BRD §10.2 #1 "R:R" breaker, both are 'R:R').
+        stage1 = outputs.get("out_1_math.json", {})
+        raw_rr = stage1.get("raw_rr")
+        # live_rr carries the trap-encoding in the golden dataset (the
+        # executable reality); older records may predate the pair-splitting.
+        live_rr = stage1.get("live_rr", raw_rr)
+        return (raw_rr is not None and raw_rr < 1.0) or (
+            live_rr is not None and live_rr < 1.0
+        )
     if breaker == "promoter_pledging_gt_25pct":
         pledge = outputs.get("out_6_fundamental.json", {}).get("promoter_pledge_pct")
         return pledge is not None and pledge > 25.0
@@ -158,8 +170,8 @@ def gate_option_rejection(trades: list[dict]) -> Gate:
     """Options (CE/PE) recommendations must exit 2 (ADR-001 hard prohibition)."""
     g = Gate("Option Rejection Guardrail", OPTION_REJ_MIN, higher_is_pass=True)
     options = [t for t in trades
-               if t.get("script_outputs", {}).get("out_0_ingest_reco.json", {})
-                   .get("instrument") in ("CE", "PE", "OPTION")]
+               if t.get("script_outputs", {}).get("current_trade.json", {})
+                   .get("type") in ("CE", "PE", "OPTION")]
     if not options:
         g.skipped = True
         g.detail = "no option-instrument trades in the dataset yet"
