@@ -2,8 +2,10 @@
 
 **Status:** FROZEN  
 **Priority:** P1  
-**Test Seam:** `tests/test_12_html.py`  
+**Test Seam:** `tests/test_12_generate_html_report.py`  
 **Target Script:** `scripts/12_generate_html_report.py`  
+**Output Artifact:** `reports/report_{SYMBOL}_{DATE}.html`  
+**Pipeline Contract:** `BRD.md` §9.1 (stage 12)  
 
 ### 1. Goal & Context
 Generate a self-contained, standalone interactive HTML dashboard (`reports/report_{SYMBOL}_{DATE}.html`) for every analyzed recommendation. Can be opened directly in any browser (`file:///...`) without running a web server.

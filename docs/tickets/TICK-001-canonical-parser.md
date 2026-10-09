@@ -2,8 +2,10 @@
 
 **Status:** FROZEN  
 **Priority:** P0  
-**Test Seam:** `tests/test_0_ingest.py`  
+**Test Seam:** `tests/test_0_ingest_reco.py`  
 **Target Script:** `scripts/0_ingest_reco.py`  
+**Output Artifact:** `current_trade.json`  
+**Pipeline Contract:** `BRD.md` §9.1 (stage 0)  
 
 ### 1. Goal & Context
 Parse raw user recommendation (unformatted copy-pasted text or mobile screenshot) into canonical `current_trade.json`. Enforce strict pre-flight gatekeeper checks: reject options immediately, check NSE MWPL F&O ban list, and check SEBI ASM/GSM surveillance lists.

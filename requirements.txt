@@ -1,0 +1,22 @@
+# UVEST runtime dependencies — pinned for reproducibility.
+#
+# Contract:
+# * Python 3.11+ only (AGENTS.md engineering philosophy; matches this repo's
+#   confirmed runtime).
+# * Local-first, no cloud SaaS: everything installs from PyPI on a fresh
+#   clone with no extra setup.
+#
+# Provenance: every pin matches the exact resolved versions in the dev
+# environment as of 2026-10-10 (`python -m pip show <pkg>`). The invariant
+# suite is stdlib-only, so CI runs without installing anything; these
+# dependencies serve the pipeline tickets (BRD §9.1), not the tests.
+#
+# Transitive pins are committed in requirements-lock.txt for full
+# `pip install -r requirements-lock.txt` reproducibility.
+
+numpy==2.4.6
+pandas==3.0.5
+scipy==1.17.1
+fastdtw==0.3.4
+lightgbm==4.7.0
+yfinance==1.7.0

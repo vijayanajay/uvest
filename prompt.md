@@ -61,14 +61,17 @@ python scripts/8_dhan_precision.py > out_8_dhan.json
 # Step 9: Consolidated Decision Synthesis & Scoring Engine (0–100 Score)
 python scripts/9_decision_engine.py > out_9_decision.json
 
-# Step 10: Standalone Interactive HTML Visualizer Report Generation
-python scripts/12_generate_html_report.py > reports/report_latest.html
-
-# Step 11: Persistent Trade Logging & Daily Triage Update
+# Step 10: Persistent Trade Logging & Daily Triage Update
 python scripts/10_daily_triage.py --action log > out_10_triage.json
+
+# Step 11: Failure Autopsy & Bayesian Threshold Calibration (only when a trade resolves)
+python scripts/11_postmortem_learning.py --resolve <TRADE_ID> --outcome LOSS > out_11_postmortem.json
+
+# Step 12: Standalone Interactive HTML Visualizer Report Generation
+python scripts/12_generate_html_report.py   # writes reports/report_{SYMBOL}_{DATE}.html
 ```
 
-*(Note: If running as a single command, execute `python scripts/run_validation.py` which runs the entire chain and outputs `consolidated_report.json` and the HTML report.)*
+> **Canonical contract:** script names, output artifacts, test seams, and execution order are frozen in `BRD.md` §9.1. This block mirrors that table — never invoke a script that is not listed there.
 
 ---
 

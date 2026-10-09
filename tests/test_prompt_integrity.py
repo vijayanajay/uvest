@@ -104,6 +104,7 @@ class TestPromptIntegrity(unittest.TestCase):
             "8_dhan_precision.py",
             "9_decision_engine.py",
             "10_daily_triage.py",
+            "11_postmortem_learning.py",
             "12_generate_html_report.py",
         ]
         for script in required_scripts:

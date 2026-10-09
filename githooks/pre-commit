@@ -1,0 +1,22 @@
+#!/bin/sh
+# UVEST pre-commit hook — runs the full invariant & gate suite.
+#
+# Tracked in githooks/ and activated via `git config core.hooksPath githooks`
+# (run scripts/setup_hooks.sh once per clone). Failing the suite blocks the
+# commit, treating spec drift like a build failure — capital-risk invariants
+# must never ship on a broken baseline.
+
+echo "🛡️  UVEST invariant suite (pre-commit)..."
+python tests/run_all_tests.py
+status=$?
+
+if [ $status -ne 0 ]; then
+    echo ""
+    echo "❌ Pre-commit blocked: invariant suite FAILED (exit $status)."
+    echo "   Capital-risk gates must pass before committing."
+    echo "   Bypass deliberately with: git commit --no-verify"
+    exit $status
+fi
+
+echo "✅ Invariant suite passed."
+exit 0

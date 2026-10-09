@@ -50,7 +50,7 @@ Retail advisory applications (such as Univest) publish high-velocity trade recom
 │  [Tier 1: Free Public Endpoints / Bhavcopy / Screener / Yahoo Finance]                 │
 │   ├── scripts/1_math_and_rr.py             (R:R Symmetry, Lot Sizing, Slippage)        │
 │   ├── scripts/2_market_data.py             (ATR, 50/200 EMA, Volatility Regime)        │
-│   ├── scripts/3_dtw_pattern.py             (Dynamic Time Warping vs 5-Yr NSE History)  │
+│   ├── scripts/3_dtw_pattern.py             (Dynamic Time Warping vs 10-Yr NSE History) │
 │   ├── scripts/4_ml_direction.py            (LightGBM 1-Month Return & Direction Cone)  │
 │   ├── scripts/5_institutional_flow.py      (NSE Delivery % × OI Buildup Matrix)        │
 │   ├── scripts/6_fundamental_audit.py       (Piotroski, Altman Z, Promoter Pledge, CFO) │
@@ -281,8 +281,38 @@ To guarantee high reliability, zero paid subscription overhead, and precision ex
 
 Every tool is an independent, single-responsibility CLI script that reads `current_trade.json`, executes its analysis, and dumps structured JSON to standard output.
 
+### 9.1 Canonical Pipeline Contract (Single Source of Truth)
+
+*This table is the **only** authoritative definition of script names, output artifacts, test seams, and execution order. `prompt.md` §2, `docs/tickets/INDEX.md`, and every ticket file mirror it. `tests/test_contract_consistency.py` fails the suite if any of them drift apart.*
+
+**Naming rules (frozen):**
+1. Script name: `scripts/{stage}_{kebab_or_snake_name}.py`, where `stage` is the execution position.
+2. Test seam: `tests/test_{script stem}.py` — mechanically derived from the script filename, never hand-assigned.
+3. JSON artifact: `out_{stage}_{slug}.json`; the canonical input is `current_trade.json` (stage 0).
+4. HTML artifact: `reports/report_{SYMBOL}_{DATE}.html`, written by the script itself (not a stdout redirect).
+5. Execution order: ascending stage number, `0 → 12`.
+
+| Stage | Script | Output Artifact | Test Seam | Owning Ticket |
+| :--- | :--- | :--- | :--- | :--- |
+| 0 | `scripts/0_ingest_reco.py` | `current_trade.json` | `tests/test_0_ingest_reco.py` | `TICK-001` |
+| 1 | `scripts/1_math_and_rr.py` | `out_1_math.json` | `tests/test_1_math_and_rr.py` | `TICK-002` |
+| 2 | `scripts/2_market_data.py` | `out_2_market.json` | `tests/test_2_market_data.py` | `TICK-013` |
+| 3 | `scripts/3_dtw_pattern.py` | `out_3_dtw.json` | `tests/test_3_dtw_pattern.py` | `TICK-003` |
+| 4 | `scripts/4_ml_direction.py` | `out_4_ml.json` | `tests/test_4_ml_direction.py` | `TICK-004` |
+| 5 | `scripts/5_institutional_flow.py` | `out_5_flow.json` | `tests/test_5_institutional_flow.py` | `TICK-005` |
+| 6 | `scripts/6_fundamental_audit.py` | `out_6_fundamental.json` | `tests/test_6_fundamental_audit.py` | `TICK-006` |
+| 7 | `scripts/7_sector_macro_regime.py` | `out_7_regime.json` | `tests/test_7_sector_macro_regime.py` | `TICK-007` |
+| 8 | `scripts/8_dhan_precision.py` | `out_8_dhan.json` | `tests/test_8_dhan_precision.py` | `TICK-008` |
+| 9 | `scripts/9_decision_engine.py` | `out_9_decision.json` | `tests/test_9_decision_engine.py` | `TICK-009` |
+| 10 | `scripts/10_daily_triage.py` | `out_10_triage.json` | `tests/test_10_daily_triage.py` | `TICK-011` |
+| 11 | `scripts/11_postmortem_learning.py` | `out_11_postmortem.json`, `thresholds.json` | `tests/test_11_postmortem_learning.py` | `TICK-012` |
+| 12 | `scripts/12_generate_html_report.py` | `reports/report_{SYMBOL}_{DATE}.html` | `tests/test_12_generate_html_report.py` | `TICK-010` |
+| — | `tests/run_evals.py` (Evals harness) | `tests/evals/golden_dataset.json` scorecard | `tests/run_evals.py` | `EVAL-001` |
+
+**Conditional stage:** Stage 11 (`11_postmortem_learning.py`) executes only when a tracked trade resolves. It is the sole writer of `thresholds.json` (Bayesian calibration weights) and therefore never runs during the standard validation chain.
+
 ```bash
-# Workflow Execution Pipeline:
+# Workflow Execution Pipeline (canonical order 0 → 12):
 python scripts/0_ingest_reco.py --input input.txt                      > current_trade.json
 python scripts/1_math_and_rr.py                                       > out_1_math.json
 python scripts/2_market_data.py                                       > out_2_market.json
@@ -292,18 +322,19 @@ python scripts/5_institutional_flow.py                                > out_5_fl
 python scripts/6_fundamental_audit.py                                 > out_6_fundamental.json
 python scripts/7_sector_macro_regime.py                               > out_7_regime.json
 python scripts/8_dhan_precision.py                                    > out_8_dhan.json
-python scripts/9_decision_engine.py                                    > out_9_decision.json
-python scripts/12_generate_html_report.py                             > reports/report_RELIANCE_20261009.html
+python scripts/9_decision_engine.py                                   > out_9_decision.json
 python scripts/10_daily_triage.py --action track                      > out_10_triage.json
+python scripts/11_postmortem_learning.py --resolve <TRADE_ID> --outcome LOSS > out_11_postmortem.json
+python scripts/12_generate_html_report.py                             # writes reports/report_{SYMBOL}_{DATE}.html
 ```
 
 ### Script Inventory & Responsibilities
 
-| Script Name | Inputs | Key Operations | Output JSON Key Fields |
+| Script Name | Inputs | Key Operations | Key Payload Fields |
 | :--- | :--- | :--- | :--- |
 | `0_ingest_reco.py` | `input.txt` or `--image path.png` | Parses text or screenshot OCR; verifies F&O ban and ASM/GSM. | `symbol`, `type`, `entry_range`, `sl`, `target`, `lot_size`, `ban_status` |
 | `1_math_and_rr.py` | `current_trade.json` | Computes nominal vs. live R:R, slippage penalty, risk per lot, margin capital allocation. | `raw_rr`, `live_rr`, `risk_inr`, `reward_inr`, `outside_range_pct`, `inverted_rr_flag` |
-| `2_market_data.py` | `current_trade.json` | Fetches daily OHLCV (yfinance); computes 14D ATR, 50/200 EMA, Bollinger Bands, ATR-SL ratio. | `atr_14`, `sl_atr_ratio`, `is_tight_sl`, `above_50_ema`, `above_200_sma`, `trend_state` |
+| `2_market_data.py` | `current_trade.json` | Fetches daily OHLCV (yfinance); computes 14D ATR, 20/50/200 EMA, Bollinger Bands, ATR-SL ratio. | `atr_14`, `sl_atr_ratio`, `is_tight_sl`, `ema_20`, `above_50_ema`, `above_200_sma`, `trend_state`, `bollinger_upper`, `bollinger_lower`, `bollinger_bandwidth`, `waived`, `as_of` |
 | `3_dtw_pattern.py` | `current_trade.json` | FastDTW against 10-year historical library; isolates top 15 analogs; extracts 22-day forward path. | `dtw_win_rate_22d`, `dtw_median_return`, `dtw_mae_drawdown`, `analog_confidence` |
 | `4_ml_direction.py` | `current_trade.json` | LightGBM classifier inference on multi-factor features; outputs 1M probability and price cone. | `prob_target_hit_22d`, `price_cone_p10_p50_p90`, `mae_projected`, `shap_drivers` |
 | `5_institutional_flow.py` | `current_trade.json` | Scrapes NSE Bhavcopy; calculates Delivery % surge, Futures OI buildup, rollover %, basis. | `delivery_pct`, `delivery_zscore`, `oi_change_pct`, `matrix_verdict`, `basis_annualized` |

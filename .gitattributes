@@ -1,0 +1,5 @@
+# Force LF for shell scripts: hooks and CI entrypoints break with CRLF
+# ($'\r': command not found), while this repo primarily develops on Windows
+# where core.autocrlf would otherwise convert them on checkout.
+githooks/* text eol=lf
+scripts/*.sh text eol=lf

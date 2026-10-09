@@ -30,5 +30,5 @@ Generate a standalone, zero-dependency, dark-mode interactive HTML report card f
 
 ## Execution
 ```bash
-python scripts/12_generate_html_report.py > reports/report_latest.html
+python scripts/12_generate_html_report.py   # writes reports/report_{SYMBOL}_{DATE}.html
 ```
