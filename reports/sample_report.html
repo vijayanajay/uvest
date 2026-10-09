@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UVEST Validation Report: RELIANCE FUT (29 OCT)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f17;
+      --card-bg: rgba(18, 24, 38, 0.85);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --green: #2ea043;
+      --green-glow: rgba(46, 160, 67, 0.35);
+      --red: #da3633;
+      --amber: #d29922;
+      --purple: #bc8cff;
+      --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(88, 166, 255, 0.04) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(46, 160, 67, 0.05) 0%, transparent 40%);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      padding: 24px;
+      min-height: 100vh;
+    }
+
+    .container { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+    /* Top Bar */
+    .top-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .brand-title .badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      background: rgba(88, 166, 255, 0.15);
+      color: var(--accent);
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(88, 166, 255, 0.3);
+    }
+    .meta-tags {
+      display: flex;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    /* Hero Banner */
+    .hero-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 24px 28px;
+      backdrop-filter: blur(12px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 4px; height: 100%;
+      background: var(--green);
+      box-shadow: 0 0 16px var(--green);
+    }
+    .hero-left h1 {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .hero-left p { color: var(--text-muted); font-size: 15px; margin-top: 4px; }
+    
+    .verdict-box {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 16px 24px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+    }
+    .score-circle {
+      text-align: center;
+    }
+    .score-number {
+      font-size: 44px;
+      font-weight: 800;
+      color: var(--green);
+      line-height: 1;
+      font-family: var(--font-mono);
+      text-shadow: 0 0 20px var(--green-glow);
+    }
+    .score-label { font-size: 11px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em; }
+    
+    .decision-badge {
+      padding: 8px 18px;
+      background: rgba(46, 160, 67, 0.15);
+      border: 1px solid var(--green);
+      color: #3fb950;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Grid Layout */
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 20px;
+      backdrop-filter: blur(10px);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 12px;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-badge {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      padding: 2px 7px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-muted);
+    }
+
+    /* Gauge / Metrics */
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+    .stat-label { color: var(--text-muted); }
+    .stat-val { font-family: var(--font-mono); font-weight: 600; }
+    .stat-val.green { color: var(--green); }
+    .stat-val.red { color: var(--red); }
+    .stat-val.amber { color: var(--amber); }
+
+    /* Visual Price Cone Chart (SVG) */
+    .cone-container { width: 100%; height: 180px; position: relative; }
+    svg { width: 100%; height: 100%; }
+
+    /* Price Bar Range */
+    .range-bar-wrapper {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .range-track {
+      height: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+    .range-fill {
+      position: absolute;
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--green));
+      border-radius: 6px;
+    }
+    .range-ticks {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+    }
+
+    /* Flip Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--card-border);
+    }
+    th { color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+    td { font-family: var(--font-mono); }
+
+    /* Action Ticket */
+    .execution-card {
+      background: linear-gradient(135deg, rgba(46, 160, 67, 0.12) 0%, rgba(18, 24, 38, 0.95) 100%);
+      border: 1px solid rgba(46, 160, 67, 0.3);
+      border-radius: 14px;
+      padding: 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .exec-title { font-size: 18px; font-weight: 700; color: #fff; }
+    .exec-details { display: flex; gap: 20px; flex-wrap: wrap; font-family: var(--font-mono); font-size: 14px; }
+    .exec-chip {
+      background: rgba(0, 0, 0, 0.4);
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+    }
+    .exec-chip span { color: var(--text-muted); font-size: 11px; display: block; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="top-header">
+      <div class="brand-title">
+        <span>🛡️ UVEST QUANTITATIVE ENGINE</span>
+        <span class="badge">PROD · V2.4</span>
+      </div>
+      <div class="meta-tags">
+        <span>EVALUATED: 2026-10-09 11:30 IST</span>
+        <span>SOURCE: UNIVEST APP</span>
+        <span>LATENCY: 420ms</span>
+      </div>
+    </div>
+
+    <!-- Hero Verdict -->
+    <div class="hero-card">
+      <div class="hero-left">
+        <h1>RELIANCE <span style="font-size: 18px; color: var(--accent); font-weight: 600;">NSE FUTURES (29 OCT)</span></h1>
+        <p>Quantitative, fundamental, and market microstructure trade validation report.</p>
+      </div>
+      <div class="verdict-box">
+        <div class="score-circle">
+          <div class="score-number">84</div>
+          <div class="score-label">Score / 100</div>
+        </div>
+        <div class="decision-badge">
+          <span>🟢</span> GO (EXECUTE FULL SIZE)
+        </div>
+      </div>
+    </div>
+
+    <!-- The 3 Core Predictions Grid -->
+    <div class="grid-3">
+      <!-- 1. Direction -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🎯 1. Direction (1-Month Swing)</span>
+          <span class="card-badge">DTW + LightGBM</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Model Verdict:</span>
+          <span class="stat-val green">STRONG BULLISH</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Probability Distribution:</span>
+          <span class="stat-val">P(Up) 78% · P(Flat) 14% · P(Down) 8%</span>
+        </div>
+        <div class="range-bar-wrapper">
+          <div class="range-track">
+            <div class="range-fill" style="width: 78%;"></div>
+          </div>
+          <div class="range-ticks">
+            <span>0%</span>
+            <span>Edge: +78% Confidence</span>
+            <span>100%</span>
+          </div>
+        </div>
+        <p style="font-size: 13px; color: var(--text-muted);">
+          FastDTW identified 12/15 historical analogs reaching +4% within 22 bars. LightGBM predicts positive drift aligned with sector momentum.
+        </p>
+      </div>
+
+      <!-- 2. Range (Cone) -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📊 2. Expected Range (22 Days)</span>
+          <span class="card-badge">Jump-Diffusion Cone</span>
+        </div>
+        <div class="cone-container">
+          <svg viewBox="0 0 320 140">
+            <defs>
+              <linearGradient id="coneGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="rgba(88,166,255,0.1)"/>
+                <stop offset="100%" stop-color="rgba(46,160,67,0.35)"/>
+              </linearGradient>
+            </defs>
+            <!-- Cone Fan Area -->
+            <path d="M 20 70 Q 160 30 300 15 L 300 125 Q 160 110 20 70 Z" fill="url(#coneGrad)" />
+            <!-- Median Trajectory -->
+            <path d="M 20 70 Q 160 60 300 45" fill="none" stroke="#58a6ff" stroke-width="2" stroke-dasharray="4" />
+            <!-- Target Line -->
+            <line x1="20" y1="35" x2="300" y2="35" stroke="#2ea043" stroke-width="1.5" stroke-dasharray="2" />
+            <!-- Stop Loss Line -->
+            <line x1="20" y1="120" x2="300" y2="120" stroke="#da3633" stroke-width="1.5" stroke-dasharray="2" />
+            <!-- Labels -->
+            <text x="25" y="30" fill="#2ea043" font-size="10" font-family="JetBrains Mono">Target: ₹3,120</text>
+            <text x="25" y="115" fill="#da3633" font-size="10" font-family="JetBrains Mono">Stop: ₹2,910</text>
+            <text x="200" y="60" fill="#58a6ff" font-size="10" font-family="JetBrains Mono">P50: ₹3,085</text>
+          </svg>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Projected Max Drawdown (MAE):</span>
+          <span class="stat-val">-₹42.00 (Stop at ₹2,910 is safe)</span>
+        </div>
+      </div>
+
+      <!-- 3. Optimal Price Range -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📍 3. Optimal Execution Zone</span>
+          <span class="card-badge">Anchored VWAP + 5m OB</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Univest Entry Band:</span>
+          <span class="stat-val">₹2,975.00 – ₹2,985.00</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Current Live Price:</span>
+          <span class="stat-val amber">₹2,988.20 (Slipped +₹3.20)</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Optimal Limit Buy Zone:</span>
+          <span class="stat-val green">₹2,968.00 – ₹2,974.00</span>
+        </div>
+        <p style="font-size: 13px; color: var(--text-muted);">
+          Market entry is slipped. A limit order at ₹2,974.00 taps the 5-minute liquidity block and expands R:R from 1:1.68 to 1:2.28 (+36% expectancy gain).
+        </p>
+      </div>
+    </div>
+
+    <!-- Analytics Deep Dive -->
+    <div class="grid-3">
+      <!-- Institutional Flow -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🌊 Institutional Order Flow</span>
+          <span class="card-badge">Bhavcopy × OI</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Bhavcopy Delivery %:</span>
+          <span class="stat-val green">56.4% (+1.8σ vs 20D Avg)</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Futures OI Change:</span>
+          <span class="stat-val green">+8.4% (Long Buildup)</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Futures Basis:</span>
+          <span class="stat-val">+₹6.50 (+4.8% carry premium)</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Retail vs Institutional:</span>
+          <span class="stat-val green">INSTITUTIONAL ACCUMULATION</span>
+        </div>
+      </div>
+
+      <!-- Fundamentals -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🏢 Fundamental & Governance</span>
+          <span class="card-badge">Public Filings</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Piotroski F-Score:</span>
+          <span class="stat-val green">8 / 9 (Superior Quality)</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Altman Z''-Score:</span>
+          <span class="stat-val green">3.12 (Safe Zone)</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Promoter Pledging:</span>
+          <span class="stat-val green">0.00% (Zero Hazard)</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Earnings Calendar:</span>
+          <span class="stat-val green">In 28 Days (Safe from Shock)</span>
+        </div>
+      </div>
+
+      <!-- Macro & Sector -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🌐 Sector & Macro Regime</span>
+          <span class="card-badge">NSE 500 & VIX</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Mansfield Sector RS:</span>
+          <span class="stat-val green">+2.45 (Leading NIFTY 50)</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">NIFTY 50 Macro Tape:</span>
+          <span class="stat-val green">Above 50 & 200 DMA</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">India VIX Volatility:</span>
+          <span class="stat-val">13.8 (Normal Regime)</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">FII / DII 5D Net Cash:</span>
+          <span class="stat-val green">+₹1,240 Cr (Net Inflow)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Flip Table & Action Ticket -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🔀 Decision Flip Table</span>
+        <span class="card-badge">Slippage & Math Optimization</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Order Type</th>
+            <th>Fill Price</th>
+            <th>Risk / Lot</th>
+            <th>Reward / Lot</th>
+            <th>Live R:R</th>
+            <th>Confidence Score</th>
+            <th>Verdict</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Market Buy (Chasing)</td>
+            <td>₹2,988.20</td>
+            <td>₹19,550</td>
+            <td>₹32,950</td>
+            <td>1 : 1.68</td>
+            <td>74 / 100</td>
+            <td style="color: var(--amber);">🟡 CONDITIONAL GO</td>
+          </tr>
+          <tr style="background: rgba(46,160,67,0.1);">
+            <td><strong>Limit Buy (Recommended)</strong></td>
+            <td><strong>₹2,974.00</strong></td>
+            <td><strong>₹16,000</strong></td>
+            <td><strong>₹36,500</strong></td>
+            <td><strong>1 : 2.28</strong></td>
+            <td><strong>84 / 100</strong></td>
+            <td style="color: var(--green);"><strong>🟢 GO (FULL SIZE)</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Final Execution Card -->
+    <div class="execution-card">
+      <div>
+        <div class="exec-title">⚡ ACTIONABLE EXECUTION TICKET</div>
+        <p style="color: var(--text-muted); font-size: 13px;">Place a limit order at institutional support. Do not chase green candles.</p>
+      </div>
+      <div class="exec-details">
+        <div class="exec-chip"><span>ACTION</span>BUY LIMIT</div>
+        <div class="exec-chip"><span>LIMIT PRICE</span>₹2,974.00</div>
+        <div class="exec-chip"><span>STOP LOSS</span>₹2,910.00</div>
+        <div class="exec-chip"><span>TARGET</span>₹3,120.00</div>
+        <div class="exec-chip"><span>LOTS</span>1 Lot (250 sh)</div>
+        <div class="exec-chip"><span>MAX RISK</span>₹16,000 (3.2%)</div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

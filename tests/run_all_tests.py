@@ -1,4 +1,4 @@
-"""Kailash Nadh-style fast, zero-dependency test runner.
+"""Kailash Nadh-style fast, zero-dependency invariant test runner.
 
 Runs all invariant tests in < 300ms, printing a concise execution summary.
 Returns exit code 0 on success, 1 on failure (ideal for git hooks & CI).
@@ -21,7 +21,7 @@ TESTS_DIR = Path(__file__).resolve().parent
 
 def main() -> int:
     print("=" * 70)
-    print("🛡️  UVEST — PROMPT & DECISION ENGINE INVARIANT TEST SUITE")
+    print("🛡️  UVEST — FROZEN SPECIFICATION & PROMPT INVARIANT TEST SUITE")
     print("=" * 70)
 
     start_time = time.perf_counter()

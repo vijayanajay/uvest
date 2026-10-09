@@ -2,6 +2,9 @@
 __pycache__/
 *.py[codz]
 *$py.class
+_cacache/
+_npx/
+_update-notifier-last-checked
 
 # C extensions
 *.so
