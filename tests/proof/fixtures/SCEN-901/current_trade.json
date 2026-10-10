@@ -1,0 +1,15 @@
+{
+  "symbol": "BAJFINANCE",
+  "exchange": "NSE",
+  "instrument_type": "CASH",
+  "action": "BUY",
+  "entry_price": 717.74,
+  "entry_range_min": 716.74,
+  "entry_range_max": 718.74,
+  "live_price": 717.74,
+  "target": 799.51,
+  "stoploss": 680.57,
+  "lot_size": 1,
+  "recommended_date": "2025-01-15",
+  "user_capital_inr": 500000.0
+}

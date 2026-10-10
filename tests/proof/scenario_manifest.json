@@ -1,0 +1,146 @@
+{
+  "schema": "uvest-scenario-manifest/1",
+  "generated_on": "2026-10-10",
+  "scenarios": [
+    {
+      "scenario_id": "SCEN-901",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-10",
+      "authoring": {
+        "shape": {
+          "risk_atr": 2.0,
+          "rr": 2.2
+        },
+        "source": "proof-scaffold/1",
+        "selection_rule": "first cached symbol-month with a matching forward outcome at this shape (curate convention)"
+      },
+      "classification_tags": [
+        "SCAFFOLD"
+      ],
+      "gate_focus": [
+        "S1"
+      ],
+      "symbol": "BAJFINANCE",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2025-01-15",
+      "entry_price": 717.74,
+      "entry_range_min": 716.74,
+      "entry_range_max": 718.74,
+      "target_price": 799.51,
+      "stop_loss": 680.57,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/SCEN-901/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/SCEN-901/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2025-01-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/SCEN-901/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/SCEN-901/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/SCEN-901/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2025-02-13",
+        "resolution_outcome": "WIN",
+        "resolution_basis": "target_first",
+        "forward_derived_cache": {
+          "min": 715.63,
+          "max": 866.28
+        },
+        "quadrant_target": "TP"
+      },
+      "expected_verdict": "GO"
+    },
+    {
+      "scenario_id": "SCEN-902",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-10",
+      "authoring": {
+        "shape": {
+          "risk_atr": 0.6,
+          "rr": 2.5
+        },
+        "source": "proof-scaffold/1",
+        "selection_rule": "first cached symbol-month with a matching forward outcome at this shape (curate convention)"
+      },
+      "classification_tags": [
+        "SCAFFOLD"
+      ],
+      "gate_focus": [
+        "tighter_than_0_75x_atr"
+      ],
+      "symbol": "AXISBANK",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2022-04-15",
+      "entry_price": 793.05,
+      "entry_range_min": 792.05,
+      "entry_range_max": 794.05,
+      "target_price": 819.27,
+      "stop_loss": 782.56,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/SCEN-902/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/SCEN-902/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2022-04-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/SCEN-902/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/SCEN-902/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/SCEN-902/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2022-05-18",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 630.05,
+          "max": 816.2
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID"
+    }
+  ]
+}

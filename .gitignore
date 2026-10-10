@@ -240,3 +240,7 @@ reports/report_*.html
 # ---------------------------------------------------------------------------
 !tests/**/*.json
 !skills-lock.json
+
+# Scenario-manifest replay sandboxes — materialized per run under the proof
+# root; never evidence, never committed (scenario-manifest-schema.md).
+tests/proof/_replay/

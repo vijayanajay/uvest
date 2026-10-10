@@ -1,0 +1,15 @@
+{
+  "symbol": "AXISBANK",
+  "atr_14": 17.482143,
+  "sl_atr_ratio": 0.6000408580183866,
+  "is_tight_sl": true,
+  "ema_20": 765.72,
+  "above_50_ema": true,
+  "above_200_sma": true,
+  "trend_state": "BULLISH",
+  "bollinger_upper": 814.06,
+  "bollinger_lower": 701.54,
+  "bollinger_bandwidth": 14.8485,
+  "waived": false,
+  "as_of": "2022-04-13"
+}
