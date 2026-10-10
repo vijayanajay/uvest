@@ -3,7 +3,7 @@
 
 `--record <dir>` turns a pipeline run into a **replay bundle**: each stage
 writes its canonical artifact into the given directory exactly as it emits it
-to stdout, byte-for-byte. Later, `--replay <dir>` mode (stages 2+) or a plain
+to stdout, byte-for-byte. Later, `--replay <dir>` mode (stages 3+) or a plain
 re-run against the recorded inputs reproduces the same artifacts — the golden
 dataset becomes *recorded evidence*, not hand-authored JSON.
 
@@ -42,6 +42,8 @@ FROZEN_ARTIFACTS = {
     0: "current_trade.json",
     1: "out_1_math.json",
     2: "out_2_market.json",
+    3: "out_3_dtw.json",
+    5: "out_5_flow.json",
 }
 
 

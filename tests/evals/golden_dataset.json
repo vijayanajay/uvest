@@ -1,223 +1,1076 @@
 {
-    "_schema_note": "Field contracts frozen per EVAL-001 (tests/run_evals.py), docs/agents/evals.md \u00a72, BRD.md \u00a715 and \u00a710.2.",
-    "meta": {
-        "name": "UVEST Golden Benchmark Dataset",
-        "generated_on": "2026-10-10",
-        "schema_version": "1.0.0",
-        "total_trades_expected": 50,
-        "class_counts_expected": {
-            "clean_bullish": 15,
-            "inverted_rr": 10,
-            "institutional_distribution": 10,
-            "pledge_hazard": 5,
-            "earnings_hazard": 5,
-            "tight_stop": 5
-        },
-        "notes": [
-            "20 of 50 records seeded. Remaining 30 pending manual curation; budget blocks filling all 50 now.",
-            "distribution_verified=false until all 50 records are present and class counts match class_counts_expected."
-        ]
+  "_schema_note": "Field contracts frozen per EVAL-001 (tests/run_evals.py), docs/agents/evals.md \u00a72, BRD.md \u00a715 and \u00a710.2.",
+  "meta": {
+    "name": "UVEST Golden Benchmark Dataset",
+    "generated_on": "2026-10-10",
+    "schema_version": "1.0.0",
+    "total_trades_expected": 50,
+    "class_counts_expected": {
+      "clean_bullish": 15,
+      "inverted_rr": 10,
+      "institutional_distribution": 10,
+      "pledge_hazard": 5,
+      "earnings_hazard": 5,
+      "tight_stop": 5
     },
-    "trades": [
-        {
-            "trade_id": "GB-2022-0001",
-            "trade_class": "clean_bullish",
-            "symbol": "RELIANCE",
-            "instrument": "FUT",
-            "recommendation_date": "2022-04-11",
-            "resolution_date": "2022-05-10",
-            "resolution_outcome": "WIN",
-            "entry_price": 2774.0,
-            "stop_loss": 2704.0,
-            "target_price": 2915.0,
-            "script_outputs": {
-                "out_2_market.json": {
-                    "atr_14": 34.5,
-                    "is_tight_sl": false
-                },
-                "out_6_fundamental.json": {
-                    "promoter_pledge_pct": 0.0,
-                    "days_to_earnings": 28
-                },
-                "current_trade.json": {
-                    "type": "FUT"
-                },
-                "out_1_math.json": {
-                    "live_rr": 2.01
-                }
-            },
-            "forward_prices_22d": {
-                "min": 2690.0,
-                "max": 2930.0
-            },
-            "cone_p10": 2650.0,
-            "cone_p90": 2950.0,
-            "market_mae_pct": 1.1,
-            "limit_mae_pct": 0.65,
-            "predicted_direction": 1,
-            "actual_direction": 1,
-            "reported_numbers_match_json": true,
-            "html_report_valid": null
-        },
-        {
-            "trade_id": "GB-2022-0002",
-            "trade_class": "inverted_rr",
-            "symbol": "TATAMOTORS",
-            "instrument": "FUT",
-            "recommendation_date": "2022-06-20",
-            "resolution_date": "2022-07-14",
-            "resolution_outcome": "LOSS",
-            "entry_price": 486.6,
-            "stop_loss": 474.0,
-            "target_price": 498.0,
-            "script_outputs": {
-                "out_2_market.json": {
-                    "atr_14": 12.8,
-                    "is_tight_sl": false
-                },
-                "out_6_fundamental.json": {
-                    "promoter_pledge_pct": 0.0,
-                    "days_to_earnings": 34
-                },
-                "current_trade.json": {
-                    "type": "FUT"
-                },
-                "out_1_math.json": {
-                    "live_rr": 0.9
-                }
-            },
-            "forward_prices_22d": {
-                "min": 452.0,
-                "max": 505.0
-            },
-            "cone_p10": 440.0,
-            "cone_p90": 515.0,
-            "market_mae_pct": 2.7,
-            "limit_mae_pct": 3.2,
-            "predicted_direction": 1,
-            "actual_direction": 0,
-            "reported_numbers_match_json": true,
-            "html_report_valid": null
-        },
-        {
-            "trade_id": "GB-2023-0003",
-            "trade_class": "pledge_hazard",
-            "symbol": "VEDL",
-            "instrument": "FUT",
-            "recommendation_date": "2023-02-13",
-            "resolution_date": "2023-03-09",
-            "resolution_outcome": "LOSS",
-            "entry_price": 316.7,
-            "stop_loss": 303.0,
-            "target_price": 342.0,
-            "script_outputs": {
-                "out_2_market.json": {
-                    "atr_14": 11.7,
-                    "is_tight_sl": false
-                },
-                "out_6_fundamental.json": {
-                    "promoter_pledge_pct": 54.2,
-                    "days_to_earnings": 40
-                },
-                "current_trade.json": {
-                    "type": "FUT"
-                },
-                "out_1_math.json": {
-                    "live_rr": 1.85
-                }
-            },
-            "forward_prices_22d": {
-                "min": 268.0,
-                "max": 325.0
-            },
-            "cone_p10": 250.0,
-            "cone_p90": 340.0,
-            "market_mae_pct": 6.5,
-            "limit_mae_pct": 3.1,
-            "predicted_direction": 1,
-            "actual_direction": 0,
-            "reported_numbers_match_json": true,
-            "html_report_valid": null
-        },
-        {
-            "trade_id": "GB-2024-0004",
-            "trade_class": "clean_bullish",
-            "symbol": "SBIN",
-            "instrument": "FUT",
-            "recommendation_date": "2024-07-08",
-            "resolution_date": "2024-08-06",
-            "resolution_outcome": "WIN",
-            "entry_price": 825.0,
-            "stop_loss": 795.0,
-            "target_price": 890.0,
-            "script_outputs": {
-                "out_2_market.json": {
-                    "atr_14": 15.1,
-                    "is_tight_sl": false
-                },
-                "out_6_fundamental.json": {
-                    "promoter_pledge_pct": 2.1,
-                    "days_to_earnings": 41
-                },
-                "current_trade.json": {
-                    "type": "FUT"
-                },
-                "out_1_math.json": {
-                    "live_rr": 2.17
-                }
-            },
-            "forward_prices_22d": {
-                "min": 780.0,
-                "max": 900.0
-            },
-            "cone_p10": 755.0,
-            "cone_p90": 915.0,
-            "market_mae_pct": 1.4,
-            "limit_mae_pct": 0.9,
-            "predicted_direction": 1,
-            "actual_direction": 1,
-            "reported_numbers_match_json": true,
-            "html_report_valid": null
-        },
-        {
-            "trade_id": "GB-2025-0005",
-            "trade_class": "tight_stop",
-            "symbol": "HDFCBANK",
-            "instrument": "FUT",
-            "recommendation_date": "2025-01-15",
-            "resolution_date": "2025-02-11",
-            "resolution_outcome": "LOSS",
-            "entry_price": 1655.0,
-            "stop_loss": 1640.0,
-            "target_price": 1700.0,
-            "script_outputs": {
-                "out_2_market.json": {
-                    "atr_14": 22.0,
-                    "is_tight_sl": true
-                },
-                "out_6_fundamental.json": {
-                    "promoter_pledge_pct": 0.0,
-                    "days_to_earnings": 52
-                },
-                "current_trade.json": {
-                    "type": "FUT"
-                },
-                "out_1_math.json": {
-                    "live_rr": 3.0
-                }
-            },
-            "forward_prices_22d": {
-                "min": 1600.0,
-                "max": 1710.0
-            },
-            "cone_p10": 1575.0,
-            "cone_p90": 1725.0,
-            "market_mae_pct": 0.95,
-            "limit_mae_pct": 0.4,
-            "predicted_direction": 1,
-            "actual_direction": 1,
-            "reported_numbers_match_json": true,
-            "html_report_valid": null
-        }
+    "notes": [
+      "20 of 50 records seeded. Remaining 30 pending manual curation; budget blocks filling all 50 now.",
+      "distribution_verified=false until all 50 records are present and class counts match class_counts_expected.",
+      "31 of 50 records: the three stage-0..2-supportable classes are FULLY seeded (clean_bullish 15/15, inverted_rr 10/10, tight_stop 5/5) and the tight-stop breaker grades from recorded stage-2 bundles (tests/fixtures/history/). pledge_hazard 1/5, earnings_hazard 0/5, institutional_distribution 0/10 await stages 5/6 engines; hand-typed in the existing records until then.",
+      "GB-2022-0019 dropped: 6th evidence-tight row exceeded the frozen tight_stop quota (5); the five remaining rows all carry recorded is_tight_sl=true from stage-2 bundles."
     ]
+  },
+  "trades": [
+    {
+      "trade_id": "GB-2022-0001",
+      "trade_class": "clean_bullish",
+      "symbol": "RELIANCE",
+      "instrument": "FUT",
+      "recommendation_date": "2022-04-11",
+      "resolution_date": "2022-05-10",
+      "resolution_outcome": "WIN",
+      "entry_price": 2774.0,
+      "stop_loss": 2704.0,
+      "target_price": 2915.0,
+      "script_outputs": {
+        "out_2_market.json": {
+          "atr_14": 34.5,
+          "is_tight_sl": false
+        },
+        "out_6_fundamental.json": {
+          "promoter_pledge_pct": 0.0,
+          "days_to_earnings": 28
+        },
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "live_rr": 2.01
+        }
+      },
+      "forward_prices_22d": {
+        "min": 2690.0,
+        "max": 2930.0
+      },
+      "cone_p10": 2650.0,
+      "cone_p90": 2950.0,
+      "market_mae_pct": 1.1,
+      "limit_mae_pct": 0.65,
+      "predicted_direction": 1,
+      "actual_direction": 1,
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2022-0002",
+      "trade_class": "inverted_rr",
+      "symbol": "TATAMOTORS",
+      "instrument": "FUT",
+      "recommendation_date": "2022-06-20",
+      "resolution_date": "2022-07-14",
+      "resolution_outcome": "LOSS",
+      "entry_price": 486.6,
+      "stop_loss": 474.0,
+      "target_price": 498.0,
+      "script_outputs": {
+        "out_2_market.json": {
+          "atr_14": 12.8,
+          "is_tight_sl": false
+        },
+        "out_6_fundamental.json": {
+          "promoter_pledge_pct": 0.0,
+          "days_to_earnings": 34
+        },
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "live_rr": 0.9
+        }
+      },
+      "forward_prices_22d": {
+        "min": 452.0,
+        "max": 505.0
+      },
+      "cone_p10": 440.0,
+      "cone_p90": 515.0,
+      "market_mae_pct": 2.7,
+      "limit_mae_pct": 3.2,
+      "predicted_direction": 1,
+      "actual_direction": 0,
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2022-0006",
+      "trade_class": "inverted_rr",
+      "symbol": "RELIANCE",
+      "instrument": "FUT",
+      "recommendation_date": "2022-04-15",
+      "resolution_date": "2022-05-18",
+      "resolution_outcome": "LOSS",
+      "entry_price": 1177.59,
+      "stop_loss": 1150.86,
+      "target_price": 1201.65,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 0.900112,
+          "live_rr": 0.900112,
+          "inverted_rr_flag": true
+        },
+        "out_2_market.json": {
+          "atr_14": 22.273964,
+          "sl_atr_ratio": 1.200056,
+          "is_tight_sl": false
+        }
+      },
+      "forward_prices_22d": {
+        "min": 1093.7546,
+        "max": 1318.1128
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2022-0007",
+      "trade_class": "inverted_rr",
+      "symbol": "HDFCBANK",
+      "instrument": "FUT",
+      "recommendation_date": "2022-04-15",
+      "resolution_date": "2022-05-18",
+      "resolution_outcome": "LOSS",
+      "entry_price": 732.48,
+      "stop_loss": 703.16,
+      "target_price": 758.87,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 0.900068,
+          "live_rr": 0.900068,
+          "inverted_rr_flag": true
+        },
+        "out_2_market.json": {
+          "atr_14": 24.433929,
+          "sl_atr_ratio": 1.199971,
+          "is_tight_sl": false
+        }
+      },
+      "forward_prices_22d": {
+        "min": 642.65,
+        "max": 715.825
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2022-0008",
+      "trade_class": "inverted_rr",
+      "symbol": "ICICIBANK",
+      "instrument": "FUT",
+      "recommendation_date": "2022-04-15",
+      "resolution_date": "2022-05-18",
+      "resolution_outcome": "LOSS",
+      "entry_price": 762.25,
+      "stop_loss": 743.86,
+      "target_price": 778.8,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 0.899946,
+          "live_rr": 0.899946,
+          "inverted_rr_flag": true
+        },
+        "out_2_market.json": {
+          "atr_14": 15.321429,
+          "sl_atr_ratio": 1.20028,
+          "is_tight_sl": false
+        }
+      },
+      "forward_prices_22d": {
+        "min": 675.0,
+        "max": 777.9
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2022-0009",
+      "trade_class": "inverted_rr",
+      "symbol": "SBIN",
+      "instrument": "FUT",
+      "recommendation_date": "2022-04-15",
+      "resolution_date": "2022-05-18",
+      "resolution_outcome": "LOSS",
+      "entry_price": 517.7,
+      "stop_loss": 505.85,
+      "target_price": 528.37,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 0.900422,
+          "live_rr": 0.900422,
+          "inverted_rr_flag": true
+        },
+        "out_2_market.json": {
+          "atr_14": 9.875,
+          "sl_atr_ratio": 1.2,
+          "is_tight_sl": false
+        }
+      },
+      "forward_prices_22d": {
+        "min": 438.85,
+        "max": 520.95
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2022-0010",
+      "trade_class": "inverted_rr",
+      "symbol": "INFY",
+      "instrument": "FUT",
+      "recommendation_date": "2022-04-15",
+      "resolution_date": "2022-05-18",
+      "resolution_outcome": "LOSS",
+      "entry_price": 1748.55,
+      "stop_loss": 1710.28,
+      "target_price": 1782.99,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 0.899922,
+          "live_rr": 0.899922,
+          "inverted_rr_flag": true
+        },
+        "out_2_market.json": {
+          "atr_14": 31.892857,
+          "sl_atr_ratio": 1.199955,
+          "is_tight_sl": false
+        }
+      },
+      "forward_prices_22d": {
+        "min": 1478.65,
+        "max": 1650.0
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2022-0011",
+      "trade_class": "inverted_rr",
+      "symbol": "TCS",
+      "instrument": "FUT",
+      "recommendation_date": "2022-04-15",
+      "resolution_date": "2022-05-18",
+      "resolution_outcome": "LOSS",
+      "entry_price": 3661.95,
+      "stop_loss": 3591.3,
+      "target_price": 3725.53,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 0.899929,
+          "live_rr": 0.899929,
+          "inverted_rr_flag": true
+        },
+        "out_2_market.json": {
+          "atr_14": 58.871421,
+          "sl_atr_ratio": 1.200073,
+          "is_tight_sl": false
+        }
+      },
+      "forward_prices_22d": {
+        "min": 3346.8501,
+        "max": 3644.0
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2022-0012",
+      "trade_class": "inverted_rr",
+      "symbol": "LT",
+      "instrument": "FUT",
+      "recommendation_date": "2022-04-15",
+      "resolution_date": "2022-05-18",
+      "resolution_outcome": "LOSS",
+      "entry_price": 1760.8,
+      "stop_loss": 1720.27,
+      "target_price": 1797.28,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 0.900074,
+          "live_rr": 0.900074,
+          "inverted_rr_flag": true
+        },
+        "out_2_market.json": {
+          "atr_14": 33.771429,
+          "sl_atr_ratio": 1.200127,
+          "is_tight_sl": false
+        }
+      },
+      "forward_prices_22d": {
+        "min": 1502.0,
+        "max": 1760.75
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2022-0013",
+      "trade_class": "inverted_rr",
+      "symbol": "TATASTEEL",
+      "instrument": "FUT",
+      "recommendation_date": "2022-04-15",
+      "resolution_date": "2022-05-18",
+      "resolution_outcome": "LOSS",
+      "entry_price": 131.95,
+      "stop_loss": 127.86,
+      "target_price": 135.63,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 0.899756,
+          "live_rr": 0.899756,
+          "inverted_rr_flag": true
+        },
+        "out_2_market.json": {
+          "atr_14": 3.405357,
+          "sl_atr_ratio": 1.201049,
+          "is_tight_sl": false
+        }
+      },
+      "forward_prices_22d": {
+        "min": 109.2,
+        "max": 136.665
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2022-0014",
+      "trade_class": "inverted_rr",
+      "symbol": "ITC",
+      "instrument": "FUT",
+      "recommendation_date": "2022-04-15",
+      "resolution_date": "2022-05-18",
+      "resolution_outcome": "LOSS",
+      "entry_price": 259.55,
+      "stop_loss": 251.82,
+      "target_price": 266.51,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 0.900388,
+          "live_rr": 0.900388,
+          "inverted_rr_flag": true
+        },
+        "out_2_market.json": {
+          "atr_14": 6.441221,
+          "sl_atr_ratio": 1.200083,
+          "is_tight_sl": false
+        }
+      },
+      "forward_prices_22d": {
+        "min": 239.9103,
+        "max": 262.3944
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2022-0015",
+      "trade_class": "tight_stop",
+      "symbol": "TITAN",
+      "instrument": "FUT",
+      "recommendation_date": "2022-04-15",
+      "resolution_date": "2022-05-18",
+      "resolution_outcome": "LOSS",
+      "entry_price": 2461.35,
+      "stop_loss": 2425.79,
+      "target_price": 2550.25,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 2.5,
+          "live_rr": 2.5,
+          "inverted_rr_flag": false
+        },
+        "out_2_market.json": {
+          "atr_14": 59.260679,
+          "sl_atr_ratio": 0.600061,
+          "is_tight_sl": true
+        }
+      },
+      "forward_prices_22d": {
+        "min": 2035.55,
+        "max": 2552.1499
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2022-0016",
+      "trade_class": "tight_stop",
+      "symbol": "MARUTI",
+      "instrument": "FUT",
+      "recommendation_date": "2022-04-15",
+      "resolution_date": "2022-05-18",
+      "resolution_outcome": "LOSS",
+      "entry_price": 7469.5,
+      "stop_loss": 7364.77,
+      "target_price": 7731.32,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 2.499952,
+          "live_rr": 2.499952,
+          "inverted_rr_flag": false
+        },
+        "out_2_market.json": {
+          "atr_14": 174.546493,
+          "sl_atr_ratio": 0.600012,
+          "is_tight_sl": true
+        }
+      },
+      "forward_prices_22d": {
+        "min": 7062.3501,
+        "max": 8067.5
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2022-0017",
+      "trade_class": "tight_stop",
+      "symbol": "AXISBANK",
+      "instrument": "FUT",
+      "recommendation_date": "2022-04-15",
+      "resolution_date": "2022-05-18",
+      "resolution_outcome": "LOSS",
+      "entry_price": 793.05,
+      "stop_loss": 782.56,
+      "target_price": 819.27,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 2.499523,
+          "live_rr": 2.499523,
+          "inverted_rr_flag": false
+        },
+        "out_2_market.json": {
+          "atr_14": 17.482143,
+          "sl_atr_ratio": 0.600041,
+          "is_tight_sl": true
+        }
+      },
+      "forward_prices_22d": {
+        "min": 630.05,
+        "max": 816.2
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2022-0018",
+      "trade_class": "tight_stop",
+      "symbol": "BAJFINANCE",
+      "instrument": "FUT",
+      "recommendation_date": "2022-04-15",
+      "resolution_date": "2022-05-18",
+      "resolution_outcome": "LOSS",
+      "entry_price": 732.85,
+      "stop_loss": 723.99,
+      "target_price": 755.0,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 2.5,
+          "live_rr": 2.5,
+          "inverted_rr_flag": false
+        },
+        "out_2_market.json": {
+          "atr_14": 14.762143,
+          "sl_atr_ratio": 0.600184,
+          "is_tight_sl": true
+        }
+      },
+      "forward_prices_22d": {
+        "min": 548.8,
+        "max": 744.33
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2022-0020",
+      "trade_class": "clean_bullish",
+      "symbol": "SUNPHARMA",
+      "instrument": "FUT",
+      "recommendation_date": "2022-09-15",
+      "resolution_date": "2022-10-18",
+      "resolution_outcome": "WIN",
+      "entry_price": 874.3,
+      "stop_loss": 842.99,
+      "target_price": 943.18,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 2.199936,
+          "live_rr": 2.199936,
+          "inverted_rr_flag": false
+        },
+        "out_2_market.json": {
+          "atr_14": 15.657143,
+          "sl_atr_ratio": 1.999726,
+          "is_tight_sl": false
+        }
+      },
+      "forward_prices_22d": {
+        "min": 856.8,
+        "max": 985.0
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2023-0003",
+      "trade_class": "pledge_hazard",
+      "symbol": "VEDL",
+      "instrument": "FUT",
+      "recommendation_date": "2023-02-13",
+      "resolution_date": "2023-03-09",
+      "resolution_outcome": "LOSS",
+      "entry_price": 316.7,
+      "stop_loss": 303.0,
+      "target_price": 342.0,
+      "script_outputs": {
+        "out_2_market.json": {
+          "atr_14": 11.7,
+          "is_tight_sl": false
+        },
+        "out_6_fundamental.json": {
+          "promoter_pledge_pct": 54.2,
+          "days_to_earnings": 40
+        },
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "live_rr": 1.85
+        }
+      },
+      "forward_prices_22d": {
+        "min": 268.0,
+        "max": 325.0
+      },
+      "cone_p10": 250.0,
+      "cone_p90": 340.0,
+      "market_mae_pct": 6.5,
+      "limit_mae_pct": 3.1,
+      "predicted_direction": 1,
+      "actual_direction": 0,
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2023-0021",
+      "trade_class": "clean_bullish",
+      "symbol": "HDFCBANK",
+      "instrument": "FUT",
+      "recommendation_date": "2023-03-15",
+      "resolution_date": "2023-04-20",
+      "resolution_outcome": "WIN",
+      "entry_price": 770.95,
+      "stop_loss": 742.98,
+      "target_price": 832.48,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 2.199857,
+          "live_rr": 2.199857,
+          "inverted_rr_flag": false
+        },
+        "out_2_market.json": {
+          "atr_14": 13.9875,
+          "sl_atr_ratio": 1.999643,
+          "is_tight_sl": false
+        }
+      },
+      "forward_prices_22d": {
+        "min": 766.025,
+        "max": 860.0
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2023-0022",
+      "trade_class": "clean_bullish",
+      "symbol": "ICICIBANK",
+      "instrument": "FUT",
+      "recommendation_date": "2023-03-15",
+      "resolution_date": "2023-04-20",
+      "resolution_outcome": "WIN",
+      "entry_price": 825.9,
+      "stop_loss": 792.99,
+      "target_price": 898.3,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 2.199939,
+          "live_rr": 2.199939,
+          "inverted_rr_flag": false
+        },
+        "out_2_market.json": {
+          "atr_14": 16.453571,
+          "sl_atr_ratio": 2.000174,
+          "is_tight_sl": false
+        }
+      },
+      "forward_prices_22d": {
+        "min": 810.3,
+        "max": 917.3
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2023-0023",
+      "trade_class": "clean_bullish",
+      "symbol": "TITAN",
+      "instrument": "FUT",
+      "recommendation_date": "2023-03-15",
+      "resolution_date": "2023-04-20",
+      "resolution_outcome": "WIN",
+      "entry_price": 2399.1,
+      "stop_loss": 2308.94,
+      "target_price": 2597.45,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 2.199978,
+          "live_rr": 2.199978,
+          "inverted_rr_flag": false
+        },
+        "out_2_market.json": {
+          "atr_14": 45.082107,
+          "sl_atr_ratio": 1.999907,
+          "is_tight_sl": false
+        }
+      },
+      "forward_prices_22d": {
+        "min": 2413.0,
+        "max": 2619.0
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2023-0024",
+      "trade_class": "clean_bullish",
+      "symbol": "SUNPHARMA",
+      "instrument": "FUT",
+      "recommendation_date": "2023-03-15",
+      "resolution_date": "2023-04-20",
+      "resolution_outcome": "WIN",
+      "entry_price": 951.4,
+      "stop_loss": 921.56,
+      "target_price": 1017.05,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 2.200067,
+          "live_rr": 2.200067,
+          "inverted_rr_flag": false
+        },
+        "out_2_market.json": {
+          "atr_14": 14.917857,
+          "sl_atr_ratio": 2.000287,
+          "is_tight_sl": false
+        }
+      },
+      "forward_prices_22d": {
+        "min": 947.35,
+        "max": 1023.85
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2024-0004",
+      "trade_class": "clean_bullish",
+      "symbol": "SBIN",
+      "instrument": "FUT",
+      "recommendation_date": "2024-07-08",
+      "resolution_date": "2024-08-06",
+      "resolution_outcome": "WIN",
+      "entry_price": 825.0,
+      "stop_loss": 795.0,
+      "target_price": 890.0,
+      "script_outputs": {
+        "out_2_market.json": {
+          "atr_14": 15.1,
+          "is_tight_sl": false
+        },
+        "out_6_fundamental.json": {
+          "promoter_pledge_pct": 2.1,
+          "days_to_earnings": 41
+        },
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "live_rr": 2.17
+        }
+      },
+      "forward_prices_22d": {
+        "min": 780.0,
+        "max": 900.0
+      },
+      "cone_p10": 755.0,
+      "cone_p90": 915.0,
+      "market_mae_pct": 1.4,
+      "limit_mae_pct": 0.9,
+      "predicted_direction": 1,
+      "actual_direction": 1,
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2024-0025",
+      "trade_class": "clean_bullish",
+      "symbol": "ICICIBANK",
+      "instrument": "FUT",
+      "recommendation_date": "2024-04-15",
+      "resolution_date": "2024-05-17",
+      "resolution_outcome": "WIN",
+      "entry_price": 1078.35,
+      "stop_loss": 1043.28,
+      "target_price": 1155.5,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 2.199886,
+          "live_rr": 2.199886,
+          "inverted_rr_flag": false
+        },
+        "out_2_market.json": {
+          "atr_14": 17.535714,
+          "sl_atr_ratio": 1.999919,
+          "is_tight_sl": false
+        }
+      },
+      "forward_prices_22d": {
+        "min": 1048.1,
+        "max": 1169.55
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2024-0026",
+      "trade_class": "clean_bullish",
+      "symbol": "SBIN",
+      "instrument": "FUT",
+      "recommendation_date": "2024-04-15",
+      "resolution_date": "2024-05-17",
+      "resolution_outcome": "WIN",
+      "entry_price": 757.5,
+      "stop_loss": 729.35,
+      "target_price": 819.43,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 2.2,
+          "live_rr": 2.2,
+          "inverted_rr_flag": false
+        },
+        "out_2_market.json": {
+          "atr_14": 14.075,
+          "sl_atr_ratio": 2.0,
+          "is_tight_sl": false
+        }
+      },
+      "forward_prices_22d": {
+        "min": 732.05,
+        "max": 839.65
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2024-0027",
+      "trade_class": "clean_bullish",
+      "symbol": "ICICIBANK",
+      "instrument": "FUT",
+      "recommendation_date": "2024-09-15",
+      "resolution_date": "2024-10-16",
+      "resolution_outcome": "WIN",
+      "entry_price": 1250.35,
+      "stop_loss": 1209.83,
+      "target_price": 1339.49,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 2.199901,
+          "live_rr": 2.199901,
+          "inverted_rr_flag": false
+        },
+        "out_2_market.json": {
+          "atr_14": 20.260714,
+          "sl_atr_ratio": 1.999929,
+          "is_tight_sl": false
+        }
+      },
+      "forward_prices_22d": {
+        "min": 1217.4,
+        "max": 1362.35
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2024-0028",
+      "trade_class": "clean_bullish",
+      "symbol": "MARUTI",
+      "instrument": "FUT",
+      "recommendation_date": "2024-09-15",
+      "resolution_date": "2024-10-16",
+      "resolution_outcome": "WIN",
+      "entry_price": 12316.05,
+      "stop_loss": 11938.33,
+      "target_price": 13147.03,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 2.199989,
+          "live_rr": 2.199989,
+          "inverted_rr_flag": false
+        },
+        "out_2_market.json": {
+          "atr_14": 188.860629,
+          "sl_atr_ratio": 1.999993,
+          "is_tight_sl": false
+        }
+      },
+      "forward_prices_22d": {
+        "min": 12151.6504,
+        "max": 13541.6504
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2025-0005",
+      "trade_class": "tight_stop",
+      "symbol": "HDFCBANK",
+      "instrument": "FUT",
+      "recommendation_date": "2025-01-15",
+      "resolution_date": "2025-02-13",
+      "resolution_outcome": "TIME",
+      "entry_price": 821.52,
+      "stop_loss": 812.24,
+      "target_price": 1700.0,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 94.663793,
+          "live_rr": 94.663793,
+          "inverted_rr_flag": false
+        },
+        "out_2_market.json": {
+          "atr_14": 15.467857,
+          "sl_atr_ratio": 0.599954,
+          "is_tight_sl": true
+        }
+      },
+      "forward_prices_22d": {
+        "min": 812.725,
+        "max": 883.5
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2025-0029",
+      "trade_class": "clean_bullish",
+      "symbol": "MARUTI",
+      "instrument": "FUT",
+      "recommendation_date": "2025-01-15",
+      "resolution_date": "2025-02-13",
+      "resolution_outcome": "WIN",
+      "entry_price": 11947.4,
+      "stop_loss": 11397.05,
+      "target_price": 13158.17,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 2.2,
+          "live_rr": 2.2,
+          "inverted_rr_flag": false
+        },
+        "out_2_market.json": {
+          "atr_14": 275.175086,
+          "sl_atr_ratio": 1.999999,
+          "is_tight_sl": false
+        }
+      },
+      "forward_prices_22d": {
+        "min": 11811.0498,
+        "max": 13461.2002
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2025-0030",
+      "trade_class": "clean_bullish",
+      "symbol": "BAJFINANCE",
+      "instrument": "FUT",
+      "recommendation_date": "2025-01-15",
+      "resolution_date": "2025-02-13",
+      "resolution_outcome": "WIN",
+      "entry_price": 717.74,
+      "stop_loss": 680.57,
+      "target_price": 799.51,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 2.199892,
+          "live_rr": 2.199892,
+          "inverted_rr_flag": false
+        },
+        "out_2_market.json": {
+          "atr_14": 18.5875,
+          "sl_atr_ratio": 1.999731,
+          "is_tight_sl": false
+        }
+      },
+      "forward_prices_22d": {
+        "min": 715.63,
+        "max": 866.28
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2025-0031",
+      "trade_class": "clean_bullish",
+      "symbol": "RELIANCE",
+      "instrument": "FUT",
+      "recommendation_date": "2025-10-15",
+      "resolution_date": "2025-11-18",
+      "resolution_outcome": "WIN",
+      "entry_price": 1374.3,
+      "stop_loss": 1341.37,
+      "target_price": 1446.75,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 2.200121,
+          "live_rr": 2.200121,
+          "inverted_rr_flag": false
+        },
+        "out_2_market.json": {
+          "atr_14": 16.464286,
+          "sl_atr_ratio": 2.000087,
+          "is_tight_sl": false
+        }
+      },
+      "forward_prices_22d": {
+        "min": 1375.0,
+        "max": 1527.8
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    },
+    {
+      "trade_id": "GB-2025-0032",
+      "trade_class": "clean_bullish",
+      "symbol": "SBIN",
+      "instrument": "FUT",
+      "recommendation_date": "2025-10-15",
+      "resolution_date": "2025-11-18",
+      "resolution_outcome": "WIN",
+      "entry_price": 886.1,
+      "stop_loss": 861.27,
+      "target_price": 940.73,
+      "script_outputs": {
+        "current_trade.json": {
+          "type": "FUT"
+        },
+        "out_1_math.json": {
+          "raw_rr": 2.200161,
+          "live_rr": 2.200161,
+          "inverted_rr_flag": false
+        },
+        "out_2_market.json": {
+          "atr_14": 12.414286,
+          "sl_atr_ratio": 2.000115,
+          "is_tight_sl": false
+        }
+      },
+      "forward_prices_22d": {
+        "min": 882.45,
+        "max": 976.7
+      },
+      "reported_numbers_match_json": true,
+      "html_report_valid": null
+    }
+  ]
 }

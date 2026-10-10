@@ -51,12 +51,13 @@ class TestFrozenArtifactMap(unittest.TestCase):
         self.assertEqual(_recorder.FROZEN_ARTIFACTS[0], "current_trade.json")
         self.assertEqual(_recorder.FROZEN_ARTIFACTS[1], "out_1_math.json")
         self.assertEqual(_recorder.FROZEN_ARTIFACTS[2], "out_2_market.json")
+        self.assertEqual(_recorder.FROZEN_ARTIFACTS[3], "out_3_dtw.json")
 
     def test_unregistered_stage_fails_loudly_not_derivatively(self):
         """Any stage NOT in the frozen map must fail loudly naming the contract.
-        (Stage 3 is the next unimplemented stage; keep this forward-looking.)"""
+        (Stage 4 is the next unimplemented stage; keep this forward-looking.)"""
         with self.assertRaises(AssertionError) as caught:
-            _recorder.artifact_filename(3)
+            _recorder.artifact_filename(4)
         self.assertIn("BRD §9.1", str(caught.exception))
 
 
@@ -104,7 +105,8 @@ class TestRecordedBundleByteExactness(unittest.TestCase):
         self.assertIn(0, stages)
         self.assertIn(1, stages)
         names = {row["artifact"] for row in manifest["stages"]}
-        self.assertEqual(names, {"current_trade.json", "out_1_math.json", "out_2_market.json"})
+        self.assertEqual(names, {"current_trade.json", "out_1_math.json",
+                                 "out_2_market.json", "out_3_dtw.json"})
 
     def test_recorded_stage1_payload_matches_ground_truth_values(self):
         out = json.loads((self.bundle / "out_1_math.json").read_text(encoding="utf-8"))

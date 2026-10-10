@@ -6,17 +6,17 @@
 | Ticket ID | Title | Status | Test Seam | Priority |
 | :--- | :--- | :--- | :--- | :--- |
 | `TICK-001` | [Canonical Ingestion Parser & Gatekeeper](file:///d:/Code/uvest/docs/tickets/TICK-001-canonical-parser.md) | FROZEN (sliced) | `tests/test_0_ingest_reco.py` | P0 |
-| `TICK-002` | [Mathematical R:R, Slippage & Margin Engine](file:///d:/Code/uvest/docs/tickets/TICK-002-math-and-rr.md) | FROZEN (pending) | `tests/test_1_math_and_rr.py` | P0 |
-| `TICK-003` | [FastDTW 10-Year Historical Pattern Matcher](file:///d:/Code/uvest/docs/tickets/TICK-003-dtw-matcher.md) | FROZEN (pending) | `tests/test_3_dtw_pattern.py` | P1 |
-| `TICK-004` | [LightGBM 1-Month Direction & Volatility Cone](file:///d:/Code/uvest/docs/tickets/TICK-004-lightgbm-cone.md) | FROZEN (pending) | `tests/test_4_ml_direction.py` | P1 |
-| `TICK-005` | [NSE Bhavcopy Delivery % × Futures OI Matrix](file:///d:/Code/uvest/docs/tickets/TICK-005-institutional-matrix.md) | FROZEN (pending) | `tests/test_5_institutional_flow.py` | P0 |
-| `TICK-006` | [Fundamental & Corporate Governance Auditor](file:///d:/Code/uvest/docs/tickets/TICK-006-fundamental-audit.md) | FROZEN (pending) | `tests/test_6_fundamental_audit.py` | P1 |
-| `TICK-007` | [Sector Relative Strength & Macro VIX Regime](file:///d:/Code/uvest/docs/tickets/TICK-007-sector-macro.md) | FROZEN (pending) | `tests/test_7_sector_macro_regime.py` | P1 |
-| `TICK-008` | [Dhan API Precision Intraday & Depth Client](file:///d:/Code/uvest/docs/tickets/TICK-008-dhan-precision.md) | FROZEN (pending) | `tests/test_8_dhan_precision.py` | P1 |
-| `TICK-009` | [Consolidated Multi-Factor Decision Engine](file:///d:/Code/uvest/docs/tickets/TICK-009-decision-engine.md) | FROZEN (pending) | `tests/test_9_decision_engine.py` | P0 |
+| `TICK-002` | [Mathematical R:R, Slippage & Margin Engine](file:///d:/Code/uvest/docs/tickets/TICK-002-math-and-rr.md) | FROZEN (sliced) | `tests/test_1_math_and_rr.py` | P0 |
+| `TICK-003` | [FastDTW 10-Year Historical Pattern Matcher](file:///d:/Code/uvest/docs/tickets/TICK-003-dtw-matcher.md) | FROZEN (sliced) | `tests/test_3_dtw_pattern.py` | P1 |
+| `TICK-004` | [LightGBM 1-Month Direction & Volatility Cone](file:///d:/Code/uvest/docs/tickets/TICK-004-lightgbm-cone.md) | FROZEN (sliced) | `tests/test_4_ml_direction.py` | P1 |
+| `TICK-005` | [NSE Bhavcopy Delivery % × Futures OI Matrix](file:///d:/Code/uvest/docs/tickets/TICK-005-institutional-matrix.md) | FROZEN (sliced) | `tests/test_5_institutional_flow.py` | P0 |
+| `TICK-006` | [Fundamental & Corporate Governance Auditor](file:///d:/Code/uvest/docs/tickets/TICK-006-fundamental-audit.md) | FROZEN (sliced) | `tests/test_6_fundamental_audit.py` | P1 |
+| `TICK-007` | [Sector Relative Strength & Macro VIX Regime](file:///d:/Code/uvest/docs/tickets/TICK-007-sector-macro.md) | FROZEN (sliced) | `tests/test_7_sector_macro_regime.py` | P1 |
+| `TICK-008` | [Dhan API Precision Intraday & Depth Client](file:///d:/Code/uvest/docs/tickets/TICK-008-dhan-precision.md) | FROZEN (sliced) | `tests/test_8_dhan_precision.py` | P1 |
+| `TICK-009` | [Consolidated Multi-Factor Decision Engine](file:///d:/Code/uvest/docs/tickets/TICK-009-decision-engine.md) | FROZEN (sliced) | `tests/test_9_decision_engine.py` | P0 |
 | `TICK-010` | [Standalone Interactive HTML Visualizer](file:///d:/Code/uvest/docs/tickets/TICK-010-html-visualizer.md) | FROZEN (sliced) | `tests/test_12_generate_html_report.py` | P1 |
-| `TICK-011` | [Daily Position Triage & Adverse Movement Tracker](file:///d:/Code/uvest/docs/tickets/TICK-011-daily-triage.md) | FROZEN (pending) | `tests/test_10_daily_triage.py` | P1 |
-| `TICK-012` | [Continuous Learning & Failure Autopsy Engine](file:///d:/Code/uvest/docs/tickets/TICK-012-failure-autopsy.md) | FROZEN (pending) | `tests/test_11_postmortem_learning.py` | P2 |
+| `TICK-011` | [Daily Position Triage & Adverse Movement Tracker](file:///d:/Code/uvest/docs/tickets/TICK-011-daily-triage.md) | FROZEN (sliced) | `tests/test_10_daily_triage.py` | P1 |
+| `TICK-012` | [Continuous Learning & Failure Autopsy Engine](file:///d:/Code/uvest/docs/tickets/TICK-012-failure-autopsy.md) | FROZEN (sliced) | `tests/test_11_postmortem_learning.py` | P2 |
 | `TICK-013` | [Daily OHLCV, ATR & Trend Regime Engine](file:///d:/Code/uvest/docs/tickets/TICK-013-market-data.md) | FROZEN (sliced) | `tests/test_2_market_data.py` | P1 |
 | `EVAL-001` | [Behavioral Evals Benchmark Suite (50 Trades)](file:///d:/Code/uvest/docs/tickets/EVAL-001-benchmark-suite.md) | FROZEN (sliced) | `tests/run_evals.py` | P0 |
 
@@ -49,8 +49,8 @@ Ticket IDs were assigned in **slicing order**; stage numbers encode **execution 
 
 ## Slice Status
 
-- **Sliced** — the ticket file is committed in `docs/tickets/`: `TICK-001`, `TICK-010`, `TICK-013`, `EVAL-001`.
-- **Pending** — contract frozen and stage assigned, but the ticket file does not exist yet: `TICK-002` … `TICK-009`, `TICK-011`, `TICK-012`. Strict TDD for these stages cannot begin until the file is written.
+- **Sliced** — all ticket files are committed in `docs/tickets/`: `TICK-001` through `TICK-013`, `EVAL-001`.
+- **Pending** — none; all pipeline stages are formally specced, sliced, and ready for TDD implementation.
 
 ## The Spec-and-Freeze Milestone
 All architectural requirements in `BRD.md`, domain models in `docs/agents/domain.md`, evaluation gates in `docs/agents/evals.md`, and ticket acceptance criteria above are **LOCKED AND FROZEN**.

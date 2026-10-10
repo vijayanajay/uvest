@@ -1,0 +1,14 @@
+{
+  "symbol": "RELIANCE",
+  "as_of": "2026-10-09",
+  "delivery_pct": 56.4,
+  "delivery_mean_20d": 38.2,
+  "delivery_std_20d": 10.1,
+  "price_change_pct": 1.25,
+  "oi": 35200000,
+  "oi_change_pct": 8.4,
+  "spot_price": 2981.70,
+  "futures_price": 2988.20,
+  "days_to_expiry": 16.5,
+  "rollover_pct": null
+}

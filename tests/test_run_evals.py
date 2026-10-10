@@ -121,7 +121,12 @@ class TestGoldenDatasetContract(unittest.TestCase):
                     "per the TICK-013 tri-state contract, or omit it entirely")
 
     def test_clean_trades_are_clean(self):
-        """A clean_bullish trade must NOT trip any hard breaker."""
+        """A clean_bullish trade must NOT trip any hard breaker.
+
+        Breakers belong to stages that may not have run for a record: an
+        ABSENT stage payload (`None`) is the §10.3 tri-state, not a trip —
+        only a PRESENT value is graded, and only against its own threshold.
+        """
         for trade in self.trades:
             if trade.get("trade_class") != "clean_bullish":
                 continue
@@ -129,8 +134,11 @@ class TestGoldenDatasetContract(unittest.TestCase):
             rr = out.get("out_1_math.json", {}).get("live_rr")
             pledge = out.get("out_6_fundamental.json", {}).get("promoter_pledge_pct")
             tight = out.get("out_2_market.json", {}).get("is_tight_sl")
+            self.assertIsNotNone(rr, f"{trade['trade_id']}: clean trade missing live_rr")
             self.assertGreater(rr, 1.0, f"{trade['trade_id']}: clean trade has R:R <= 1.0")
-            self.assertLess(pledge, 25.0, f"{trade['trade_id']}: clean trade pledge >= 25%")
+            if pledge is not None:
+                self.assertLess(pledge, 25.0,
+                                f"{trade['trade_id']}: clean trade pledge >= 25%")
             self.assertFalse(tight, f"{trade['trade_id']}: clean trade is_tight_sl true")
 
     def test_no_class_exceeds_its_quota(self):
