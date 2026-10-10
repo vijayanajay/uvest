@@ -332,7 +332,7 @@ python scripts/12_generate_html_report.py                             # writes r
 
 | Script Name | Inputs | Key Operations | Key Payload Fields |
 | :--- | :--- | :--- | :--- |
-| `0_ingest_reco.py` | `input.txt` or `--image path.png` | Parses text or screenshot OCR; verifies F&O ban and ASM/GSM. | `symbol`, `type`, `entry_range`, `sl`, `target`, `lot_size`, `ban_status` |
+| `0_ingest_reco.py` | `input.txt` or `--image path.png` | Parses text or screenshot OCR; verifies F&O ban and ASM/GSM. | `symbol`, `instrument_type`, `type`, `entry_range`, `sl`, `target`, `lot_size`, `ban_status` |
 | `1_math_and_rr.py` | `current_trade.json` | Computes nominal vs. live R:R, slippage penalty, risk per lot, margin capital allocation. | `raw_rr`, `live_rr`, `risk_inr`, `reward_inr`, `outside_range_pct`, `inverted_rr_flag` |
 | `2_market_data.py` | `current_trade.json` | Fetches daily OHLCV (yfinance); computes 14D ATR, 20/50/200 EMA, Bollinger Bands, ATR-SL ratio. | `atr_14`, `sl_atr_ratio`, `is_tight_sl`, `ema_20`, `above_50_ema`, `above_200_sma`, `trend_state`, `bollinger_upper`, `bollinger_lower`, `bollinger_bandwidth`, `waived`, `as_of` |
 | `3_dtw_pattern.py` | `current_trade.json` | FastDTW against 10-year historical library; isolates top 15 analogs; extracts 22-day forward path. | `dtw_win_rate_22d`, `dtw_median_return`, `dtw_mae_drawdown`, `analog_confidence` |

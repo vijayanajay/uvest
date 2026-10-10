@@ -168,7 +168,7 @@ def compute_institutional_flow(payload: dict, bhav: dict | None) -> dict:
     }
 
 
-def main() -> None:
+def main() -> int:
     parser = argparse.ArgumentParser(description="UVEST Stage 5: Institutional Order Flow Engine")
     parser.add_argument("--input", default="current_trade.json",
                         help="Path to canonical current_trade.json")
@@ -183,12 +183,16 @@ def main() -> None:
     result = compute_institutional_flow(payload, bhav)
 
     output_str = json.dumps(result, indent=2) + "\n"
-    sys.stdout.write(output_str)
 
-    if args.record:
-        bundle_dir = resolve_bundle_dir(payload, args.record)
-        record_artifact(bundle_dir, stage=5, exact_stdout=output_str)
+    bundle = resolve_bundle_dir(args.record, payload.get("symbol") or "UNSPECIFIED",
+                                payload.get("recommended_date"))
+    if bundle is not None:
+        record_artifact(bundle, 5, output_str)
+
+    sys.stdout.write(output_str)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
+

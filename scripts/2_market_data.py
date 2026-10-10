@@ -151,8 +151,12 @@ def compute(payload: dict, sessions: list[dict] | None) -> dict:
     live = float(payload["live_price"])
     stop = float(payload["stoploss"])
     sl_distance = abs(live - stop)
-    sl_atr_ratio = sl_distance / atr
-    is_tight = sl_atr_ratio < ATR_NOISE_GATE  # strict < (boundary 0.75 is NOT tight)
+    if atr > 0:
+        sl_atr_ratio = sl_distance / atr
+        is_tight = bool(sl_atr_ratio < ATR_NOISE_GATE)  # strict < (boundary 0.75 is NOT tight)
+    else:
+        sl_atr_ratio = None
+        is_tight = None
 
     ema_20 = ema(closes, 20)
     ema_50 = ema(closes, 50)
@@ -174,7 +178,7 @@ def compute(payload: dict, sessions: list[dict] | None) -> dict:
         # 4dp, and sl_atr_ratio derives from the unrounded ATR internally.
         "atr_14": round(atr, 6),
         "sl_atr_ratio": sl_atr_ratio,
-        "is_tight_sl": bool(is_tight),
+        "is_tight_sl": is_tight,
         "ema_20": round(ema_20, 2),
         "above_50_ema": above_50,
         "above_200_sma": above_200,

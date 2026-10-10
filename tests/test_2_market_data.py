@@ -97,6 +97,16 @@ class TestAtrConvention(unittest.TestCase):
         self.assertEqual(code, 0, err)
         self.assertIs(out["is_tight_sl"], True)
 
+    def test_zero_atr_handles_division_by_zero_safely(self):
+        """When ATR is 0 (flat sessions), sl_atr_ratio and is_tight_sl are None without ZeroDivisionError."""
+        module, _ = import_mode(2)
+        zero_tr_sessions = [{"date": f"2026-01-{i+1:02d}", "open": 100.0, "high": 100.0,
+                             "low": 100.0, "close": 100.0, "volume": 1000} for i in range(205)]
+        out = module.compute(CANONICAL, zero_tr_sessions)
+        self.assertEqual(out["atr_14"], 0.0)
+        self.assertIsNone(out["sl_atr_ratio"])
+        self.assertIsNone(out["is_tight_sl"])
+
 
 class TestTrendState(unittest.TestCase):
     """BRD §9 contract keys (ema_20, above_50_ema, above_200_sma, trend_state)."""

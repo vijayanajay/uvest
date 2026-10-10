@@ -199,6 +199,23 @@ class TestWaiverAndDeterminism(unittest.TestCase):
             )
         self.assertEqual(p1.stdout, p2.stdout)
 
+    def test_record_flag_creates_exact_artifact(self):
+        """--record <dir> writes out_5_flow.json matching stdout byte-for-byte."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            bundle_path = Path(tmp_dir) / "bundle"
+            with temp_input(CANONICAL, ".json") as path:
+                proc = subprocess_mode(
+                    SCRIPT,
+                    ["--input", path, "--bhavcopy-fixture", str(FIXTURE_BHAVCOPY),
+                     "--record", str(bundle_path)],
+                )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            artifact = bundle_path / "out_5_flow.json"
+            self.assertTrue(artifact.exists(), "recorded stage 5 artifact missing")
+            self.assertEqual(artifact.read_text(encoding="utf-8"), proc.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
+

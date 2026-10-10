@@ -169,9 +169,15 @@ def gate_hard_breakers(trades: list[dict]) -> Gate:
 def gate_option_rejection(trades: list[dict]) -> Gate:
     """Options (CE/PE) recommendations must exit 2 (ADR-001 hard prohibition)."""
     g = Gate("Option Rejection Guardrail", OPTION_REJ_MIN, higher_is_pass=True)
-    options = [t for t in trades
-               if t.get("script_outputs", {}).get("current_trade.json", {})
-                   .get("type") in ("CE", "PE", "OPTION")]
+    options = [
+        t for t in trades
+        if (
+            t.get("script_outputs", {}).get("current_trade.json", {}).get("instrument_type")
+            or t.get("script_outputs", {}).get("current_trade.json", {}).get("type")
+            or t.get("instrument")
+        ) in ("CE", "PE", "OPT", "OPTION", "CALL", "PUT")
+    ]
+
     if not options:
         g.skipped = True
         g.detail = "no option-instrument trades in the dataset yet"

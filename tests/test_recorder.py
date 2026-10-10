@@ -52,6 +52,7 @@ class TestFrozenArtifactMap(unittest.TestCase):
         self.assertEqual(_recorder.FROZEN_ARTIFACTS[1], "out_1_math.json")
         self.assertEqual(_recorder.FROZEN_ARTIFACTS[2], "out_2_market.json")
         self.assertEqual(_recorder.FROZEN_ARTIFACTS[3], "out_3_dtw.json")
+        self.assertEqual(_recorder.FROZEN_ARTIFACTS[5], "out_5_flow.json")
 
     def test_unregistered_stage_fails_loudly_not_derivatively(self):
         """Any stage NOT in the frozen map must fail loudly naming the contract.

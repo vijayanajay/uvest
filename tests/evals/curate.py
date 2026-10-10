@@ -239,7 +239,7 @@ def record_for(trade_id: str, trade_class: str, symbol: str, rec_date: str,
         "stop_loss": stop,
         "target_price": target,
         "script_outputs": {
-            "current_trade.json": {"type": "FUT"},
+            "current_trade.json": {"type": "FUT", "instrument_type": "FUT"},
             "out_1_math.json": {
                 "raw_rr": round(stage1["raw_rr"], 6),
                 "live_rr": round(stage1["live_rr"], 6),
@@ -305,7 +305,7 @@ def rebase_tight_stop(row: dict | None) -> dict | None:
         "resolution_outcome": out["resolution_outcome"],
         "entry_price": live, "stop_loss": stop, "target_price": target,
         "script_outputs": {
-            "current_trade.json": {"type": "FUT"},
+            "current_trade.json": {"type": "FUT", "instrument_type": "FUT"},
             "out_1_math.json": {
                 "raw_rr": round(stage1["raw_rr"], 6),
                 "live_rr": round(stage1["live_rr"], 6),

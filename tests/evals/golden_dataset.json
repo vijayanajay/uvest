@@ -42,7 +42,8 @@
           "days_to_earnings": 28
         },
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "live_rr": 2.01
@@ -82,7 +83,8 @@
           "days_to_earnings": 34
         },
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "live_rr": 0.9
@@ -114,7 +116,8 @@
       "target_price": 1201.65,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 0.900112,
@@ -147,7 +150,8 @@
       "target_price": 758.87,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 0.900068,
@@ -180,7 +184,8 @@
       "target_price": 778.8,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 0.899946,
@@ -213,7 +218,8 @@
       "target_price": 528.37,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 0.900422,
@@ -246,7 +252,8 @@
       "target_price": 1782.99,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 0.899922,
@@ -279,7 +286,8 @@
       "target_price": 3725.53,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 0.899929,
@@ -312,7 +320,8 @@
       "target_price": 1797.28,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 0.900074,
@@ -345,7 +354,8 @@
       "target_price": 135.63,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 0.899756,
@@ -378,7 +388,8 @@
       "target_price": 266.51,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 0.900388,
@@ -411,7 +422,8 @@
       "target_price": 2550.25,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 2.5,
@@ -444,7 +456,8 @@
       "target_price": 7731.32,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 2.499952,
@@ -477,7 +490,8 @@
       "target_price": 819.27,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 2.499523,
@@ -510,7 +524,8 @@
       "target_price": 755.0,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 2.5,
@@ -543,7 +558,8 @@
       "target_price": 943.18,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 2.199936,
@@ -584,7 +600,8 @@
           "days_to_earnings": 40
         },
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "live_rr": 1.85
@@ -616,7 +633,8 @@
       "target_price": 832.48,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 2.199857,
@@ -649,7 +667,8 @@
       "target_price": 898.3,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 2.199939,
@@ -682,7 +701,8 @@
       "target_price": 2597.45,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 2.199978,
@@ -715,7 +735,8 @@
       "target_price": 1017.05,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 2.200067,
@@ -756,7 +777,8 @@
           "days_to_earnings": 41
         },
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "live_rr": 2.17
@@ -788,7 +810,8 @@
       "target_price": 1155.5,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 2.199886,
@@ -821,7 +844,8 @@
       "target_price": 819.43,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 2.2,
@@ -854,7 +878,8 @@
       "target_price": 1339.49,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 2.199901,
@@ -887,7 +912,8 @@
       "target_price": 13147.03,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 2.199989,
@@ -920,7 +946,8 @@
       "target_price": 1700.0,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 94.663793,
@@ -953,7 +980,8 @@
       "target_price": 13158.17,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 2.2,
@@ -986,7 +1014,8 @@
       "target_price": 799.51,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 2.199892,
@@ -1019,7 +1048,8 @@
       "target_price": 1446.75,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 2.200121,
@@ -1052,7 +1082,8 @@
       "target_price": 940.73,
       "script_outputs": {
         "current_trade.json": {
-          "type": "FUT"
+          "type": "FUT",
+          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "raw_rr": 2.200161,
