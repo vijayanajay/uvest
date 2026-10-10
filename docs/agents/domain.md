@@ -53,3 +53,13 @@
 - **Status:** APPROVED & FROZEN
 - **Context:** Developing quant features without frozen mathematical seams causes regressions and "vibe coding."
 - **Decision:** Complete specification in `BRD.md`, tickets in `docs/tickets/`, and behavioral evals in `docs/agents/evals.md` must be frozen before implementation starts.
+
+### ADR-005: Retention of Hard Safety Circuit Breakers (Rejecting Soft Pledge Pricing)
+- **Status:** APPROVED & FROZEN
+- **Context:** An alternative proposal in `docs/understanding.md` suggested softening circuit breakers (specifically Promoter Pledging > 25%) by attempting to "price the risk" into a continuous expected value calculation rather than hard-rejecting the trade.
+- **Decision:** REJECT the softening proposal. In Indian equities and futures, promoter pledge crises trigger cascading NBFC/bank margin call liquidations and lower circuits where bid liquidity completely evaporates. A retail trader physically cannot exit at the theoretical stop loss in cash, while in futures, broker RMS executes fire-sale liquidations. Hard circuit breakers (Promoter Pledge > 25%, Inverted R:R < 1.0, Options, F&O Ban, Futures Earnings < 7d) remain absolute vetoes (`AVOID`).
+
+### ADR-006: 7-State Verdict Schema & Daily Stewardship Contract
+- **Status:** APPROVED & FROZEN
+- **Context:** The original tri-state verdict (`GO`, `CONDITIONAL_GO`, `NO_GO`) was too coarse, and the system lacked lifecycle ownership of active trades after entry.
+- **Decision:** Adopt the 7-state lifecycle vocabulary: Pre-entry (`GO`, `GO_WEAK`, `WAIT`, `AVOID`) and Post-entry (`HOLD`, `PRESSURE`, `EXIT`). Every non-GO verdict carries a mandatory `what_would_flip_me`. Confirmed trades enter daily stewardship where `still_chance_pct` is computed deterministically from premise evidence and published in a canonical daily report card.

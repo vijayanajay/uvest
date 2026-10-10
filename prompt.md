@@ -77,17 +77,17 @@ python scripts/12_generate_html_report.py   # writes reports/report_{SYMBOL}_{DA
 
 ## 3. GATING RULES & HARD CIRCUIT BREAKERS
 
-If any of the following triggers trip in the tool outputs, immediately flag a **🔴 NO-GO (REJECT)** regardless of any other score:
+If any of the following triggers trip in the tool outputs, immediately flag an **🔴 AVOID** regardless of any other score:
 
 | Gate / Hazard | Source Script | Circuit Breaker Condition & Action |
 | :--- | :--- | :--- |
 | **Options Prohibition** | `0_ingest_reco.py` | Instrument is Option (CE/PE) $\implies$ **INSTANT TERMINATION**. |
-| **F&O Ban List** | `0_ingest_reco.py` | Stock is under NSE MWPL F&O ban $\implies$ **HARD NO-GO** for Futures. |
-| **Promoter Pledging** | `6_fundamental_audit.py` | Promoter pledged shares $> 25\%$ $\implies$ **HARD NO-GO** (Fatal governance risk). |
-| **Inverted Risk-Reward** | `1_math_and_rr.py` | Live $R:R < 1.0$ (Risking ₹1 to make $< ₹1$) $\implies$ **HARD NO-GO**. |
-| **Earnings Shock Hazard** | `6_fundamental_audit.py` | Quarterly results scheduled within $< 7$ days on Futures $\implies$ **HARD NO-GO**. |
-| **Volatility Noise Stop** | `2_market_data.py` | Stop-loss distance $< 0.75 \times \text{Daily ATR}$ $\implies$ **HARD NO-GO** (Noise trap). |
-| **Panic Volatility Regime** | `7_sector_macro_regime.py` | India VIX $> 24$ and Market Breadth $< 30\%$ $\implies$ **HARD NO-GO** on long setups. |
+| **F&O Ban List** | `0_ingest_reco.py` | Stock is under NSE MWPL F&O ban $\implies$ **HARD AVOID** for Futures. |
+| **Promoter Pledging** | `6_fundamental_audit.py` | Promoter pledged shares $> 25\%$ $\implies$ **HARD AVOID** (Fatal governance liquidation hazard). |
+| **Inverted Risk-Reward** | `1_math_and_rr.py` | Live $R:R < 1.0$ (Risking ₹1 to make $< ₹1$) $\implies$ **HARD AVOID** (Overridden to `WAIT` if limit order recovers $R:R \ge 1.5$). |
+| **Earnings Shock Hazard** | `6_fundamental_audit.py` | Quarterly results scheduled within $< 7$ days on Futures $\implies$ **HARD AVOID**. |
+| **Volatility Noise Stop** | `2_market_data.py` | Stop-loss distance $< 0.75 \times \text{Daily ATR}$ $\implies$ **HARD AVOID** / `WAIT` (Noise trap). |
+| **Panic Volatility Regime** | `7_sector_macro_regime.py` | India VIX $> 24$ and Market Breadth $< 30\%$ $\implies$ **HARD AVOID** on long setups. |
 
 ---
 
@@ -126,8 +126,8 @@ Synthesize all script outputs and render the report strictly following this temp
 # 🛡️ UVEST QUANTITATIVE & FUNDAMENTAL VALIDATION REPORT
 **Ticker:** SYMBOL · **Type:** EQUITY / FUTURES · **Action:** BUY · **Source:** Univest
 
-### **FINAL CONFIDENCE SCORE: NN / 100**
-### **DECISION: 🟢 GO / 🟡 CONDITIONAL GO / 🔴 NO-GO**
+### **FINAL CONFIDENCE SCORE: NN / 100 · P(WIN): NN.N% · EXPECTANCY: ±N.NNR**
+### **VERDICT: 🟢 GO / 🟡 GO_WEAK / ⏳ WAIT / 🔴 AVOID**
 
 ---
 

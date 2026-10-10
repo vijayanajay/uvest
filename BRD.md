@@ -8,30 +8,31 @@
 
 ## 1. Executive Summary & Core Philosophy
 
-Retail advisory applications (such as Univest) publish high-velocity trade recommendations for Indian equities and futures. While these recommendations claim enticing reward-to-risk profiles, retail traders routinely suffer catastrophic drawdowns due to:
-1. **Inverted Risk-Reward at Market Entry:** Recommendations arrive after prices have already slipped past the viable entry band.
+Retail advisory services (such as Univest) publish high-velocity trade recommendations for Indian equities and futures. These advisory desks operate with an estimated historical baseline win rate of ~55%–60%. However, retail traders routinely experience severe drawdowns due to:
+1. **Inverted Risk-Reward at Market Entry:** Chasing recommendations after prices have already slipped past viable entry bands.
 2. **Ignorance of Institutional Market Microstructure:** Entering long during institutional distribution or retail short-covering rallies.
-3. **Fundamental Blind Spots:** Recommending stocks burdened by heavy promoter pledging, deteriorating cash flows (accrual anomalies), or impending earnings announcements.
+3. **Fundamental Blind Spots:** Recommending stocks burdened by catastrophic promoter pledging (>25%), deteriorating cash flows, or impending earnings announcements.
 4. **Market Regime Misalignment:** Trading long setups during macro liquidity contractions, high India VIX volatility regimes, or sector-relative weakness.
 5. **Lack of Post-Entry Management & Autopsy:** No disciplined rules when a trade moves into negative territory, and zero post-mortem learning when a stop-loss is triggered.
 
-### 1.1 The Solution
-**UVEST** is an institutional-grade, agentic trade validation engine operated inside an Agentic IDE (Antigravity, Cursor, Windsurf, VS Code Agent). 
-- It ingests Univest recommendations (via raw text or screenshot OCR).
-- It executes a suite of lightweight, modular Python tools against **free publicly available data** (NSE India Bhavcopy, Yahoo Finance, Screener.in) and reserves the **Dhan Broker API** as a high-precision layer for intraday candles and order-flow microstructure.
-- It synthesizes quantitative, machine-learning, fundamental, and macro regime analytics to deliver **Three Core Predictions**:
+### 1.1 The Solution: Edge Magnifier, Execution Optimizer & Daily Steward
+**UVEST** is an institutional-grade, agentic trade validation and stewardship engine operated inside an Agentic IDE (Antigravity, Cursor, Windsurf, VS Code Agent). 
+- **The Core Role:** UVEST does not police or reject recommendations wholesale. Recognizing that every trade is imperfect on *some* dimension, UVEST acts as an **edge magnifier, risk-reward optimizer, and post-entry steward**. It establishes the recommender's historical hit rate as an anchor, quantifies the **conditional improvement ($\Delta P_{\text{win}}$)**, refines entry geometry via limit zones, and guides the trader through the entire trade lifecycle.
+- **Constructive Feedback (`what_would_flip_me`):** A verdict without an actionable condition is rejection without education. Every non-`GO` verdict explicitly details the exact price, volume, or structural condition that would flip the trade to acceptable.
+- **The Three Core Predictions:**
   1. **Direction:** 1-Month Swing Trajectory and Probability ($P(\text{Bullish}), P(\text{Neutral}), P(\text{Bearish})$).
   2. **Range:** 1-Month Expected Price Volatility Cone ([P10, P50, P90], Max Adverse Excursion, Max Favorable Excursion).
   3. **Optimal Price Range:** Precise Limit Execution Zone (Anchored VWAP, Liquidity Pool, and Support Retest) vs. Univest’s recommended entry band.
-- It generates both a concise markdown terminal report and a **standalone, rich interactive HTML visualization dashboard** for every recommendation.
-- It tracks every recommendation in a local SQLite database, guides the user on **daily position management** when trades move in an adverse direction, and executes an automated **Failure Autopsy** upon trade resolution to calibrate future scoring.
+- **Daily Lifecycle Stewardship:** Once entry is confirmed, UVEST owns the trade. It evaluates daily premise integrity, calculates posterior probability updates, and issues daily actionable cards (`HOLD`, `PRESSURE`, `EXIT`) with predefined soft-exit and stop levels.
+- **Standalone Interactive HTML Visualization:** For every recommendation analyzed, UVEST generates a standalone, zero-dependency HTML dashboard (`reports/report_{SYMBOL}_{DATE}.html`).
 
-### 1.2 Non-Negotiable Scope Boundaries & Guardrails
+### 1.2 Non-Negotiable Scope Boundaries & Kailash Nadh Disciplines
 - **Supported Asset Classes:** **Equities (Cash / CNC / MIS)** and **Futures (NSE Equity Stock Futures)**.
 - **Strict Prohibition: NO OPTIONS TRADING EVER.** Option buying suffers from non-linear theta decay and implied volatility crush; option selling introduces unbounded tail risk incompatible with this system's risk framework.
-- **The Data Hierarchy:** Free public data first (Bhavcopy, NSE web endpoints, yfinance, Screener). Dhan API is queried strictly as a precision fallback for intraday resolution (5m, 10m) or when public data is missing or stale.
+- **Hard Circuit Breakers Non-Negotiable:** Corporate governance ruin (Promoter Pledge $>25\%$), physical exchange blocks (F&O Ban), and binary earnings shocks ($<7\text{d}$ on Futures) cannot be "priced" away into a continuous expectation because liquidity evaporates during circuit-down events. They remain absolute hard disqualifiers (`AVOID`).
+- **The Data Hierarchy:** Free public data first (NSE Bhavcopy, Yahoo Finance, Screener.in). Dhan API is queried strictly as a precision fallback for intraday resolution (5m, 10m) or when public data is missing or stale.
 - **Zero Hallucination:** Every number, indicator, win rate, and ratio displayed to the user must trace directly to a local JSON output generated by an executed script.
-- **YAGNI & Boring Technology:** Python 3.11+, standard library, SQLite3, lightweight math/ML (numpy, scipy, fastdtw, lightgbm), and local flat JSON contracts. No microservice bloat, no distributed queues, no heavy external databases.
+- **YAGNI & Boring Technology:** Python 3.11+, standard library, SQLite3, lightweight math/ML (numpy, scipy, fastdtw, lightgbm), and local flat JSON contracts. No microservice bloat, no distributed queues, no ungrounded probabilistic hand-waving.
 
 ---
 
@@ -61,10 +62,10 @@ Retail advisory applications (such as Univest) publish high-velocity trade recom
 └───────────────────────────────────────────┬────────────────────────────────────────────┘
                                             │
 ┌───────────────────────────────────────────▼────────────────────────────────────────────┐
-│                    3. DECISION ENGINE & SYNTHESIS (0–100)                              │
+│                    3. DECISION ENGINE & SYNTHESIS (EXPECTANCY & P_WIN)                 │
 │   scripts/9_decision_engine.py                                                         │
-│   ↳ Evaluates: Direction (1M), Range (P10-P90), Optimal Entry Zone                     │
-│   ↳ Verdict: 🟢 GO (100% Size) | 🟡 CONDITIONAL GO (50% Size) | 🔴 NO-GO (Reject)       │
+│   ↳ Evaluates: Direction (1M), Range (P10-P90), Optimal Entry Zone, Flip Conditions    │
+│   ↳ Verdict: 🟢 GO | 🟡 GO_WEAK | ⏳ WAIT | 🔴 AVOID (Daily: HOLD | PRESSURE | EXIT)    │
 └───────────────────────────────────────────┬────────────────────────────────────────────┘
                                             │
 ┌───────────────────────────────────────────▼────────────────────────────────────────────┐
@@ -341,16 +342,26 @@ python scripts/12_generate_html_report.py                             # writes r
 | `6_fundamental_audit.py` | `current_trade.json` | Queries Screener.in; evaluates Piotroski F-score, Altman Z, Promoter Pledge %, CFO/PAT, Earnings Date. | `piotoski_score`, `promoter_pledge_pct`, `pledge_circuit_breaker`, `cfo_pat_ratio`, `days_to_earnings` |
 | `7_sector_macro_regime.py` | `current_trade.json` | Mansfield Sector RS vs NIFTY; NIFTY 50 vs 200 DMA; India VIX band; 5-day FII/DII net flows. | `sector_mrs`, `sector_rrg_state`, `nifty_trend`, `vix_regime`, `fii_dii_flow_bias` |
 | `8_dhan_precision.py` | `current_trade.json` | Queries Dhan API for 5m/10m intraday bars; computes Anchored VWAP, Fair Value Gaps, optimal limit price. | `anchored_vwap`, `optimal_limit_buy`, `spread_impact_cost_pct`, `orderblock_support` |
-| `9_decision_engine.py` | All script outputs | Consolidates scores (0–100); evaluates circuit breakers; produces final Decision Report. | `final_score`, `decision`, `circuit_breakers_tripped`, `three_predictions`, `flip_table` |
-| `10_daily_triage.py` | `uvest_history.db` | Daily tracking loop; monitors active trades against live prices; triggers adverse movement protocol. | `open_trades_status`, `action_required`, `trailing_stop_update`, `premise_invalidated` |
-| `11_postmortem_learning.py` | `uvest_history.db` | Executes failure autopsy on resolved trades; decomposes error causes; updates Bayesian weights. | `resolved_trades`, `root_cause_breakdown`, `brier_calibration`, `weight_adjustments` |
+| `9_decision_engine.py` | All script outputs | Synthesizes p_win, expectancy, and 7-state verdict; evaluates circuit breakers; produces Decision Report. | `final_score`, `decision`, `circuit_breakers_tripped`, `three_predictions`, `flip_table`, `p_win`, `expectancy`, `verdict`, `what_would_flip_me` |
+| `10_daily_triage.py` | `uvest_history.db` | Daily stewardship loop; premise check; posterior still_chance_pct; adverse movement tri-state. | `open_trades_status`, `action_required`, `trailing_stop_update`, `premise_invalidated`, `still_chance_pct`, `chance_delta_since_entry`, `cancellation_call`, `action_levels`, `what_would_cancel_me_tomorrow` |
+| `11_postmortem_learning.py` | `uvest_history.db` | Executes failure autopsy on resolved trades; decomposes error causes; updates calibration weights. | `resolved_trades`, `root_cause_breakdown`, `brier_calibration`, `weight_adjustments`, `calibration_delta` |
 | `12_generate_html_report.py`| All script outputs | Renders standalone interactive HTML dashboard for browser visualization. | Generates `reports/report_{SYMBOL}_{DATE}.html` |
 
 ---
 
 ## 10. Consolidated Decision Engine & Scoring Model
 
-### 10.1 Multi-Dimensional Scoring Weights (100-Point Model)
+### 10.1 Statistical Expectancy & Base Rate Framework
+The system does not evaluate a recommendation in a vacuum or hold it to an impossible standard. The advisory desk provides an anchor baseline win rate ($P_{\text{base}} \approx 55\%–60\%$). The quantitative engine’s objective is to estimate and defend the trade's statistical expectancy:
+
+$$\text{Expectancy } (E) = P(\text{Win}) \times R_{\text{Reward}} - (1 - P(\text{Win})) \times R_{\text{Risk}}$$
+
+- At $P(\text{Win}) = 55\%$ and $R:R = 1:2$, mathematical expectancy is $+0.65R$ per trade.
+- The machine’s contribution is measured as **conditional improvement ($\Delta P_{\text{win}}$)**: how much does win rate and realized R:R improve when executing via UVEST’s optimal limit zone and structural filters.
+- **The 55% Floor:** If the calibrated $P(\text{Win}) \ge 55\%$ at the trade's geometry and no hard hazard is present, the setup is positive-expectancy and qualifies for entry (`GO`).
+
+### 10.2 Multi-Dimensional Synthesizer (100-Point Calibration Model)
+To arrive at the calibrated $P(\text{Win})$ and detect structural flaws, the engine consolidates six orthogonal modules:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -365,62 +376,118 @@ python scripts/12_generate_html_report.py                             # writes r
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### 10.2 Hard Disqualifiers (Instant Circuit Breakers $\implies$ Score 0 / Hard REJECT)
-If any of the following conditions trigger, the decision engine overrides all scores to **🔴 NO-GO (REJECT)**:
-1. **Inverted Risk-Reward ($R:R < 1.0$):** Risking ₹1 to make less than ₹1.
-2. **Promoter Pledging $> 25\%$:** Fatal corporate governance hazard.
+*Nuanced Synthesis (No Wholesale Rejections on Minor Weakness):* Every trade is imperfect on *some* dimension. A below-average reading on delivery or technicals does not justify wholesale rejection. The engine models the complementary interplay: a minor technical pullback with strong institutional accumulation remains viable, contributing a calibrated confidence deduction rather than a binary veto.
+
+### 10.3 Retained Hard Circuit Breakers (Fatal Tail-Risk Veto $\implies$ AVOID)
+*(Formalized in ADR-005: Rejection of Soft "Pledge Pricing")*
+
+While minor weaknesses are accommodated, **un-exitable catastrophic hazards cannot be "priced" away into a continuous expectation**. In Indian equities and futures, when lenders dump pledged promoter shares or a stock enters lower circuits, order book bid liquidity drops to zero in cash, and broker RMS executes unhedged fire sales in futures.
+
+If any of the following 6 hard circuit breakers trigger, the engine immediately issues **🔴 AVOID**:
+1. **Promoter Pledging $> 25\%$:** Fatal corporate governance liquidation hazard. (Hard kill switch — cannot be waived or priced).
+2. **Inverted Risk-Reward ($R:R < 1.0$ at market):** Overridden to `WAIT` if optimal limit order restores $R:R \ge 1.5$; otherwise `AVOID`.
 3. **NSE F&O Ban Period Active:** Trading banned by exchange for the contract.
-4. **Earnings Shock Hazard:** Quarterly results announcement within $< 7$ days on a Futures trade.
-5. **Severe Volatility Noise Trap:** Recommended Stop-Loss distance is tighter than $0.75 \times \text{Daily ATR}$ (virtually guaranteed to be stopped out by normal intraday noise).
-6. **Severe Adverse Regime:** India VIX $> 24$ (Panic Mode) with Market Breadth $< 30\%$ bullish.
+4. **Binary Earnings Shock Hazard:** Quarterly financial results scheduled within $< 7$ days on a Futures trade (un-hedged gap-down risk).
+5. **Severe Volatility Noise Trap:** Recommended Stop-Loss distance is tighter than $0.75 \times \text{Daily ATR}$ (intraday noise stopout).
+6. **Severe Panic Macro Regime:** India VIX $> 24$ with NSE 500 Market Breadth $< 30\%$ bullish (for new long futures).
 
-### 10.3 Dynamic Scoring Thresholds
-- **Effective Score $\ge 80\%$:** 🟢 **GO (EXECUTE FULL SIZE)** — Prime mathematical edge, institutional backing, clean fundamentals.
-- **Effective Score $65\% – 79\%$:** 🟡 **CONDITIONAL GO (REDUCE SIZE 50%)** — Viable trade, but requires waiting for a limit pull-back or tighter stop.
-- **Effective Score $< 65\%$:** 🔴 **NO-GO (REJECT)** — Negative expectancy; trade dismissed.
+### 10.4 Canonical 7-State Verdict Vocabulary
+UVEST replaces coarse pass/fail grades with explicit, actionable probability statements across the trade lifecycle:
 
-*Waiver Rule:* If any data source fails (e.g., Dhan API offline or Screener rate-limited), that check earns 0 points and is marked `waived`. Waived points are subtracted from `max_available_score`. Missing data never inflates and never penalizes the calculated percentage.
+| Verdict | Lifecycle Phase | When Used | Required JSON Fields | Actionable Sizing |
+| :--- | :--- | :--- | :--- | :--- |
+| **🟢 GO** | Pre-Entry | Positive expectancy ($P_{\text{win}} \ge 55\%$, $R:R \ge 1.5$); known risks. | `p_win`, `expectancy`, `thesis`, `action_levels` | 100% Size (Full) |
+| **🟡 GO_WEAK** | Pre-Entry | Positive expectancy but $\ge 1$ data source offline (waived stage). | same + `confidence_deficit` | 50% Size (Half) |
+| **⏳ WAIT** | Pre-Entry | Viable thesis, but entry price/timing slipped. | `recheck_condition` (e.g., `price <= limit_zone`), `what_would_flip_me` | 0% (Wait for limit) |
+| **🔴 AVOID** | Pre-Entry | Hard circuit breaker tripped or composite negative expectancy. | `avoid_reason`, `what_would_flip_me` | 0% (Do not enter) |
+| **🔵 HOLD** | Post-Entry | Daily triage: thesis intact, path compatible with target. | daily updated `still_chance_pct`, `premises` | Hold position |
+| **🟠 PRESSURE**| Post-Entry | Thesis intact, but path deteriorating ($>1\text{ATR}$ adverse drift). | `soft_exit_zone`, `tighten_stop_to`, `cancel_risk` | Tighten / Soft exit |
+| **⛔ EXIT** | Post-Entry | Premise invalidated, hard stop hit, or time stop reached. | `invalidation_reason`, `exit_zone` | Liquidate immediately |
+
+**The Flip Condition Invariant:** Every non-`GO` verdict (`WAIT`, `AVOID`) MUST provide `what_would_flip_me`. A refusal without an actionable flip condition is rejected as un-calibrated noise.
+
+*Waiver Rule:* If any data source fails (e.g., Dhan API offline or Screener rate-limited), that check earns 0 points and is marked `waived`. Waived points are subtracted from `max_available_score`. Missing data lowers confidence (`confidence_deficit`), but never fabricates a false rejection.
 
 ---
 
-## 11. Daily Position Tracking & Adverse Movement Protocol
+## 11. Daily Position Stewardship & Adverse Movement Protocol
 
-> **"None of the recommendations considered and opinions given should be lost."**
+> **"None of the recommendations considered and opinions given should be lost."**  
+> Once a trade is confirmed by the user, the Day-1 thesis is frozen in `uvest_history.db`: entry price, stop-loss, target geometry, premises, and prior $P(\text{Win})$. From that moment, the trade becomes the system's responsibility.
 
-Once a recommendation is analyzed and accepted by the user, it enters the persistent `uvest_history.db` tracking table. Every morning prior to market open, or post-market close, `scripts/10_daily_triage.py` runs a multi-step check.
+### 11.1 The Daily Stewardship Cycle
+Every trading day prior to market open or post-close, `scripts/10_daily_triage.py` executes the stewardship loop:
+1. **Premise Verification:** Audits the core reasons the trade was entered (e.g., "delivery accumulation holds", "sector MRS leading", "price above 20 EMA"). Each premise is scored into a state: `reinforced`, `intact`, `weakening`, or `broken`.
+2. **Deterministic Posterior Update (`still_chance_pct`):** Updates the probability of reaching the target before hitting the stop loss.
+3. **Tri-State Action Publishing:** Emits exactly one of `HOLD`, `PRESSURE`, or `EXIT`, along with pre-calculated action levels (`soft_exit_zone`, `tighten_stop_to`, `hard_stop`).
+4. **No Re-Judging of Entry:** Entry asks "should I take this?" Stewardship asks "should I *keep* this?"
 
-### 11.1 The Daily Question: "What should the user do today?"
-The system evaluates active trades against live daily bars and classifies the position into one of four states:
+### 11.2 Deterministic Grounding of `still_chance_pct` (Eliminating Probabilistic Hallucination)
+To strictly satisfy the **Zero Hallucination** invariant and prevent pseudo-Bayesian hand-waving, `still_chance_pct` is computed deterministically from verified local evidence:
 
+$$\text{still\_chance\_pct} = \text{clamp}\left( P_{\text{prior}} + \sum_{i} \Delta_{\text{premise}, i} - \Delta_{\text{drawdown}}, 5.0\%, 95.0\% \right)$$
+
+- **Premise Evidence Weights:**
+  - `reinforced`: $+2.0\%$ to $+5.0\%$ (e.g., Bhavcopy delivery Z-score $> +2.0\sigma$, sector MRS leading).
+  - `intact`: $0.0\%$ (structural runway unaffected).
+  - `weakening`: $-5.0\%$ to $-8.0\%$ (delivery dries up, testing 20 EMA / AVWAP support).
+  - `broken`: $-15.0\%$ to $-25.0\%$ (close $< 20\text{EMA}$ on high volume, sector RS rollover).
+- **Adverse Drawdown Penalty ($\Delta_{\text{drawdown}}$):**
+  - Drawdown $\le 1.0 \times \text{Daily ATR}$: $0.0\%$ (normal market noise buffer).
+  - Drawdown $> 1.0 \times \text{Daily ATR}$: $-5.0\%$.
+  - Drawdown $> 1.5 \times \text{Daily ATR}$: $-12.0\%$.
+- **Trigger to `PRESSURE`:** If `still_chance_pct` drops $> 15\text{pp}$ below the entry prior, or drops below the $55.0\%$ threshold for 2 consecutive trading sessions, the trade is automatically promoted to `PRESSURE`.
+
+### 11.3 Canonical Daily Stewardship Report Card Schema (`out_10_triage.json`)
+Every active trade produces this exact, self-contained JSON artifact daily:
+
+```json
+{
+  "trade_id": "GB-2026-0001",
+  "symbol": "RELIANCE",
+  "as_of": "2026-10-14",
+  "days_held": 5,
+  "days_left_of_horizon": 17,
+  "still_chance_pct": 61.0,
+  "chance_delta_since_entry": +2.0,
+  "unrealized_r_multiple": 0.6,
+  "premises": [
+    {
+      "premise": "delivery accumulation holds",
+      "state": "reinforced",
+      "evidence": "delivery 58% vs 20d-avg 34%, z=+3.0"
+    },
+    {
+      "premise": "sector holds above 50DMA",
+      "state": "intact",
+      "evidence": "NIFTY Energy MRS +1.2"
+    }
+  ],
+  "cancellation_call": "HOLD",
+  "recommended_action": null,
+  "action_levels": {
+    "soft_exit_zone": 2965.0,
+    "tighten_stop_to": 2948.0,
+    "hard_stop": 2910.0
+  },
+  "what_would_cancel_me_tomorrow": [
+    "close < 20EMA while delivery% < 30%",
+    "sector MRS turns negative",
+    "close below anchor VWAP for 2 consecutive sessions"
+  ],
+  "confidence_deficit": 0.0
+}
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          DAILY POSITION TRIAGE                              │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ 1. PROFIT HARVESTING ZONE (Price within 10% of Target)                      │
-│    Action: Trail Stop Loss to Breakeven + 50% of unrealized gains.          │
-│                                                                             │
-│ 2. HEALTHY RUNWAY ZONE (Price consolidating above Entry)                    │
-│    Action: HOLD. Maintain original stop loss. Let mathematical edge work.   │
-│                                                                             │
-│ 3. ADVERSE MOVEMENT ZONE (Price moving against entry toward Stop Loss)      │
-│    Action: Trigger Three-Stage Adverse Movement Protocol (See Section 11.2).│
-│                                                                             │
-│ 4. STAGNATION / TIME STOP ZONE (Trade active > 12 days without movement)   │
-│    Action: FUTURES: Close on Friday to eliminate carry cost. CASH: HOLD.    │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
 
-### 11.2 The Three-Stage Adverse Movement Protocol
-When a trade drifts into the negative direction:
-- **Level 1 (Drawdown $\le 1.0 \times \text{ATR}$ from Entry): Normal Pullback.**
-  - Check: Is institutional delivery continuing to accumulate? Is the sector holding?
-  - Verdict: **DO NOTHING. DO NOT AVERAGE DOWN.** Maintain stop-loss discipline.
-- **Level 2 (Drawdown $> 1.0 \times \text{ATR}$ or breaks 20 EMA / Structural Support): Warning.**
-  - Check: Has the fundamental premise broken? Did FIIs aggressively short the stock in yesterday's Bhavcopy?
-  - Verdict: **CANCEL RE-ENTRY ORDERS. TIGHTEN STOP TO PREVIOUS DAY HIGH/LOW.** Prepare for exit.
-- **Level 3 (Stop-Loss Hit or Premise Invalidation): Hard Liquidation.**
-  - **The Golden Rule:** **NEVER AVERAGE DOWN A LOSING POSITION.** 
-  - Action: Execute exit order immediately. Record trade resolution in `uvest_history.db` as `LOSS` or `INVALIDATED`.
+### 11.4 Actionable Tri-State Adverse Movement Protocol
+When a trade encounters adverse price action:
+- **`HOLD` (Healthy Runway / Normal Pullback $\le 1.0 \times \text{ATR}$):**
+  - Action: DO NOTHING. Maintain original geometry and stop loss. Let the quantitative edge work.
+- **`PRESSURE` (Premise Weakening or Drawdown $> 1.0 \times \text{ATR}$):**
+  - Action: The system flags `recommended_action`: either `SOFT_EXIT` (book remaining gains or cut loss at `soft_exit_zone`) or `TIGHTEN` (trail stop to previous session's low).
+- **`EXIT` (Premise Invalidation or Hard Stop Hit):**
+  - Action: Hard liquidation. Close the position immediately.
+  - **THE GOLDEN RULE OF CAPITAL PRESERVATION:** **NEVER AVERAGE DOWN A LOSING POSITION.** Any user behavior attempting to add size to an adverse trade is explicitly flagged as a catastrophic violation of trading physics.
 
 ---
 
@@ -430,11 +497,19 @@ When any tracked trade resolves (reaches Target, hits Stop Loss, or expires), `s
 
 ### 12.1 The Post-Mortem Failure Autopsy Matrix
 Every failed trade (`LOSS`) is systematically decomposed into one of five root causes:
-1. `VOLATILITY_NOISE`: Stop hit intraday, but stock closed above stop price by day end. (ATR buffer too tight).
-2. `REGIME_SHOCK`: NIFTY crashed $>1.5\%$ or India VIX surged $>15\%$ on the stopout day. (Macro beta overrode alpha).
-3. `INSTITUTIONAL_DISTRIBUTION`: Delivery % was low or Futures OI was unwinding during initial rally. (Retail bull trap).
-4. `EARNINGS_SURPRISE`: Unscheduled corporate filing, credit downgrade, or sudden news. (Tighten corporate announcement filters).
-5. `ENTRY_SLIPPAGE`: Entered outside recommended price band. Had user waited for optimal limit zone, trade would have been a WIN.
+1. `VOLATILITY_NOISE`: Stop hit intraday, but stock closed above stop price by day end. (ATR buffer too tight; requires wider volatility multiplier).
+2. `REGIME_SHOCK`: NIFTY crashed $>1.5\%$ or India VIX surged $>15\%$ on the stopout day. (Macro beta overrode alpha; tighten macro regime gates).
+3. `INSTITUTIONAL_DISTRIBUTION`: Delivery % was low or Futures OI was unwinding during initial rally. (Retail bull trap; increase flow divergence penalty).
+4. `EARNINGS_SURPRISE`: Unscheduled corporate filing, credit downgrade, or sudden news. (Tighten corporate announcement and governance filters).
+5. `ENTRY_SLIPPAGE`: Entered outside recommended price band. Had user waited for optimal limit zone, trade would have been a WIN. (Enforces limit order compliance).
+
+### 12.2 Rule-Based Calibration & Zero-Bloat Weight Updates (Rejecting Premature ML Retraining)
+To adhere strictly to Kailash Nadh engineering principles (YAGNI & boring technology), Stage 11 **rejects premature ML retraining on small, autocorrelated daily cards**:
+- Training complex neural nets or LightGBM models on a few dozen replayed trades and hundreds of correlated daily bars produces severe temporal overfitting and statistical noise.
+- Instead, Stage 11 operates a **deterministic Bayesian self-audit**:
+  1. Computes the cumulative Brier score: $\text{Brier} = \frac{1}{N} \sum_{k=1}^N (P_{\text{win}, k} - y_k)^2$, where $y_k \in \{0, 1\}$.
+  2. Modifies rubric weights in `thresholds.json` via conservative, bounded linear adjustments ($\Delta w = \pm 0.5\text{ pts}$, learning rate $\eta = 0.05$) when root-cause clusters emerge.
+  3. All weight shifts are persisted in `uvest_history.db` with human-readable rationale.
 
 ---
 
@@ -502,7 +577,13 @@ As established via `/setup-matt-pocock-skills`:
 1. **Issue Tracker:** `docs/agents/issue-tracker.md`  
    Directs task tracking to local Markdown tickets in `docs/tickets/` (`TICK-001`, `TICK-002`, etc.) — zero cloud tracker bloat.
 2. **Domain Modeling & ADRs:** `docs/agents/domain.md`  
-   Maintains the frozen glossary of Indian market mechanics (F&O lot sizes, Delivery %, MWPL ban limits, Pledging) and architectural decisions.
+   Maintains the frozen glossary of Indian market mechanics and canonical ADR register:
+   - `ADR-001`: Strict Exclusion of Options.
+   - `ADR-002`: Local-First Zero-Cloud Architecture.
+   - `ADR-003`: Tiered Data Hierarchy (Free First, Dhan Precision Fallback).
+   - `ADR-004`: Spec & Evals Frozen Before TDD.
+   - `ADR-005`: Retention of Hard Safety Circuit Breakers (Rejecting Soft Pledge Pricing).
+   - `ADR-006`: 7-State Verdict Lifecycle & Daily Stewardship Contract.
 3. **Behavioral Evals:** `docs/agents/evals.md`  
    Specifies the golden evaluation dataset and invariant assertions.
 
@@ -515,22 +596,34 @@ As established via `/setup-matt-pocock-skills`:
 
 Evals provide the automated, empirical guarantee that the system does not hallucinate, bypass circuit breakers, or degrade in prediction accuracy.
 
-### 15.1 The 50-Trade Golden Benchmark Dataset (`tests/evals/golden_dataset.json`)
-The suite evaluates 50 historically validated Univest setups with known forward outcomes:
-- 15 Clean Winning Setups (High delivery %, positive F&O buildup, pristine fundamentals).
-- 10 Slippage & Inverted R:R Traps ($R:R < 1.0$).
-- 10 Institutional Distribution Traps (Rising price on falling OI and low delivery).
-- 5 High Promoter Pledging Traps (Pledge $>25\%$).
-- 5 Binary Earnings Hazard Traps (Results within $<7$ days).
-- 5 Noise Stop Traps (Stop loss tighter than $0.75 \times \text{Daily ATR}$).
+> **Authoritative Frozen Specification:**  
+> The comprehensive historical scenario catalog (60 real NSE stress trades spanning 2018–2026), asymmetric edge-case protocols (Toxic Winners vs Over-Strict Misses), post-entry stewardship drift handling, and automated regression scorecards are permanently frozen in **[business_test_cases.md](file:///d:/Code/uvest/business_test_cases.md)**. Every update in the repository must be tested against this frozen specification to prove that the system is getting better ($\Delta E > 0$). This suite must never be altered unless explicitly commanded by the repository owner.
 
-### 15.2 Mandatory Evaluation Pass Criteria
-1. **Zero Hallucination:** 100% of figures reported in Markdown/HTML must match local script JSON outputs.
-2. **Circuit Breaker Accuracy:** 100% detection and blocking of Promoter Pledges $>25\%$, Inverted R:R, Options instruments, and Earnings $<7\text{d}$.
-3. **Directional Calibration:** Brier Score $\le 0.18$ on 1-month swing direction predictions.
-4. **Range Coverage:** Actual 22-day prices contained within calculated $[P_{10}, P_{90}]$ cone in $\ge 80\%$ of trades.
-5. **Limit Entry Advantage:** Optimal Limit Entry reduces realized MAE in $\ge 75\%$ of trades compared to market orders.
-6. **HTML Validity:** 100% valid standalone HTML5 generated with 0 missing assets.
+### 15.1 Point-in-Time Replay Architecture & Filesystem Blindness
+Every historical recommendation is replayed under strict point-in-time constraints where the engine physically sees only data with timestamp $\le T_{\text{rec}}$:
+1. **Filesystem Isolation:** Replayed trades are isolated on disk: `replay/{trade_id}/content/` contains only fixtures truncated at $\le T_{\text{rec}}$. Forward tape lives exclusively in `replay/{trade_id}/outcome/`, read only by the post-verdict scorer.
+2. **Fixture SHA Integrity:** SHA-256 checksums of fixtures are recorded at verdict time and verified at scoring time. Any forward leakage is a hard build failure.
+
+### 15.2 Expectancy-Grounded Confusion Matrix
+The system's historical performance is evaluated across a 4-quadrant confusion matrix:
+
+| Verdict | Forward Outcome | Quadrant | What It Measures |
+| :--- | :--- | :--- | :--- |
+| **GO** | WIN | **TP** | Correctly stamped positive-expectancy trade. |
+| **GO** | LOSS | **FP** | Engine error — the most critical diagnostic data point. |
+| **AVOID** | LOSS | **TN** | Hazard correctly avoided (capital preserved). |
+| **AVOID** | WIN | **FN** | Cost of strictness (forgone positive expectancy). |
+
+### 15.3 Mandatory Evaluation Pass Gates (S1–S7)
+1. **Zero Hallucination:** 100% of figures in Markdown/HTML match local script JSON outputs.
+2. **S1 — Filter Delta (55% Gate):** Trades stamped `GO` must realize $>50\%$ win frequency across the benchmark, and `GO` bucket expectancy must exceed the all-tips baseline.
+3. **S2 — Calibration:** $|\text{predicted } P_{\text{win}} - \text{realized win frequency}| \le 10\text{pp}$ per verdict bucket.
+4. **S3 — Per-Regime Honesty:** `GO` bucket expectancy must remain positive in each market regime bucket (India VIX bands, sector RS).
+5. **S4 — AVOID Cost Accounting:** Tracks FN rate and forgone expectancy per regime to ensure the filter is not needlessly restrictive.
+6. **S5 — Stewardship Value-Add:** Evaluated across losing setups ($N \ge 25$) with a $1.0\times\text{Daily ATR}$ buffer. Counterfactual exits at `soft_exit_zone` must reduce cumulative portfolio drawdown by $\ge 15\%$ compared to hard stop-loss exits.
+7. **S6 — No-Lookahead Integrity:** 100% pass on fixture SHA checks and prefix-only recomputations.
+8. **S7 — Marginal Band Honesty:** Setups within the $55\%–62\%$ predicted $P_{\text{win}}$ band must realize positive mathematical expectancy ($E \ge 0$).
+9. **Circuit Breaker Enforcement:** 100% detection and blocking of Promoter Pledge $>25\%$, Inverted R:R, Options, and Futures Earnings $<7\text{d}$.
 
 ---
 
@@ -542,8 +635,8 @@ When the user provides a recommendation, the Agent executes the script suite and
 # 🛡️ UVEST QUANTITATIVE & FUNDAMENTAL VALIDATION REPORT
 **Ticker:** RELIANCE · **Type:** FUTURES (29 OCT) · **Action:** BUY · **Source:** Univest
 
-### **FINAL CONFIDENCE SCORE: 84 / 100**
-### **DECISION: 🟢 GO (EXECUTE FULL SIZE — LIMIT ORDER ONLY)**
+### **FINAL CONFIDENCE SCORE: 84 / 100 · P(WIN): 74.0% · EXPECTANCY: +0.62R**
+### **VERDICT: 🟢 GO (EXECUTE FULL SIZE — LIMIT ORDER ONLY)**
 **Visual Dashboard Generated:** `reports/report_RELIANCE_20261009.html`
 
 ---
@@ -589,8 +682,8 @@ When the user provides a recommendation, the Agent executes the script suite and
 ---
 
 ### 🔀 What Would Change the Decision (Flip Table)
-- **Current Live Market Order:** Yields Score: **74 / 100** (🟡 CONDITIONAL GO due to slippage).
-- **Limit Order at ₹2,974.00:** Yields Score: **84 / 100** (🟢 FULL GO; R:R expands to 1:2.28; risk reduced by ₹3,550/lot).
+- **Current Live Market Order:** Yields Verdict: **⏳ WAIT** (Score 74/100, live slippage reduced live R:R to 1:1.68; requires waiting for limit zone).
+- **Limit Order at ₹2,974.00:** Flips to Verdict: **🟢 GO** (Score 84/100; R:R expands to 1:2.28; risk reduced by ₹3,550/lot).
 
 ---
 
