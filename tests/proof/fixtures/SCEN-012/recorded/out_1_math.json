@@ -1,0 +1,12 @@
+{
+  "symbol": "VEDL",
+  "instrument_type": "FUT",
+  "raw_rr": 2.0,
+  "live_rr": 2.0,
+  "risk_inr": 9869.0,
+  "reward_inr": 19738.0,
+  "quantity": 1775,
+  "outside_range_pct": 0.0,
+  "inverted_rr_flag": false,
+  "capital_allocation_pct": 1.9738
+}

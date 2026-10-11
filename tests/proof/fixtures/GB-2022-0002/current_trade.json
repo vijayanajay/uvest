@@ -1,0 +1,15 @@
+{
+  "symbol": "TATAMOTORS",
+  "exchange": "NSE",
+  "instrument_type": "CASH",
+  "action": "BUY",
+  "entry_price": 382.7,
+  "entry_range_min": 381.7,
+  "entry_range_max": 383.7,
+  "live_price": 382.7,
+  "target": 396.66,
+  "stoploss": 367.19,
+  "lot_size": 1,
+  "recommended_date": "2022-06-20",
+  "user_capital_inr": 500000.0
+}

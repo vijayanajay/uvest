@@ -1,0 +1,15 @@
+{
+  "symbol": "RELIANCE",
+  "atr_14": 22.738757,
+  "sl_atr_ratio": 2.000109316189532,
+  "is_tight_sl": false,
+  "ema_20": 1183.48,
+  "above_50_ema": true,
+  "above_200_sma": true,
+  "trend_state": "BULLISH",
+  "bollinger_upper": 1266.17,
+  "bollinger_lower": 1101.1,
+  "bollinger_bandwidth": 13.9457,
+  "waived": false,
+  "as_of": "2022-04-11"
+}

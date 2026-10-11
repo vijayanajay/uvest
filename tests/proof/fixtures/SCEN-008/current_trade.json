@@ -1,0 +1,18 @@
+{
+  "symbol": "ADANIPORTS",
+  "exchange": "NSE",
+  "instrument_type": "FUT",
+  "expiry": "2023-02-23",
+  "action": "BUY",
+  "entry_price": 699.0,
+  "entry_range_min": 698.0,
+  "entry_range_max": 700.0,
+  "live_price": 699.0,
+  "target": 729.94,
+  "stoploss": 683.53,
+  "lot_size": 725,
+  "margin": 506775.0,
+  "recommended_date": "2023-01-27",
+  "app_warning": "catalog scaffold",
+  "user_capital_inr": 500000.0
+}

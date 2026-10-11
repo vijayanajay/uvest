@@ -40,6 +40,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
+# Match every other entrypoint in this repo (run_evals.py, curate.py,
+# run_all_tests.py): force UTF-8 output so CLI consumers — pre-commit, CI,
+# subprocess harnesses — can decode diagnostics containing non-ASCII text
+# regardless of the Windows console codepage.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8")
+
 MANIFEST_FILE = "scenario_manifest.json"
 HASH_FILE = "manifest.sha256"
 BASELINE_FILE = "baseline_scorecard.json"
@@ -491,7 +499,8 @@ def _v10_replay(rows: list[dict], proof_root: Path,
                              f"stage {artifact.get('stage')} fresh run differs from recorded bytes", sid)
 
 
-def _v11_quarantine(rows: list[dict], proof_root: Path, report: ValidationReport) -> None:
+def _v11_quarantine(rows: list[dict], proof_root: Path, baseline: Any,
+                    report: ValidationReport) -> None:
     quarantined: list[tuple[str, int, str]] = []
     for row in rows:
         sid = row.get("scenario_id")
@@ -523,25 +532,52 @@ def _v11_quarantine(rows: list[dict], proof_root: Path, report: ValidationReport
                 report.error("V11_GATE_ARTIFACT_UNDECLARED",
                              f"gate {gate!r} depends on stage {dep}, which no artifact entry declares", sid)
     register_path = proof_root / REGISTER_FILE
-    if not quarantined:
-        return
-    if not register_path.exists():
+    declared: list[tuple] | None = None
+    if register_path.exists():
+        register, loaded = _read_json(register_path)
+        if not loaded or not isinstance(register, dict) or register.get("schema") != REGISTER_SCHEMA:
+            report.error("V11_REGISTER_MALFORMED", f"{REGISTER_FILE} is not a readable register")
+        else:
+            declared = []
+            for entry in register.get("rows") or []:
+                if not isinstance(entry, dict):
+                    report.error("V11_REGISTER_MALFORMED", "register rows must be objects")
+                    declared = None
+                    break
+                declared.append((entry.get("scenario_id"), entry.get("stage"),
+                                 str(entry.get("artifact"))))
+    if quarantined and declared is None and not register_path.exists():
         report.error("V11_REGISTER_MISSING",
                      "quarantined artifacts exist but no quarantine register is committed")
-        return
-    register, loaded = _read_json(register_path)
-    if not loaded or not isinstance(register, dict) or register.get("schema") != REGISTER_SCHEMA:
-        report.error("V11_REGISTER_MALFORMED", f"{REGISTER_FILE} is not a readable register")
-        return
-    declared: list[tuple[str, int, str]] = []
-    for entry in register.get("rows") or []:
-        if not isinstance(entry, dict):
-            report.error("V11_REGISTER_MALFORMED", "register rows must be objects")
-            return
-        declared.append((entry.get("scenario_id"), entry.get("stage"), str(entry.get("artifact"))))
-    if sorted(declared) != sorted(quarantined):
+    if declared is not None and sorted(declared) != sorted(quarantined):
         report.error("V11_REGISTER_MISMATCH",
                      "register rows do not exactly match the manifest's quarantined artifacts")
+
+    # Non-increasing migration meter (E5): the baseline freezes the count and the
+    # register digest. Growth is a hard error; an equal-count digest change is a
+    # silent swap (hard error); a decrease is a reported shrink to be re-frozen.
+    current_count = len(quarantined)
+    if isinstance(baseline, dict):
+        frozen_count = baseline.get("quarantined_count")
+        frozen_digest = baseline.get("quarantine_register_sha256")
+        if isinstance(frozen_count, int):
+            if current_count > frozen_count:
+                report.error("V11_QUARANTINE_REGRESSION",
+                             f"quarantine register grew: {current_count} > frozen {frozen_count}")
+            elif current_count < frozen_count:
+                report.warn("V11_QUARANTINE_SHRUNK",
+                            f"quarantine register shrank: {current_count} < frozen "
+                            f"{frozen_count}; re-freeze the baseline to bank the progress")
+            elif isinstance(frozen_digest, str) and register_path.exists():
+                actual = hashlib.sha256(register_path.read_bytes()).hexdigest()
+                if actual != frozen_digest:
+                    report.error("V11_REGISTER_DIGEST_MISMATCH",
+                                 "register changed at equal count — a quarantined artifact "
+                                 "was swapped without the count decreasing")
+        elif current_count > 0:
+            report.error("V11_BASELINE_METER_MISSING",
+                         "baseline must freeze quarantined_count and "
+                         "quarantine_register_sha256 once the register is non-empty")
 
 
 def _v12_baseline(proof_root: Path, baseline: Any, require_baseline: bool,
@@ -621,12 +657,12 @@ def validate_manifest(
     _v8_forward(rows, proof_root, report)
     _v9_caches(rows, proof_root, report)
     _v10_replay(rows, proof_root, rerun, report)
-    _v11_quarantine(rows, proof_root, report)
 
     baseline_obj = baseline
     if baseline is _UNSET:
         loaded, ok = _read_json(proof_root / BASELINE_FILE)
         baseline_obj = loaded if ok else None
+    _v11_quarantine(rows, proof_root, baseline_obj, report)
     _v12_baseline(proof_root, baseline_obj, require_baseline, allow_re_freeze, report)
 
     _v13_quadrant_exclusion(rows, report)

@@ -1,0 +1,18 @@
+{
+  "symbol": "VEDL",
+  "exchange": "NSE",
+  "instrument_type": "FUT",
+  "expiry": "2023-03-30",
+  "action": "BUY",
+  "entry_price": 283.05,
+  "entry_range_min": 282.05,
+  "entry_range_max": 284.05,
+  "live_price": 283.05,
+  "target": 294.17,
+  "stoploss": 277.49,
+  "lot_size": 1775,
+  "margin": 502413.75,
+  "recommended_date": "2023-03-15",
+  "app_warning": "catalog scaffold",
+  "user_capital_inr": 500000.0
+}

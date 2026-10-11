@@ -1,0 +1,15 @@
+{
+  "symbol": "MARUTI",
+  "atr_14": 188.860629,
+  "sl_atr_ratio": 1.9999933435419157,
+  "is_tight_sl": false,
+  "ema_20": 12321.63,
+  "above_50_ema": false,
+  "above_200_sma": true,
+  "trend_state": "MIXED",
+  "bollinger_upper": 12503.66,
+  "bollinger_lower": 12109.69,
+  "bollinger_bandwidth": 3.2012,
+  "waived": false,
+  "as_of": "2024-09-13"
+}

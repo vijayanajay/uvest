@@ -1,7 +1,3782 @@
 {
   "schema": "uvest-scenario-manifest/1",
-  "generated_on": "2026-10-10",
+  "generated_on": "2026-10-11",
   "scenarios": [
+    {
+      "scenario_id": "GB-2022-0001",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION"
+      ],
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2022-04-11",
+      "entry_price": 1204.61,
+      "entry_range_min": 1203.41,
+      "entry_range_max": 1205.81,
+      "target_price": 1304.67,
+      "stop_loss": 1159.13,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2022-0001/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2022-0001/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2022-04-11",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2022-0001/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2022-0001/recorded/out_2_market.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 6,
+          "artifact": "out_6_fundamental.json",
+          "path": null,
+          "evidence": "waived",
+          "reason": "stage 6 unimplemented: the legacy hand-typed pledge/days-to-earnings payload is retired (absence, not quarantined, so the E5 migration meter cannot grow)"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2022-0001/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2022-05-16",
+        "resolution_outcome": "WIN",
+        "resolution_basis": "target_first",
+        "forward_derived_cache": {
+          "min": 1093.7546,
+          "max": 1318.1128
+        },
+        "quadrant_target": "TP"
+      },
+      "expected_verdict": "GO",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2022-0001",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "rebased_from_tape",
+        "class_shape": {
+          "risk_atr": 2.0,
+          "rr": 2.2
+        },
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 1204.61,
+          "published": {
+            "entry_price": 2774.0,
+            "stop_loss": 2704.0,
+            "target_price": 2915.0
+          }
+        },
+        "note": "legacy levels re-derived from tape (stop 1159.13 / entry 1204.61 / target 1304.67); real point-in-time RELIANCE tape re-recorded (T_rec close 1204.61, ATR14 22.7388, 224 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources; the published entry 2774.0 is 2.303x the tape's T_rec close and the published stop 2704.0 sits above every bar the tape prints, so the levels belong to a scale this tape cannot corroborate; the geometry is re-derived at the record's frozen class shape (risk_atr 2.0, rr 2.2) — never tuned to the claim",
+        "superseded": [
+          {
+            "claim": "forward_prices_22d",
+            "rule": "forward_min_max",
+            "legacy": {
+              "min": 2690.0,
+              "max": 2930.0
+            },
+            "tape": {
+              "min": 1093.7546,
+              "max": 1318.1128
+            },
+            "source": "pre-migration value recovered from git HEAD:tests/evals/golden_dataset.json"
+          },
+          {
+            "claim": "resolution_date",
+            "rule": "resolution_date",
+            "legacy": "2022-05-10",
+            "tape": "2022-05-16",
+            "source": "pre-migration value recovered from git HEAD:tests/evals/golden_dataset.json"
+          },
+          {
+            "claim": "market_mae_pct",
+            "rule": "market_mae_pct",
+            "legacy": 1.1,
+            "tape": 9.2026,
+            "source": "pre-migration value recovered from git HEAD:tests/evals/golden_dataset.json"
+          },
+          {
+            "claim": "actual_direction",
+            "rule": "realized_direction",
+            "legacy": 1,
+            "tape": 0,
+            "source": "pre-migration value recovered from git HEAD:tests/evals/golden_dataset.json"
+          }
+        ]
+      }
+    },
+    {
+      "scenario_id": "GB-2022-0002",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION",
+        "inverted_risk_reward"
+      ],
+      "symbol": "TATAMOTORS",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2022-06-20",
+      "entry_price": 382.7,
+      "entry_range_min": 381.7,
+      "entry_range_max": 383.7,
+      "target_price": 396.66,
+      "stop_loss": 367.19,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2022-0002/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2022-0002/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2022-06-20",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2022-0002/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2022-0002/recorded/out_2_market.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 6,
+          "artifact": "out_6_fundamental.json",
+          "path": null,
+          "evidence": "waived",
+          "reason": "stage 6 unimplemented: the legacy hand-typed pledge/days-to-earnings payload is retired (absence, not quarantined, so the E5 migration meter cannot grow)"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2022-0002/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2022-07-20",
+        "resolution_outcome": "WIN",
+        "resolution_basis": "target_first",
+        "forward_derived_cache": {
+          "min": 387.0,
+          "max": 460.75
+        },
+        "quadrant_target": "FN"
+      },
+      "expected_verdict": "AVOID",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2022-0002",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "rebased_from_tape",
+        "class_shape": {
+          "risk_atr": 1.2,
+          "rr": 0.9
+        },
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 382.7,
+          "published": {
+            "entry_price": 486.6,
+            "stop_loss": 474.0,
+            "target_price": 498.0
+          }
+        },
+        "note": "legacy levels re-derived from tape (stop 367.19 / entry 382.7 / target 396.66); real point-in-time TATAMOTORS tape re-recorded (T_rec close 382.7, ATR14 12.9214, 225 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources; the published entry 486.6 is 1.271x the tape's T_rec close and the published stop 474.0 sits above every bar the tape prints, so the levels belong to a scale this tape cannot corroborate; the geometry is re-derived at the record's frozen class shape (risk_atr 1.2, rr 0.9) — never tuned to the claim",
+        "tape_source": {
+          "requested": "TATAMOTORS.NS",
+          "fetched": "TMPV.NS",
+          "reason": "issuer demerged (Tata Motors -> TMPV/TMCV, 2025): TATAMOTORS.NS is delisted and the successor entity's series is the only surviving tape, so it may carry corporate-action adjustment back to 2022"
+        },
+        "superseded": [
+          {
+            "claim": "forward_prices_22d",
+            "rule": "forward_min_max",
+            "legacy": {
+              "min": 452.0,
+              "max": 505.0
+            },
+            "tape": {
+              "min": 387.0,
+              "max": 460.75
+            },
+            "source": "pre-migration value recovered from git HEAD:tests/evals/golden_dataset.json"
+          },
+          {
+            "claim": "resolution_date",
+            "rule": "resolution_date",
+            "legacy": "2022-07-14",
+            "tape": "2022-07-20",
+            "source": "pre-migration value recovered from git HEAD:tests/evals/golden_dataset.json"
+          },
+          {
+            "claim": "resolution_outcome",
+            "rule": "resolution_outcome",
+            "legacy": "LOSS",
+            "tape": "WIN",
+            "source": "pre-migration value recovered from git HEAD:tests/evals/golden_dataset.json"
+          },
+          {
+            "claim": "market_mae_pct",
+            "rule": "market_mae_pct",
+            "legacy": 2.7,
+            "tape": -1.1236,
+            "source": "pre-migration value recovered from git HEAD:tests/evals/golden_dataset.json"
+          },
+          {
+            "claim": "actual_direction",
+            "rule": "realized_direction",
+            "legacy": 0,
+            "tape": 1,
+            "source": "pre-migration value recovered from git HEAD:tests/evals/golden_dataset.json"
+          }
+        ]
+      }
+    },
+    {
+      "scenario_id": "GB-2022-0006",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION",
+        "inverted_risk_reward"
+      ],
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2022-04-15",
+      "entry_price": 1177.59,
+      "entry_range_min": 1176.41,
+      "entry_range_max": 1178.77,
+      "target_price": 1201.65,
+      "stop_loss": 1150.86,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2022-0006/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2022-0006/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2022-04-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2022-0006/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2022-0006/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2022-0006/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2022-05-18",
+        "resolution_outcome": "WIN",
+        "resolution_basis": "target_first",
+        "forward_derived_cache": {
+          "min": 1093.7546,
+          "max": 1318.1128
+        },
+        "quadrant_target": "FN"
+      },
+      "expected_verdict": "AVOID",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2022-0006",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 1177.59,
+          "published": {
+            "entry_price": 1177.59,
+            "stop_loss": 1150.86,
+            "target_price": 1201.65
+          }
+        },
+        "note": "legacy levels preserved as published (stop 1150.86 / entry 1177.59 / target 1201.65); real point-in-time RELIANCE tape re-recorded (T_rec close 1177.59, ATR14 22.274, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": [
+          {
+            "claim": "resolution_outcome",
+            "rule": "resolution_outcome",
+            "legacy": "LOSS",
+            "tape": "WIN"
+          }
+        ]
+      }
+    },
+    {
+      "scenario_id": "GB-2022-0007",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION",
+        "inverted_risk_reward"
+      ],
+      "symbol": "HDFCBANK",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2022-04-15",
+      "entry_price": 732.48,
+      "entry_range_min": 731.48,
+      "entry_range_max": 733.48,
+      "target_price": 758.87,
+      "stop_loss": 703.16,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2022-0007/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2022-0007/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2022-04-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2022-0007/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2022-0007/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2022-0007/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2022-05-18",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 642.65,
+          "max": 715.825
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2022-0007",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 732.48,
+          "published": {
+            "entry_price": 732.48,
+            "stop_loss": 703.16,
+            "target_price": 758.87
+          }
+        },
+        "note": "legacy levels preserved as published (stop 703.16 / entry 732.48 / target 758.87); real point-in-time HDFCBANK tape re-recorded (T_rec close 732.48, ATR14 24.4339, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2022-0008",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION",
+        "inverted_risk_reward"
+      ],
+      "symbol": "ICICIBANK",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2022-04-15",
+      "entry_price": 762.25,
+      "entry_range_min": 761.25,
+      "entry_range_max": 763.25,
+      "target_price": 778.8,
+      "stop_loss": 743.86,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2022-0008/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2022-0008/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2022-04-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2022-0008/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2022-0008/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2022-0008/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2022-05-18",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 675.0,
+          "max": 777.9
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2022-0008",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 762.25,
+          "published": {
+            "entry_price": 762.25,
+            "stop_loss": 743.86,
+            "target_price": 778.8
+          }
+        },
+        "note": "legacy levels preserved as published (stop 743.86 / entry 762.25 / target 778.8); real point-in-time ICICIBANK tape re-recorded (T_rec close 762.25, ATR14 15.3214, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2022-0009",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION",
+        "inverted_risk_reward"
+      ],
+      "symbol": "SBIN",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2022-04-15",
+      "entry_price": 517.7,
+      "entry_range_min": 516.7,
+      "entry_range_max": 518.7,
+      "target_price": 528.37,
+      "stop_loss": 505.85,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2022-0009/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2022-0009/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2022-04-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2022-0009/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2022-0009/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2022-0009/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2022-05-18",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 438.85,
+          "max": 520.95
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2022-0009",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 517.7,
+          "published": {
+            "entry_price": 517.7,
+            "stop_loss": 505.85,
+            "target_price": 528.37
+          }
+        },
+        "note": "legacy levels preserved as published (stop 505.85 / entry 517.7 / target 528.37); real point-in-time SBIN tape re-recorded (T_rec close 517.7, ATR14 9.875, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2022-0010",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION",
+        "inverted_risk_reward"
+      ],
+      "symbol": "INFY",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2022-04-15",
+      "entry_price": 1748.55,
+      "entry_range_min": 1746.8,
+      "entry_range_max": 1750.3,
+      "target_price": 1782.99,
+      "stop_loss": 1710.28,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2022-0010/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2022-0010/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2022-04-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2022-0010/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2022-0010/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2022-0010/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2022-05-18",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 1478.65,
+          "max": 1650.0
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2022-0010",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 1748.55,
+          "published": {
+            "entry_price": 1748.55,
+            "stop_loss": 1710.28,
+            "target_price": 1782.99
+          }
+        },
+        "note": "legacy levels preserved as published (stop 1710.28 / entry 1748.55 / target 1782.99); real point-in-time INFY tape re-recorded (T_rec close 1748.55, ATR14 31.8929, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2022-0011",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION",
+        "inverted_risk_reward"
+      ],
+      "symbol": "TCS",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2022-04-15",
+      "entry_price": 3661.95,
+      "entry_range_min": 3658.29,
+      "entry_range_max": 3665.61,
+      "target_price": 3725.53,
+      "stop_loss": 3591.3,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2022-0011/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2022-0011/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2022-04-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2022-0011/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2022-0011/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2022-0011/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2022-05-18",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 3346.8501,
+          "max": 3644.0
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2022-0011",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 3661.95,
+          "published": {
+            "entry_price": 3661.95,
+            "stop_loss": 3591.3,
+            "target_price": 3725.53
+          }
+        },
+        "note": "legacy levels preserved as published (stop 3591.3 / entry 3661.95 / target 3725.53); real point-in-time TCS tape re-recorded (T_rec close 3661.95, ATR14 58.8714, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2022-0012",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION",
+        "inverted_risk_reward"
+      ],
+      "symbol": "LT",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2022-04-15",
+      "entry_price": 1760.8,
+      "entry_range_min": 1759.04,
+      "entry_range_max": 1762.56,
+      "target_price": 1797.28,
+      "stop_loss": 1720.27,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2022-0012/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2022-0012/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2022-04-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2022-0012/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2022-0012/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2022-0012/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2022-05-18",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 1502.0,
+          "max": 1760.75
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2022-0012",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 1760.8,
+          "published": {
+            "entry_price": 1760.8,
+            "stop_loss": 1720.27,
+            "target_price": 1797.28
+          }
+        },
+        "note": "legacy levels preserved as published (stop 1720.27 / entry 1760.8 / target 1797.28); real point-in-time LT tape re-recorded (T_rec close 1760.8, ATR14 33.7714, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2022-0013",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION",
+        "inverted_risk_reward"
+      ],
+      "symbol": "TATASTEEL",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2022-04-15",
+      "entry_price": 131.95,
+      "entry_range_min": 130.95,
+      "entry_range_max": 132.95,
+      "target_price": 135.63,
+      "stop_loss": 127.86,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2022-0013/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2022-0013/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2022-04-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2022-0013/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2022-0013/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2022-0013/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2022-05-18",
+        "resolution_outcome": "WIN",
+        "resolution_basis": "target_first",
+        "forward_derived_cache": {
+          "min": 109.2,
+          "max": 136.665
+        },
+        "quadrant_target": "FN"
+      },
+      "expected_verdict": "AVOID",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2022-0013",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 131.95,
+          "published": {
+            "entry_price": 131.95,
+            "stop_loss": 127.86,
+            "target_price": 135.63
+          }
+        },
+        "note": "legacy levels preserved as published (stop 127.86 / entry 131.95 / target 135.63); real point-in-time TATASTEEL tape re-recorded (T_rec close 131.95, ATR14 3.4054, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": [
+          {
+            "claim": "resolution_outcome",
+            "rule": "resolution_outcome",
+            "legacy": "LOSS",
+            "tape": "WIN"
+          }
+        ]
+      }
+    },
+    {
+      "scenario_id": "GB-2022-0014",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION",
+        "inverted_risk_reward"
+      ],
+      "symbol": "ITC",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2022-04-15",
+      "entry_price": 259.55,
+      "entry_range_min": 258.55,
+      "entry_range_max": 260.55,
+      "target_price": 266.51,
+      "stop_loss": 251.82,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2022-0014/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2022-0014/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2022-04-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2022-0014/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2022-0014/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2022-0014/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2022-05-18",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 239.9103,
+          "max": 262.3944
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2022-0014",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 259.55,
+          "published": {
+            "entry_price": 259.55,
+            "stop_loss": 251.82,
+            "target_price": 266.51
+          }
+        },
+        "note": "legacy levels preserved as published (stop 251.82 / entry 259.55 / target 266.51); real point-in-time ITC tape re-recorded (T_rec close 259.55, ATR14 6.4412, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2022-0015",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION",
+        "tighter_than_0_75x_atr"
+      ],
+      "symbol": "TITAN",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2022-04-15",
+      "entry_price": 2461.35,
+      "entry_range_min": 2458.89,
+      "entry_range_max": 2463.81,
+      "target_price": 2550.25,
+      "stop_loss": 2425.79,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2022-0015/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2022-0015/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2022-04-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2022-0015/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2022-0015/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2022-0015/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2022-05-18",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 2035.55,
+          "max": 2552.1499
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2022-0015",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 2461.35,
+          "published": {
+            "entry_price": 2461.35,
+            "stop_loss": 2425.79,
+            "target_price": 2550.25
+          }
+        },
+        "note": "legacy levels preserved as published (stop 2425.79 / entry 2461.35 / target 2550.25); real point-in-time TITAN tape re-recorded (T_rec close 2461.35, ATR14 59.2607, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2022-0016",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION",
+        "tighter_than_0_75x_atr"
+      ],
+      "symbol": "MARUTI",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2022-04-15",
+      "entry_price": 7469.5,
+      "entry_range_min": 7462.03,
+      "entry_range_max": 7476.97,
+      "target_price": 7731.32,
+      "stop_loss": 7364.77,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2022-0016/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2022-0016/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2022-04-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2022-0016/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2022-0016/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2022-0016/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2022-05-18",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 7062.3501,
+          "max": 8067.5
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2022-0016",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 7469.5,
+          "published": {
+            "entry_price": 7469.5,
+            "stop_loss": 7364.77,
+            "target_price": 7731.32
+          }
+        },
+        "note": "legacy levels preserved as published (stop 7364.77 / entry 7469.5 / target 7731.32); real point-in-time MARUTI tape re-recorded (T_rec close 7469.5, ATR14 174.5465, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2022-0017",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION",
+        "tighter_than_0_75x_atr"
+      ],
+      "symbol": "AXISBANK",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2022-04-15",
+      "entry_price": 793.05,
+      "entry_range_min": 792.05,
+      "entry_range_max": 794.05,
+      "target_price": 819.27,
+      "stop_loss": 782.56,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2022-0017/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2022-0017/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2022-04-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2022-0017/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2022-0017/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2022-0017/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2022-05-18",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 630.05,
+          "max": 816.2
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2022-0017",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 793.05,
+          "published": {
+            "entry_price": 793.05,
+            "stop_loss": 782.56,
+            "target_price": 819.27
+          }
+        },
+        "note": "legacy levels preserved as published (stop 782.56 / entry 793.05 / target 819.27); real point-in-time AXISBANK tape re-recorded (T_rec close 793.05, ATR14 17.4821, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2022-0018",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION",
+        "tighter_than_0_75x_atr"
+      ],
+      "symbol": "BAJFINANCE",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2022-04-15",
+      "entry_price": 732.85,
+      "entry_range_min": 731.85,
+      "entry_range_max": 733.85,
+      "target_price": 755.0,
+      "stop_loss": 723.99,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2022-0018/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2022-0018/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2022-04-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2022-0018/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2022-0018/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2022-0018/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2022-05-18",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 548.8,
+          "max": 744.33
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2022-0018",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 732.85,
+          "published": {
+            "entry_price": 732.85,
+            "stop_loss": 723.99,
+            "target_price": 755.0
+          }
+        },
+        "note": "legacy levels preserved as published (stop 723.99 / entry 732.85 / target 755.0); real point-in-time BAJFINANCE tape re-recorded (T_rec close 732.85, ATR14 14.7621, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2022-0020",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION"
+      ],
+      "symbol": "SUNPHARMA",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2022-09-15",
+      "entry_price": 874.3,
+      "entry_range_min": 873.3,
+      "entry_range_max": 875.3,
+      "target_price": 943.18,
+      "stop_loss": 842.99,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2022-0020/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2022-0020/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2022-09-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2022-0020/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2022-0020/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2022-0020/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2022-10-18",
+        "resolution_outcome": "WIN",
+        "resolution_basis": "target_first",
+        "forward_derived_cache": {
+          "min": 856.8,
+          "max": 985.0
+        },
+        "quadrant_target": "TP"
+      },
+      "expected_verdict": "GO",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2022-0020",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 874.3,
+          "published": {
+            "entry_price": 874.3,
+            "stop_loss": 842.99,
+            "target_price": 943.18
+          }
+        },
+        "note": "legacy levels preserved as published (stop 842.99 / entry 874.3 / target 943.18); real point-in-time SUNPHARMA tape re-recorded (T_rec close 874.3, ATR14 15.6571, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2023-0003",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-10",
+      "authoring": {
+        "source": "quarantine-migration/1",
+        "legacy_trade_id": "GB-2023-0003",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "note": "legacy levels preserved as published; real point-in-time VEDL tape re-recorded (live close 308.75); legacy forward stats 268/325 were hand-typed and are superseded by the tape 261.95/317.9; migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources"
+      },
+      "classification_tags": [
+        "QUARANTINE_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION"
+      ],
+      "symbol": "VEDL",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2023-02-13",
+      "entry_price": 316.7,
+      "entry_range_min": 315.7,
+      "entry_range_max": 317.7,
+      "target_price": 342.0,
+      "stop_loss": 303.0,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2023-0003/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2023-0003/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2023-02-13",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2023-0003/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2023-0003/recorded/out_2_market.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 6,
+          "artifact": "out_6_fundamental.json",
+          "path": "fixtures/GB-2023-0003/quarantined/out_6_fundamental.json",
+          "evidence": "quarantined",
+          "reason": "legacy hand-typed payload from tests/evals/golden_dataset.json GB-2023-0003; retire when stage 6 records real evidence"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2023-0003/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2023-03-16",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 261.95,
+          "max": 317.9
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID"
+    },
+    {
+      "scenario_id": "GB-2023-0021",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION"
+      ],
+      "symbol": "HDFCBANK",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2023-03-15",
+      "entry_price": 770.95,
+      "entry_range_min": 769.95,
+      "entry_range_max": 771.95,
+      "target_price": 832.48,
+      "stop_loss": 742.98,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2023-0021/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2023-0021/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2023-03-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2023-0021/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2023-0021/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2023-0021/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2023-04-20",
+        "resolution_outcome": "WIN",
+        "resolution_basis": "target_first",
+        "forward_derived_cache": {
+          "min": 766.025,
+          "max": 860.0
+        },
+        "quadrant_target": "TP"
+      },
+      "expected_verdict": "GO",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2023-0021",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 770.95,
+          "published": {
+            "entry_price": 770.95,
+            "stop_loss": 742.98,
+            "target_price": 832.48
+          }
+        },
+        "note": "legacy levels preserved as published (stop 742.98 / entry 770.95 / target 832.48); real point-in-time HDFCBANK tape re-recorded (T_rec close 770.95, ATR14 13.9875, 228 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2023-0022",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION"
+      ],
+      "symbol": "ICICIBANK",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2023-03-15",
+      "entry_price": 825.9,
+      "entry_range_min": 824.9,
+      "entry_range_max": 826.9,
+      "target_price": 898.3,
+      "stop_loss": 792.99,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2023-0022/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2023-0022/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2023-03-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2023-0022/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2023-0022/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2023-0022/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2023-04-20",
+        "resolution_outcome": "WIN",
+        "resolution_basis": "target_first",
+        "forward_derived_cache": {
+          "min": 810.3,
+          "max": 917.3
+        },
+        "quadrant_target": "TP"
+      },
+      "expected_verdict": "GO",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2023-0022",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 825.9,
+          "published": {
+            "entry_price": 825.9,
+            "stop_loss": 792.99,
+            "target_price": 898.3
+          }
+        },
+        "note": "legacy levels preserved as published (stop 792.99 / entry 825.9 / target 898.3); real point-in-time ICICIBANK tape re-recorded (T_rec close 825.9, ATR14 16.4536, 228 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2023-0023",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION"
+      ],
+      "symbol": "TITAN",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2023-03-15",
+      "entry_price": 2399.1,
+      "entry_range_min": 2396.7,
+      "entry_range_max": 2401.5,
+      "target_price": 2597.45,
+      "stop_loss": 2308.94,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2023-0023/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2023-0023/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2023-03-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2023-0023/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2023-0023/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2023-0023/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2023-04-20",
+        "resolution_outcome": "WIN",
+        "resolution_basis": "target_first",
+        "forward_derived_cache": {
+          "min": 2413.0,
+          "max": 2619.0
+        },
+        "quadrant_target": "TP"
+      },
+      "expected_verdict": "GO",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2023-0023",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 2399.1,
+          "published": {
+            "entry_price": 2399.1,
+            "stop_loss": 2308.94,
+            "target_price": 2597.45
+          }
+        },
+        "note": "legacy levels preserved as published (stop 2308.94 / entry 2399.1 / target 2597.45); real point-in-time TITAN tape re-recorded (T_rec close 2399.1, ATR14 45.0821, 228 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2023-0024",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION"
+      ],
+      "symbol": "SUNPHARMA",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2023-03-15",
+      "entry_price": 951.4,
+      "entry_range_min": 950.4,
+      "entry_range_max": 952.4,
+      "target_price": 1017.05,
+      "stop_loss": 921.56,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2023-0024/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2023-0024/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2023-03-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2023-0024/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2023-0024/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2023-0024/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2023-04-20",
+        "resolution_outcome": "WIN",
+        "resolution_basis": "target_first",
+        "forward_derived_cache": {
+          "min": 947.35,
+          "max": 1023.85
+        },
+        "quadrant_target": "TP"
+      },
+      "expected_verdict": "GO",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2023-0024",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 951.4,
+          "published": {
+            "entry_price": 951.4,
+            "stop_loss": 921.56,
+            "target_price": 1017.05
+          }
+        },
+        "note": "legacy levels preserved as published (stop 921.56 / entry 951.4 / target 1017.05); real point-in-time SUNPHARMA tape re-recorded (T_rec close 951.4, ATR14 14.9179, 228 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2024-0004",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION"
+      ],
+      "symbol": "SBIN",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2024-07-08",
+      "entry_price": 825.0,
+      "entry_range_min": 824.0,
+      "entry_range_max": 826.0,
+      "target_price": 890.0,
+      "stop_loss": 795.0,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2024-0004/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2024-0004/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2024-07-08",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2024-0004/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2024-0004/recorded/out_2_market.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 6,
+          "artifact": "out_6_fundamental.json",
+          "path": null,
+          "evidence": "waived",
+          "reason": "stage 6 unimplemented: the legacy hand-typed pledge/days-to-earnings payload is retired (absence, not quarantined, so the E5 migration meter cannot grow)"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2024-0004/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2024-08-08",
+        "resolution_outcome": "WIN",
+        "resolution_basis": "target_first",
+        "forward_derived_cache": {
+          "min": 795.65,
+          "max": 899.0
+        },
+        "quadrant_target": "TP"
+      },
+      "expected_verdict": "GO",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2024-0004",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 856.25,
+          "published": {
+            "entry_price": 825.0,
+            "stop_loss": 795.0,
+            "target_price": 890.0
+          }
+        },
+        "note": "legacy levels preserved as published (stop 795.0 / entry 825.0 / target 890.0); real point-in-time SBIN tape re-recorded (T_rec close 856.25, ATR14 15.6464, 219 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": [
+          {
+            "claim": "forward_prices_22d",
+            "rule": "forward_min_max",
+            "legacy": {
+              "min": 780.0,
+              "max": 900.0
+            },
+            "tape": {
+              "min": 795.65,
+              "max": 899.0
+            },
+            "source": "pre-migration value recovered from git HEAD:tests/evals/golden_dataset.json"
+          },
+          {
+            "claim": "resolution_date",
+            "rule": "resolution_date",
+            "legacy": "2024-08-06",
+            "tape": "2024-08-08",
+            "source": "pre-migration value recovered from git HEAD:tests/evals/golden_dataset.json"
+          },
+          {
+            "claim": "market_mae_pct",
+            "rule": "market_mae_pct",
+            "legacy": 1.4,
+            "tape": 3.5576,
+            "source": "pre-migration value recovered from git HEAD:tests/evals/golden_dataset.json"
+          },
+          {
+            "claim": "actual_direction",
+            "rule": "realized_direction",
+            "legacy": 1,
+            "tape": 0,
+            "source": "pre-migration value recovered from git HEAD:tests/evals/golden_dataset.json"
+          }
+        ]
+      }
+    },
+    {
+      "scenario_id": "GB-2024-0025",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION"
+      ],
+      "symbol": "ICICIBANK",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2024-04-15",
+      "entry_price": 1078.35,
+      "entry_range_min": 1077.27,
+      "entry_range_max": 1079.43,
+      "target_price": 1155.5,
+      "stop_loss": 1043.28,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2024-0025/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2024-0025/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2024-04-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2024-0025/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2024-0025/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2024-0025/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2024-05-17",
+        "resolution_outcome": "WIN",
+        "resolution_basis": "target_first",
+        "forward_derived_cache": {
+          "min": 1048.1,
+          "max": 1169.55
+        },
+        "quadrant_target": "TP"
+      },
+      "expected_verdict": "GO",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2024-0025",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 1078.35,
+          "published": {
+            "entry_price": 1078.35,
+            "stop_loss": 1043.28,
+            "target_price": 1155.5
+          }
+        },
+        "note": "legacy levels preserved as published (stop 1043.28 / entry 1078.35 / target 1155.5); real point-in-time ICICIBANK tape re-recorded (T_rec close 1078.35, ATR14 17.5357, 222 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2024-0026",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION"
+      ],
+      "symbol": "SBIN",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2024-04-15",
+      "entry_price": 757.5,
+      "entry_range_min": 756.5,
+      "entry_range_max": 758.5,
+      "target_price": 819.43,
+      "stop_loss": 729.35,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2024-0026/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2024-0026/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2024-04-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2024-0026/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2024-0026/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2024-0026/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2024-05-17",
+        "resolution_outcome": "WIN",
+        "resolution_basis": "target_first",
+        "forward_derived_cache": {
+          "min": 732.05,
+          "max": 839.65
+        },
+        "quadrant_target": "TP"
+      },
+      "expected_verdict": "GO",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2024-0026",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 757.5,
+          "published": {
+            "entry_price": 757.5,
+            "stop_loss": 729.35,
+            "target_price": 819.43
+          }
+        },
+        "note": "legacy levels preserved as published (stop 729.35 / entry 757.5 / target 819.43); real point-in-time SBIN tape re-recorded (T_rec close 757.5, ATR14 14.075, 222 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2024-0027",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION"
+      ],
+      "symbol": "ICICIBANK",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2024-09-15",
+      "entry_price": 1250.35,
+      "entry_range_min": 1249.1,
+      "entry_range_max": 1251.6,
+      "target_price": 1339.49,
+      "stop_loss": 1209.83,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2024-0027/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2024-0027/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2024-09-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2024-0027/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2024-0027/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2024-0027/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2024-10-16",
+        "resolution_outcome": "WIN",
+        "resolution_basis": "target_first",
+        "forward_derived_cache": {
+          "min": 1217.4,
+          "max": 1362.35
+        },
+        "quadrant_target": "TP"
+      },
+      "expected_verdict": "GO",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2024-0027",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 1250.35,
+          "published": {
+            "entry_price": 1250.35,
+            "stop_loss": 1209.83,
+            "target_price": 1339.49
+          }
+        },
+        "note": "legacy levels preserved as published (stop 1209.83 / entry 1250.35 / target 1339.49); real point-in-time ICICIBANK tape re-recorded (T_rec close 1250.35, ATR14 20.2607, 219 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2024-0028",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION"
+      ],
+      "symbol": "MARUTI",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2024-09-15",
+      "entry_price": 12316.05,
+      "entry_range_min": 12303.73,
+      "entry_range_max": 12328.37,
+      "target_price": 13147.03,
+      "stop_loss": 11938.33,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2024-0028/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2024-0028/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2024-09-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2024-0028/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2024-0028/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2024-0028/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2024-10-16",
+        "resolution_outcome": "WIN",
+        "resolution_basis": "target_first",
+        "forward_derived_cache": {
+          "min": 12151.6504,
+          "max": 13541.6504
+        },
+        "quadrant_target": "TP"
+      },
+      "expected_verdict": "GO",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2024-0028",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 12316.05,
+          "published": {
+            "entry_price": 12316.05,
+            "stop_loss": 11938.33,
+            "target_price": 13147.03
+          }
+        },
+        "note": "legacy levels preserved as published (stop 11938.33 / entry 12316.05 / target 13147.03); real point-in-time MARUTI tape re-recorded (T_rec close 12316.05, ATR14 188.8606, 219 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2025-0005",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION",
+        "tighter_than_0_75x_atr"
+      ],
+      "symbol": "HDFCBANK",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2025-01-15",
+      "entry_price": 821.52,
+      "entry_range_min": 820.52,
+      "entry_range_max": 822.52,
+      "target_price": 1700.0,
+      "stop_loss": 812.24,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2025-0005/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2025-0005/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2025-01-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2025-0005/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2025-0005/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2025-0005/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2025-02-13",
+        "resolution_outcome": "TIME",
+        "resolution_basis": "horizon_end",
+        "forward_derived_cache": {
+          "min": 812.725,
+          "max": 883.5
+        }
+      },
+      "expected_verdict": "AVOID",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2025-0005",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 821.52,
+          "published": {
+            "entry_price": 821.52,
+            "stop_loss": 812.24,
+            "target_price": 1700.0
+          }
+        },
+        "note": "legacy levels preserved as published (stop 812.24 / entry 821.52 / target 1700.0); real point-in-time HDFCBANK tape re-recorded (T_rec close 821.52, ATR14 15.4679, 223 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2025-0029",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION"
+      ],
+      "symbol": "MARUTI",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2025-01-15",
+      "entry_price": 11947.4,
+      "entry_range_min": 11935.45,
+      "entry_range_max": 11959.35,
+      "target_price": 13158.17,
+      "stop_loss": 11397.05,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2025-0029/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2025-0029/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2025-01-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2025-0029/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2025-0029/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2025-0029/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2025-02-13",
+        "resolution_outcome": "WIN",
+        "resolution_basis": "target_first",
+        "forward_derived_cache": {
+          "min": 11811.0498,
+          "max": 13461.2002
+        },
+        "quadrant_target": "TP"
+      },
+      "expected_verdict": "GO",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2025-0029",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 11947.4,
+          "published": {
+            "entry_price": 11947.4,
+            "stop_loss": 11397.05,
+            "target_price": 13158.17
+          }
+        },
+        "note": "legacy levels preserved as published (stop 11397.05 / entry 11947.4 / target 13158.17); real point-in-time MARUTI tape re-recorded (T_rec close 11947.4, ATR14 275.1751, 223 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2025-0030",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION"
+      ],
+      "symbol": "BAJFINANCE",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2025-01-15",
+      "entry_price": 717.74,
+      "entry_range_min": 716.74,
+      "entry_range_max": 718.74,
+      "target_price": 799.51,
+      "stop_loss": 680.57,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2025-0030/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2025-0030/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2025-01-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2025-0030/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2025-0030/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2025-0030/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2025-02-13",
+        "resolution_outcome": "WIN",
+        "resolution_basis": "target_first",
+        "forward_derived_cache": {
+          "min": 715.63,
+          "max": 866.28
+        },
+        "quadrant_target": "TP"
+      },
+      "expected_verdict": "GO",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2025-0030",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 717.74,
+          "published": {
+            "entry_price": 717.74,
+            "stop_loss": 680.57,
+            "target_price": 799.51
+          }
+        },
+        "note": "legacy levels preserved as published (stop 680.57 / entry 717.74 / target 799.51); real point-in-time BAJFINANCE tape re-recorded (T_rec close 717.74, ATR14 18.5875, 223 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2025-0031",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION"
+      ],
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2025-10-15",
+      "entry_price": 1374.3,
+      "entry_range_min": 1372.93,
+      "entry_range_max": 1375.67,
+      "target_price": 1446.75,
+      "stop_loss": 1341.37,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2025-0031/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2025-0031/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2025-10-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2025-0031/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2025-0031/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2025-0031/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2025-11-18",
+        "resolution_outcome": "WIN",
+        "resolution_basis": "target_first",
+        "forward_derived_cache": {
+          "min": 1375.0,
+          "max": 1527.8
+        },
+        "quadrant_target": "TP"
+      },
+      "expected_verdict": "GO",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2025-0031",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 1374.3,
+          "published": {
+            "entry_price": 1374.3,
+            "stop_loss": 1341.37,
+            "target_price": 1446.75
+          }
+        },
+        "note": "legacy levels preserved as published (stop 1341.37 / entry 1374.3 / target 1446.75); real point-in-time RELIANCE tape re-recorded (T_rec close 1374.3, ATR14 16.4643, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "GB-2025-0032",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-11",
+      "classification_tags": [
+        "DATASET_MIGRATION"
+      ],
+      "gate_focus": [
+        "ZERO_HALLUCINATION"
+      ],
+      "symbol": "SBIN",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2025-10-15",
+      "entry_price": 886.1,
+      "entry_range_min": 885.1,
+      "entry_range_max": 887.1,
+      "target_price": 940.73,
+      "stop_loss": 861.27,
+      "lot_size": 1,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/GB-2025-0032/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/GB-2025-0032/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2025-10-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/GB-2025-0032/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/GB-2025-0032/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/GB-2025-0032/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2025-11-18",
+        "resolution_outcome": "WIN",
+        "resolution_basis": "target_first",
+        "forward_derived_cache": {
+          "min": 882.45,
+          "max": 976.7
+        },
+        "quadrant_target": "TP"
+      },
+      "expected_verdict": "GO",
+      "authoring": {
+        "source": "dataset-migration/1",
+        "legacy_trade_id": "GB-2025-0032",
+        "legacy_dataset": "tests/evals/golden_dataset.json",
+        "legacy_instrument": "FUT",
+        "geometry_basis": "preserved_as_published",
+        "class_shape": null,
+        "corroboration": {
+          "rule": "stop_loss < T_rec close < target_price (lookahead-free, ≤T_rec tape)",
+          "t_rec_close": 886.1,
+          "published": {
+            "entry_price": 886.1,
+            "stop_loss": 861.27,
+            "target_price": 940.73
+          }
+        },
+        "note": "legacy levels preserved as published (stop 861.27 / entry 886.1 / target 940.73); real point-in-time SBIN tape re-recorded (T_rec close 886.1, ATR14 12.4143, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "superseded": []
+      }
+    },
+    {
+      "scenario_id": "SCEN-001",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-10",
+      "authoring": {
+        "source": "catalog-scaffold/1",
+        "catalog": "business_test_cases.md §3",
+        "catalog_name": "Covid Crash Day 1 (Panic VIX)",
+        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR); a row whose tape then rallies records the honest false negative (§4.1), never a tuned loss",
+        "entry_basis": "open",
+        "shape": {
+          "risk_atr": 0.5,
+          "rr": 2.0
+        },
+        "atr_14": 43.180979,
+        "expiry_rule": "NSE monthly last-Thursday, rolled when within 7 days of T_rec",
+        "lot_size_rule": "₹500000 notional band on the authored entry, rounded to a 25-share grid; historical NSE lot revisions are not archived offline",
+        "realized_outcome_basis": "target_first",
+        "breaker_pending_stage_7": [
+          "panic_regime"
+        ],
+        "catalog_trap": "India VIX 83.6; market hits 10% lower circuit"
+      },
+      "classification_tags": [
+        "CATALOG"
+      ],
+      "gate_focus": [
+        "S3",
+        "S4",
+        "S6"
+      ],
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "instrument": "FUT",
+      "action": "BUY",
+      "recommendation_date": "2020-03-23",
+      "entry_price": 418.86,
+      "entry_range_min": 417.86,
+      "entry_range_max": 419.86,
+      "target_price": 462.04,
+      "stop_loss": 397.27,
+      "lot_size": 1200,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/SCEN-001/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/SCEN-001/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2020-03-23",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/SCEN-001/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/SCEN-001/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/SCEN-001/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2020-04-28",
+        "resolution_outcome": "WIN",
+        "resolution_basis": "target_first",
+        "forward_derived_cache": {
+          "min": 409.5296,
+          "max": 683.4409
+        },
+        "quadrant_target": "FN"
+      },
+      "expected_verdict": "AVOID",
+      "expiry": "2020-04-30"
+    },
+    {
+      "scenario_id": "SCEN-002",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-10",
+      "authoring": {
+        "source": "catalog-scaffold/1",
+        "catalog": "business_test_cases.md §3",
+        "catalog_name": "Covid Panic Liquidity Freeze",
+        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR)",
+        "entry_basis": "open",
+        "shape": {
+          "risk_atr": 0.5,
+          "rr": 2.0
+        },
+        "atr_14": 25.989286,
+        "expiry_rule": null,
+        "lot_size_rule": "₹500000 notional band on the authored entry, rounded to a 25-share grid; historical NSE lot revisions are not archived offline",
+        "realized_outcome_basis": "stop_first",
+        "breaker_pending_stage_7": [
+          "panic_regime"
+        ],
+        "catalog_trap": "VIX > 80; NIFTY 500 breadth < 5% bullish"
+      },
+      "classification_tags": [
+        "CATALOG"
+      ],
+      "gate_focus": [
+        "S3",
+        "S4",
+        "S6"
+      ],
+      "symbol": "SBIN",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2020-03-24",
+      "entry_price": 190.95,
+      "entry_range_min": 189.95,
+      "entry_range_max": 191.95,
+      "target_price": 216.93,
+      "stop_loss": 177.96,
+      "lot_size": 2625,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/SCEN-002/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/SCEN-002/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2020-03-24",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/SCEN-002/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/SCEN-002/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/SCEN-002/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2020-04-29",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 175.0,
+          "max": 211.9
+        },
+        "quadrant_target": "TN",
+        "regime_tags": [
+          "vix_panic"
+        ]
+      },
+      "expected_verdict": "AVOID"
+    },
+    {
+      "scenario_id": "SCEN-003",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-10",
+      "authoring": {
+        "source": "catalog-scaffold/1",
+        "catalog": "business_test_cases.md §3",
+        "catalog_name": "Election Results Flash Crash",
+        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR)",
+        "entry_basis": "open",
+        "shape": {
+          "risk_atr": 0.5,
+          "rr": 2.0
+        },
+        "atr_14": 32.339286,
+        "expiry_rule": "NSE monthly last-Thursday, rolled when within 7 days of T_rec",
+        "lot_size_rule": "₹500000 notional band on the authored entry, rounded to a 25-share grid; historical NSE lot revisions are not archived offline",
+        "realized_outcome_basis": "stop_first",
+        "breaker_pending_stage_7": [
+          "panic_regime"
+        ],
+        "catalog_trap": "Exit-poll euphoria followed by 6% NIFTY crash; VIX 32"
+      },
+      "classification_tags": [
+        "CATALOG"
+      ],
+      "gate_focus": [
+        "S3",
+        "S4",
+        "S6"
+      ],
+      "symbol": "SBIN",
+      "exchange": "NSE",
+      "instrument": "FUT",
+      "action": "BUY",
+      "recommendation_date": "2024-06-04",
+      "entry_price": 897.0,
+      "entry_range_min": 896.0,
+      "entry_range_max": 898.0,
+      "target_price": 929.34,
+      "stop_loss": 880.83,
+      "lot_size": 550,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/SCEN-003/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/SCEN-003/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2024-06-04",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/SCEN-003/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/SCEN-003/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/SCEN-003/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2024-07-05",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 744.05,
+          "max": 864.0
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID",
+      "expiry": "2024-06-27"
+    },
+    {
+      "scenario_id": "SCEN-004",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-10",
+      "authoring": {
+        "source": "catalog-scaffold/1",
+        "catalog": "business_test_cases.md §3",
+        "catalog_name": "PSU Euphoria Reversal",
+        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR)",
+        "entry_basis": "open",
+        "shape": {
+          "risk_atr": 0.5,
+          "rr": 2.0
+        },
+        "atr_14": 119.696421,
+        "expiry_rule": "NSE monthly last-Thursday, rolled when within 7 days of T_rec",
+        "lot_size_rule": "₹500000 notional band on the authored entry, rounded to a 25-share grid; historical NSE lot revisions are not archived offline",
+        "realized_outcome_basis": "stop_first",
+        "breaker_pending_stage_7": [
+          "panic_regime"
+        ],
+        "catalog_trap": "Capital goods sector drops 12% intraday on election results"
+      },
+      "classification_tags": [
+        "CATALOG"
+      ],
+      "gate_focus": [
+        "S3",
+        "S4",
+        "S6"
+      ],
+      "symbol": "LT",
+      "exchange": "NSE",
+      "instrument": "FUT",
+      "action": "BUY",
+      "recommendation_date": "2024-06-04",
+      "entry_price": 3852.0,
+      "entry_range_min": 3848.15,
+      "entry_range_max": 3855.85,
+      "target_price": 3971.7,
+      "stop_loss": 3792.15,
+      "lot_size": 125,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/SCEN-004/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/SCEN-004/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2024-06-04",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/SCEN-004/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/SCEN-004/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/SCEN-004/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2024-07-05",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 3175.05,
+          "max": 3720.0
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID",
+      "expiry": "2024-06-27"
+    },
+    {
+      "scenario_id": "SCEN-005",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-10",
+      "authoring": {
+        "source": "catalog-scaffold/1",
+        "catalog": "business_test_cases.md §3",
+        "catalog_name": "Russia-Ukraine War Outbreak",
+        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR); a row whose tape then rallies records the honest false negative (§4.1), never a tuned loss",
+        "entry_basis": "open",
+        "shape": {
+          "risk_atr": 0.5,
+          "rr": 2.0
+        },
+        "atr_14": 4.188214,
+        "expiry_rule": "NSE monthly last-Thursday, rolled when within 7 days of T_rec",
+        "lot_size_rule": "₹500000 notional band on the authored entry, rounded to a 25-share grid; historical NSE lot revisions are not archived offline",
+        "realized_outcome_basis": "target_first",
+        "breaker_pending_stage_7": [
+          "panic_regime"
+        ],
+        "catalog_trap": "Commodity price shock; global equity gap-down through stops"
+      },
+      "classification_tags": [
+        "CATALOG"
+      ],
+      "gate_focus": [
+        "S3",
+        "S4",
+        "S6"
+      ],
+      "symbol": "TATASTEEL",
+      "exchange": "NSE",
+      "instrument": "FUT",
+      "action": "BUY",
+      "recommendation_date": "2022-02-24",
+      "entry_price": 109.4,
+      "entry_range_min": 108.4,
+      "entry_range_max": 110.4,
+      "target_price": 113.58,
+      "stop_loss": 107.31,
+      "lot_size": 4575,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/SCEN-005/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/SCEN-005/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2022-02-24",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/SCEN-005/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/SCEN-005/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/SCEN-005/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2022-03-30",
+        "resolution_outcome": "WIN",
+        "resolution_basis": "target_first",
+        "forward_derived_cache": {
+          "min": 109.56,
+          "max": 136.6
+        },
+        "quadrant_target": "FN"
+      },
+      "expected_verdict": "AVOID",
+      "expiry": "2022-03-31"
+    },
+    {
+      "scenario_id": "SCEN-006",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-10",
+      "authoring": {
+        "source": "catalog-scaffold/1",
+        "catalog": "business_test_cases.md §3",
+        "catalog_name": "RBI Surprise 40 bps Rate Hike",
+        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR)",
+        "entry_basis": "open",
+        "shape": {
+          "risk_atr": 0.5,
+          "rr": 2.0
+        },
+        "atr_14": 18.980357,
+        "expiry_rule": "NSE monthly last-Thursday, rolled when within 7 days of T_rec",
+        "lot_size_rule": "₹500000 notional band on the authored entry, rounded to a 25-share grid; historical NSE lot revisions are not archived offline",
+        "realized_outcome_basis": "stop_first",
+        "breaker_pending_stage_7": [
+          "panic_regime"
+        ],
+        "catalog_trap": "Unscheduled off-cycle policy rate hike; Bank NIFTY crack"
+      },
+      "classification_tags": [
+        "CATALOG"
+      ],
+      "gate_focus": [
+        "S3",
+        "S4",
+        "S6"
+      ],
+      "symbol": "HDFCBANK",
+      "exchange": "NSE",
+      "instrument": "FUT",
+      "action": "BUY",
+      "recommendation_date": "2022-05-04",
+      "entry_price": 700.0,
+      "entry_range_min": 699.0,
+      "entry_range_max": 701.0,
+      "target_price": 718.98,
+      "stop_loss": 690.51,
+      "lot_size": 725,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/SCEN-006/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/SCEN-006/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2022-05-04",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/SCEN-006/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/SCEN-006/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/SCEN-006/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2022-06-03",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 639.15,
+          "max": 710.25
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID",
+      "expiry": "2022-05-26"
+    },
+    {
+      "scenario_id": "SCEN-007",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-10",
+      "authoring": {
+        "source": "catalog-scaffold/1",
+        "catalog": "business_test_cases.md §3",
+        "catalog_name": "Adani-Hindenburg Governance Shock",
+        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR)",
+        "entry_basis": "open",
+        "shape": {
+          "risk_atr": 0.5,
+          "rr": 2.0
+        },
+        "atr_14": 108.667857,
+        "expiry_rule": "NSE monthly last-Thursday, rolled when within 7 days of T_rec",
+        "lot_size_rule": "₹500000 notional band on the authored entry, rounded to a 25-share grid; historical NSE lot revisions are not archived offline",
+        "realized_outcome_basis": "stop_first",
+        "breaker_pending_stage_6": [
+          "promoter_pledging_gt_25pct"
+        ],
+        "catalog_trap": "Promoter pledge > 25%, offshore debt; multi-day lower circuits"
+      },
+      "classification_tags": [
+        "CATALOG"
+      ],
+      "gate_focus": [
+        "S3",
+        "S4",
+        "S6"
+      ],
+      "symbol": "ADANIENT",
+      "exchange": "NSE",
+      "instrument": "FUT",
+      "action": "BUY",
+      "recommendation_date": "2023-01-25",
+      "entry_price": 3422.0,
+      "entry_range_min": 3418.58,
+      "entry_range_max": 3425.42,
+      "target_price": 3530.66,
+      "stop_loss": 3367.67,
+      "lot_size": 150,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/SCEN-007/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/SCEN-007/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2023-01-25",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/SCEN-007/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/SCEN-007/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/SCEN-007/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2023-02-27",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 1017.45,
+          "max": 3346.5
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID",
+      "expiry": "2023-02-23"
+    },
+    {
+      "scenario_id": "SCEN-008",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-10",
+      "authoring": {
+        "source": "catalog-scaffold/1",
+        "catalog": "business_test_cases.md §3",
+        "catalog_name": "Adani Contagion Liquidity Freeze",
+        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR)",
+        "entry_basis": "open",
+        "shape": {
+          "risk_atr": 0.5,
+          "rr": 2.0
+        },
+        "atr_14": 30.946429,
+        "expiry_rule": "NSE monthly last-Thursday, rolled when within 7 days of T_rec",
+        "lot_size_rule": "₹500000 notional band on the authored entry, rounded to a 25-share grid; historical NSE lot revisions are not archived offline",
+        "realized_outcome_basis": "stop_first",
+        "breaker_pending_stage_7": [
+          "panic_regime"
+        ],
+        "catalog_trap": "Cascading lender margin call liquidations; bid liquidity dries"
+      },
+      "classification_tags": [
+        "CATALOG"
+      ],
+      "gate_focus": [
+        "S3",
+        "S4",
+        "S6"
+      ],
+      "symbol": "ADANIPORTS",
+      "exchange": "NSE",
+      "instrument": "FUT",
+      "action": "BUY",
+      "recommendation_date": "2023-01-27",
+      "entry_price": 699.0,
+      "entry_range_min": 698.0,
+      "entry_range_max": 700.0,
+      "target_price": 729.94,
+      "stop_loss": 683.53,
+      "lot_size": 725,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/SCEN-008/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/SCEN-008/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2023-01-27",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/SCEN-008/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/SCEN-008/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/SCEN-008/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2023-02-28",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 395.1,
+          "max": 656.6
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID",
+      "expiry": "2023-02-23"
+    },
+    {
+      "scenario_id": "SCEN-009",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-10",
+      "authoring": {
+        "source": "catalog-scaffold/1",
+        "catalog": "business_test_cases.md §3",
+        "catalog_name": "Zee Entertainment Collateral Dump",
+        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR)",
+        "entry_basis": "open",
+        "shape": {
+          "risk_atr": 0.5,
+          "rr": 2.0
+        },
+        "atr_14": 23.953571,
+        "expiry_rule": null,
+        "lot_size_rule": "₹500000 notional band on the authored entry, rounded to a 25-share grid; historical NSE lot revisions are not archived offline",
+        "realized_outcome_basis": "stop_first",
+        "breaker_pending_stage_6": [
+          "promoter_pledging_gt_25pct"
+        ],
+        "catalog_trap": "Promoters pledged > 60%; lenders sold collateral; -33% in 1 day"
+      },
+      "classification_tags": [
+        "CATALOG"
+      ],
+      "gate_focus": [
+        "S3",
+        "S4",
+        "S6"
+      ],
+      "symbol": "ZEEL",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2019-01-25",
+      "entry_price": 437.75,
+      "entry_range_min": 436.75,
+      "entry_range_max": 438.75,
+      "target_price": 461.71,
+      "stop_loss": 425.77,
+      "lot_size": 1150,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/SCEN-009/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/SCEN-009/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2019-01-25",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/SCEN-009/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/SCEN-009/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/SCEN-009/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2019-02-27",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 320.0,
+          "max": 488.0
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID"
+    },
+    {
+      "scenario_id": "SCEN-010",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-10",
+      "authoring": {
+        "source": "catalog-scaffold/1",
+        "catalog": "business_test_cases.md §3",
+        "catalog_name": "NPA Crisis & Capital Inadequacy",
+        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR)",
+        "entry_basis": "open",
+        "shape": {
+          "risk_atr": 0.5,
+          "rr": 2.0
+        },
+        "atr_14": 5.482143,
+        "expiry_rule": null,
+        "lot_size_rule": "₹500000 notional band on the authored entry, rounded to a 25-share grid; historical NSE lot revisions are not archived offline",
+        "realized_outcome_basis": "stop_first",
+        "breaker_pending_stage_6": [
+          "promoter_pledging_gt_25pct"
+        ],
+        "catalog_trap": "Severe Altman Z distress; promoter holding dilution"
+      },
+      "classification_tags": [
+        "CATALOG"
+      ],
+      "gate_focus": [
+        "S3",
+        "S4",
+        "S6"
+      ],
+      "symbol": "YESBANK",
+      "exchange": "NSE",
+      "instrument": "CASH",
+      "action": "BUY",
+      "recommendation_date": "2019-09-20",
+      "entry_price": 53.7,
+      "entry_range_min": 52.7,
+      "entry_range_max": 54.7,
+      "target_price": 59.18,
+      "stop_loss": 50.96,
+      "lot_size": 9300,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/SCEN-010/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/SCEN-010/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2019-09-20",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/SCEN-010/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/SCEN-010/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/SCEN-010/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2019-10-25",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 29.0,
+          "max": 57.65
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID"
+    },
+    {
+      "scenario_id": "SCEN-011",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-10",
+      "authoring": {
+        "source": "catalog-scaffold/1",
+        "catalog": "business_test_cases.md §3",
+        "catalog_name": "NBFC Liquidity Contagion",
+        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR); a row whose tape then rallies records the honest false negative (§4.1), never a tuned loss",
+        "entry_basis": "open",
+        "shape": {
+          "risk_atr": 0.5,
+          "rr": 2.0
+        },
+        "atr_14": 33.627529,
+        "expiry_rule": "NSE monthly last-Thursday, rolled when within 7 days of T_rec",
+        "lot_size_rule": "₹500000 notional band on the authored entry, rounded to a 25-share grid; historical NSE lot revisions are not archived offline",
+        "realized_outcome_basis": "target_first",
+        "breaker_pending_stage_6": [
+          "promoter_pledging_gt_25pct"
+        ],
+        "catalog_trap": "Rating downgrades, promoter pledging 32%, cash flow deficit",
+        "tape_source": {
+          "requested": "IBULHSGFIN.NS",
+          "fetched": "SAMMAANCAP.NS",
+          "reason": "issuer renamed (Indiabulls Housing Finance -> Sammaan Capital, 2024); the catalog symbol is kept as the point-in-time identity"
+        }
+      },
+      "classification_tags": [
+        "CATALOG"
+      ],
+      "gate_focus": [
+        "S3",
+        "S4",
+        "S6"
+      ],
+      "symbol": "IBULHSGFIN",
+      "exchange": "NSE",
+      "instrument": "FUT",
+      "action": "BUY",
+      "recommendation_date": "2019-10-01",
+      "entry_price": 225.52,
+      "entry_range_min": 224.52,
+      "entry_range_max": 226.52,
+      "target_price": 259.14,
+      "stop_loss": 208.71,
+      "lot_size": 2225,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/SCEN-011/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/SCEN-011/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2019-10-01",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/SCEN-011/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/SCEN-011/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/SCEN-011/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2019-11-05",
+        "resolution_outcome": "WIN",
+        "resolution_basis": "target_first",
+        "forward_derived_cache": {
+          "min": 147.7918,
+          "max": 272.8532
+        },
+        "quadrant_target": "FN"
+      },
+      "expected_verdict": "AVOID",
+      "expiry": "2019-10-31"
+    },
+    {
+      "scenario_id": "SCEN-012",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-10",
+      "authoring": {
+        "source": "catalog-scaffold/1",
+        "catalog": "business_test_cases.md §3",
+        "catalog_name": "Vedanta Debt & Parent Pledge Stress",
+        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR)",
+        "entry_basis": "open",
+        "shape": {
+          "risk_atr": 0.5,
+          "rr": 2.0
+        },
+        "atr_14": 11.125,
+        "expiry_rule": "NSE monthly last-Thursday, rolled when within 7 days of T_rec",
+        "lot_size_rule": "₹500000 notional band on the authored entry, rounded to a 25-share grid; historical NSE lot revisions are not archived offline",
+        "realized_outcome_basis": "stop_first",
+        "breaker_pending_stage_6": [
+          "promoter_pledging_gt_25pct"
+        ],
+        "catalog_trap": "Parent debt refinancing concerns; promoter pledged 99% of stake"
+      },
+      "classification_tags": [
+        "CATALOG"
+      ],
+      "gate_focus": [
+        "S3",
+        "S4",
+        "S6"
+      ],
+      "symbol": "VEDL",
+      "exchange": "NSE",
+      "instrument": "FUT",
+      "action": "BUY",
+      "recommendation_date": "2023-03-15",
+      "entry_price": 283.05,
+      "entry_range_min": 282.05,
+      "entry_range_max": 284.05,
+      "target_price": 294.17,
+      "stop_loss": 277.49,
+      "lot_size": 1775,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/SCEN-012/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/SCEN-012/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2023-03-15",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/SCEN-012/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/SCEN-012/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/SCEN-012/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2023-04-20",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 266.0,
+          "max": 287.8
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID",
+      "expiry": "2023-03-30"
+    },
+    {
+      "scenario_id": "SCEN-013",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-10",
+      "authoring": {
+        "source": "catalog-scaffold/1",
+        "catalog": "business_test_cases.md §3",
+        "catalog_name": "Q4 Guidance Shock Gap-Down",
+        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR)",
+        "entry_basis": "open",
+        "shape": {
+          "risk_atr": 0.5,
+          "rr": 2.0
+        },
+        "atr_14": 41.332143,
+        "expiry_rule": "NSE monthly last-Thursday, rolled when within 7 days of T_rec",
+        "lot_size_rule": "₹500000 notional band on the authored entry, rounded to a 25-share grid; historical NSE lot revisions are not archived offline",
+        "realized_outcome_basis": "stop_first",
+        "breaker_pending_stage_6": [
+          "earnings_within_7d"
+        ],
+        "catalog_trap": "Results in 2 days; guidance cut caused immediate -10% gap-down"
+      },
+      "classification_tags": [
+        "CATALOG"
+      ],
+      "gate_focus": [
+        "S3",
+        "S4",
+        "S6"
+      ],
+      "symbol": "INFY",
+      "exchange": "NSE",
+      "instrument": "FUT",
+      "action": "BUY",
+      "recommendation_date": "2023-04-17",
+      "entry_price": 1250.3,
+      "entry_range_min": 1249.05,
+      "entry_range_max": 1251.55,
+      "target_price": 1291.64,
+      "stop_loss": 1229.63,
+      "lot_size": 400,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/SCEN-013/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/SCEN-013/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2023-04-17",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        }
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/SCEN-013/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/SCEN-013/recorded/out_2_market.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/SCEN-013/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2023-05-18",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 1215.0,
+          "max": 1279.75
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID",
+      "expiry": "2023-04-27"
+    },
     {
       "scenario_id": "SCEN-901",
       "schema_version": "uvest-scenario-manifest/1",

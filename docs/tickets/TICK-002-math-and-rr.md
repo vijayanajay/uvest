@@ -14,7 +14,7 @@ Stage 1 is the **sole owner of mathematical risk-to-reward symmetry, execution s
 1. **Raw vs. Live R:R:** Evaluates whether market price has drifted away from the advisory's recommended entry midpoint.
 2. **Execution Slippage:** Measures drift outside the recommended entry band as a percentage of band width.
 3. **₹ Risk & Reward per Position:** Computes total currency risk and reward based on instrument type (`lot_size` for Futures, 1 share for Cash/Equity).
-4. **Inverted R:R Circuit Breaker:** Implements BRD §10.2 #1 — if live $R:R < 1.0$ (risking ₹1 to make less than ₹1), flags `inverted_rr_flag: true`.
+4. **Inverted R:R Circuit Breaker:** Implements BRD §10.3 #2 — if live $R:R < 1.0$ (risking ₹1 to make less than ₹1), flags `inverted_rr_flag: true`. The flag is a hazard *input*, not a verdict: stage 9 converts it into ⏳ `WAIT` when an optimal limit order restores $R:R \ge 1.5$, and 🔴 `AVOID` otherwise (BRD §10.4).
 
 **Deliberately out of scope (do not build here):**
 - Technical indicators / ATR / Moving averages → stage 2 (`scripts/2_market_data.py`).
@@ -25,7 +25,7 @@ Stage 1 is the **sole owner of mathematical risk-to-reward symmetry, execution s
 
 - `BRD.md` §9.1 stage 1 (contract row) and §2 (`scripts/1_math_and_rr.py` — R:R Symmetry, Lot Sizing, Slippage).
 - `BRD.md` §9 Script Inventory payload row for `1_math_and_rr.py`: `raw_rr`, `live_rr`, `risk_inr`, `reward_inr`, `outside_range_pct`, `inverted_rr_flag`.
-- `BRD.md` §10.2 #1 — **Inverted Risk-Reward ($R:R < 1.0$):** Instant hard circuit breaker. Boundary case: live $R:R = 1.0$ does **not** trip the breaker (strict inequality `< 1.0`).
+- `BRD.md` §10.3 #2 — **Inverted Risk-Reward ($R:R < 1.0$):** Retained hard circuit breaker (BRD §10.3). Overridden to ⏳ `WAIT` if an optimal limit order restores $R:R \ge 1.5$; 🔴 `AVOID` otherwise. Boundary case: live $R:R = 1.0$ does **not** trip the breaker (strict inequality `< 1.0`).
 - `BRD.md` §16 — Worked example parameters (`RELIANCE` FUT: Entry Band 2975–2985, Live 2988.20, SL 2910, Target 3120, Lot 250).
 - `docs/agents/domain.md` — Definitions of Lot Size, Futures vs. Cash equity sizing.
 - `docs/agents/evals.md` — Golden dataset class *"10 Inverted Risk-Reward / Slippage Traps"*.

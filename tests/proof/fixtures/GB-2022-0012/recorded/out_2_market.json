@@ -1,0 +1,15 @@
+{
+  "symbol": "LT",
+  "atr_14": 33.771429,
+  "sl_atr_ratio": 1.2001269035532989,
+  "is_tight_sl": false,
+  "ema_20": 1785.65,
+  "above_50_ema": false,
+  "above_200_sma": false,
+  "trend_state": "BEARISH",
+  "bollinger_upper": 1848.33,
+  "bollinger_lower": 1716.29,
+  "bollinger_bandwidth": 7.4085,
+  "waived": false,
+  "as_of": "2022-04-13"
+}

@@ -1,0 +1,15 @@
+{
+  "symbol": "ITC",
+  "exchange": "NSE",
+  "instrument_type": "CASH",
+  "action": "BUY",
+  "entry_price": 259.55,
+  "entry_range_min": 258.55,
+  "entry_range_max": 260.55,
+  "live_price": 259.55,
+  "target": 266.51,
+  "stoploss": 251.82,
+  "lot_size": 1,
+  "recommended_date": "2022-04-15",
+  "user_capital_inr": 500000.0
+}

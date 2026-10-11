@@ -1,0 +1,15 @@
+{
+  "symbol": "RELIANCE",
+  "exchange": "NSE",
+  "instrument_type": "CASH",
+  "action": "BUY",
+  "entry_price": 1204.61,
+  "entry_range_min": 1203.41,
+  "entry_range_max": 1205.81,
+  "live_price": 1204.61,
+  "target": 1304.67,
+  "stoploss": 1159.13,
+  "lot_size": 1,
+  "recommended_date": "2022-04-11",
+  "user_capital_inr": 500000.0
+}

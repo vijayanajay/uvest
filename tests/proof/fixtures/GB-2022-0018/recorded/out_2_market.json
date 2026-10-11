@@ -1,0 +1,15 @@
+{
+  "symbol": "BAJFINANCE",
+  "atr_14": 14.762143,
+  "sl_atr_ratio": 0.6001838680021298,
+  "is_tight_sl": true,
+  "ema_20": 718.41,
+  "above_50_ema": true,
+  "above_200_sma": true,
+  "trend_state": "BULLISH",
+  "bollinger_upper": 756.6,
+  "bollinger_lower": 677.9,
+  "bollinger_bandwidth": 10.9729,
+  "waived": false,
+  "as_of": "2022-04-13"
+}

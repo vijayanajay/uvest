@@ -1,0 +1,12 @@
+{
+  "symbol": "ICICIBANK",
+  "instrument_type": "CASH",
+  "raw_rr": 0.8999456226209879,
+  "live_rr": 0.8999456226209879,
+  "risk_inr": 18.39,
+  "reward_inr": 16.55,
+  "quantity": 1,
+  "outside_range_pct": 0.0,
+  "inverted_rr_flag": true,
+  "capital_allocation_pct": 0.0037
+}

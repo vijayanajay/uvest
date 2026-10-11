@@ -1,0 +1,15 @@
+{
+  "symbol": "SUNPHARMA",
+  "exchange": "NSE",
+  "instrument_type": "CASH",
+  "action": "BUY",
+  "entry_price": 951.4,
+  "entry_range_min": 950.4,
+  "entry_range_max": 952.4,
+  "live_price": 951.4,
+  "target": 1017.05,
+  "stoploss": 921.56,
+  "lot_size": 1,
+  "recommended_date": "2023-03-15",
+  "user_capital_inr": 500000.0
+}

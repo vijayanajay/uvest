@@ -1,0 +1,12 @@
+{
+  "symbol": "ZEEL",
+  "instrument_type": "CASH",
+  "raw_rr": 1.9999999999999953,
+  "live_rr": 1.9999999999999953,
+  "risk_inr": 11.98,
+  "reward_inr": 23.96,
+  "quantity": 1,
+  "outside_range_pct": 0.0,
+  "inverted_rr_flag": false,
+  "capital_allocation_pct": 0.0024
+}

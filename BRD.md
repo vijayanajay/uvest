@@ -204,7 +204,7 @@ No quantitative setup survives an accounting fraud, promoter debt default, or su
 
 ### 6.3 Indian Corporate Governance Red Flags (Crucial Kill Switches)
 1. **Promoter Pledging (The Indian Circuit Breaker):**
-   - **Hard Rule:** If Promoter Pledged Shares $> 15\%$ of total promoter holding, issue severe warning. If $> 25\%$, **INSTANT HARD REJECTION (NO-GO)**. In India, pledged shares trigger lender margin calls and cascading circuit down-moves.
+   - **Hard Rule:** If Promoter Pledged Shares $> 15\%$ of total promoter holding, issue severe warning. If $> 25\%$, **INSTANT HARD REJECTION → 🔴 AVOID** (BRD §10.3 #1). In India, pledged shares trigger lender margin calls and cascading circuit down-moves.
 2. **Promoter Holding Trajectory:**
    - Decline in promoter holding $> 2\%$ over the last 2 quarters without OFS/Capex disclosure is flagged as insider selling.
 3. **FII & DII Ownership Shifts:**
@@ -214,7 +214,7 @@ No quantitative setup survives an accounting fraud, promoter debt default, or su
 
 ### 6.4 Corporate Calendar Hazard Gate
 - **Earnings Date Check:** Queries NSE corporate announcements for scheduled board meetings / quarterly earnings releases.
-- **Enforcement:** If earnings are scheduled within the trade holding horizon ($< 10$ trading days), **automatic cap at CONDITIONAL GO (50% size)** for Cash Equities, and **HARD NO-GO for Futures** (due to binary gap-down risk that renders stop-losses ineffective).
+- **Enforcement:** If earnings are scheduled within the trade holding horizon ($< 10$ trading days), **automatic cap at 50% size** (`GO_WEAK`, BRD §10.4) for Cash Equities, and **🔴 AVOID for Futures** (BRD §10.3 #4 — binary gap-down risk renders stop-losses ineffective).
 
 ---
 
@@ -337,7 +337,7 @@ python scripts/12_generate_html_report.py                             # writes r
 | `1_math_and_rr.py` | `current_trade.json` | Computes nominal vs. live R:R, slippage penalty, risk per lot, margin capital allocation. | `raw_rr`, `live_rr`, `risk_inr`, `reward_inr`, `outside_range_pct`, `inverted_rr_flag` |
 | `2_market_data.py` | `current_trade.json` | Fetches daily OHLCV (yfinance); computes 14D ATR, 20/50/200 EMA, Bollinger Bands, ATR-SL ratio. | `atr_14`, `sl_atr_ratio`, `is_tight_sl`, `ema_20`, `above_50_ema`, `above_200_sma`, `trend_state`, `bollinger_upper`, `bollinger_lower`, `bollinger_bandwidth`, `waived`, `as_of` |
 | `3_dtw_pattern.py` | `current_trade.json` | FastDTW against 10-year historical library; isolates top 15 analogs; extracts 22-day forward path. | `dtw_win_rate_22d`, `dtw_median_return`, `dtw_mae_drawdown`, `analog_confidence` |
-| `4_ml_direction.py` | `current_trade.json` | LightGBM classifier inference on multi-factor features; outputs 1M probability and price cone. | `prob_target_hit_22d`, `price_cone_p10_p50_p90`, `mae_projected`, `shap_drivers` |
+| `4_ml_direction.py` | `current_trade.json` | LightGBM classifier inference on multi-factor features; outputs 1M probability and price cone. | `prob_target_hit_22d`, `price_cone_p10_p50_p90`, `mae_projected`, `mfe_projected`, `shap_drivers`, `direction_label` |
 | `5_institutional_flow.py` | `current_trade.json` | Scrapes NSE Bhavcopy; calculates Delivery % surge, Futures OI buildup, rollover %, basis. | `delivery_pct`, `delivery_zscore`, `oi_change_pct`, `matrix_verdict`, `basis_annualized` |
 | `6_fundamental_audit.py` | `current_trade.json` | Queries Screener.in; evaluates Piotroski F-score, Altman Z, Promoter Pledge %, CFO/PAT, Earnings Date. | `piotoski_score`, `promoter_pledge_pct`, `pledge_circuit_breaker`, `cfo_pat_ratio`, `days_to_earnings` |
 | `7_sector_macro_regime.py` | `current_trade.json` | Mansfield Sector RS vs NIFTY; NIFTY 50 vs 200 DMA; India VIX band; 5-day FII/DII net flows. | `sector_mrs`, `sector_rrg_state`, `nifty_trend`, `vix_regime`, `fii_dii_flow_bias` |
@@ -397,7 +397,7 @@ UVEST replaces coarse pass/fail grades with explicit, actionable probability sta
 | Verdict | Lifecycle Phase | When Used | Required JSON Fields | Actionable Sizing |
 | :--- | :--- | :--- | :--- | :--- |
 | **🟢 GO** | Pre-Entry | Positive expectancy ($P_{\text{win}} \ge 55\%$, $R:R \ge 1.5$); known risks. | `p_win`, `expectancy`, `thesis`, `action_levels` | 100% Size (Full) |
-| **🟡 GO_WEAK** | Pre-Entry | Positive expectancy but $\ge 1$ data source offline (waived stage). | same + `confidence_deficit` | 50% Size (Half) |
+| **🟡 GO_WEAK** | Pre-Entry | Positive expectancy but $\ge 1$ data source offline (waived stage), or a size-capping corporate-calendar hazard (BRD §6.4). | same + `confidence_deficit` | 50% Size (Half) |
 | **⏳ WAIT** | Pre-Entry | Viable thesis, but entry price/timing slipped. | `recheck_condition` (e.g., `price <= limit_zone`), `what_would_flip_me` | 0% (Wait for limit) |
 | **🔴 AVOID** | Pre-Entry | Hard circuit breaker tripped or composite negative expectancy. | `avoid_reason`, `what_would_flip_me` | 0% (Do not enter) |
 | **🔵 HOLD** | Post-Entry | Daily triage: thesis intact, path compatible with target. | daily updated `still_chance_pct`, `premises` | Hold position |

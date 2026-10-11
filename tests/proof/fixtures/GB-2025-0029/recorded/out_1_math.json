@@ -1,0 +1,12 @@
+{
+  "symbol": "MARUTI",
+  "instrument_type": "CASH",
+  "raw_rr": 2.1999999999999886,
+  "live_rr": 2.1999999999999993,
+  "risk_inr": 550.35,
+  "reward_inr": 1210.77,
+  "quantity": 1,
+  "outside_range_pct": 0.0,
+  "inverted_rr_flag": false,
+  "capital_allocation_pct": 0.1101
+}

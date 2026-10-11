@@ -1,0 +1,15 @@
+{
+  "symbol": "INFY",
+  "atr_14": 31.892857,
+  "sl_atr_ratio": 1.199955207166854,
+  "is_tight_sl": false,
+  "ema_20": 1822.09,
+  "above_50_ema": false,
+  "above_200_sma": true,
+  "trend_state": "MIXED",
+  "bollinger_upper": 1952.06,
+  "bollinger_lower": 1752.98,
+  "bollinger_bandwidth": 10.7462,
+  "waived": false,
+  "as_of": "2022-04-13"
+}

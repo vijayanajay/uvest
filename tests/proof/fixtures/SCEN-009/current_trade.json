@@ -1,0 +1,17 @@
+{
+  "symbol": "ZEEL",
+  "exchange": "NSE",
+  "instrument_type": "CASH",
+  "action": "BUY",
+  "entry_price": 437.75,
+  "entry_range_min": 436.75,
+  "entry_range_max": 438.75,
+  "live_price": 437.75,
+  "target": 461.71,
+  "stoploss": 425.77,
+  "lot_size": 1150,
+  "margin": 503412.5,
+  "recommended_date": "2019-01-25",
+  "app_warning": "catalog scaffold",
+  "user_capital_inr": 500000.0
+}

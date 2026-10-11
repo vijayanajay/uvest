@@ -1,0 +1,15 @@
+{
+  "symbol": "MARUTI",
+  "atr_14": 174.546493,
+  "sl_atr_ratio": 0.6000120557318536,
+  "is_tight_sl": true,
+  "ema_20": 7615.85,
+  "above_50_ema": false,
+  "above_200_sma": false,
+  "trend_state": "BEARISH",
+  "bollinger_upper": 7831.98,
+  "bollinger_lower": 7385.75,
+  "bollinger_bandwidth": 5.8646,
+  "waived": false,
+  "as_of": "2022-04-13"
+}

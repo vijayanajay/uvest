@@ -51,17 +51,17 @@ The suite spans 60 real historical situations across 9 distinct Indian market st
 
 | Scenario ID | Anchor Date ($T_{\text{rec}}$) | Symbol | Instrument | Scenario Name & Stress Regime | Market Microstructure Trap / Catalyst | Target Engine Verdict | Realized Outcome | Target Quadrant |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **SCEN-001** | 2020-03-23 | RELIANCE | FUT | Covid Crash Day 1 (Panic VIX) | India VIX 83.6; market hits 10% lower circuit | **`🔴 AVOID`** | **`LOSS`** | **TN** |
+| **SCEN-001** | 2020-03-23 | RELIANCE | FUT | Covid Crash Day 1 (Panic VIX) | India VIX 83.6; market hits 10% lower circuit | **`🔴 AVOID`** | **`WIN`** | **FN** |
 | **SCEN-002** | 2020-03-24 | SBIN | CASH | Covid Panic Liquidity Freeze | VIX > 80; NIFTY 500 breadth < 5% bullish | **`🔴 AVOID`** | **`LOSS`** | **TN** |
 | **SCEN-003** | 2024-06-04 | SBIN | FUT | Election Results Flash Crash | Exit-poll euphoria followed by 6% NIFTY crash; VIX 32 | **`🔴 AVOID`** | **`LOSS`** | **TN** |
 | **SCEN-004** | 2024-06-04 | LT | FUT | PSU Euphoria Reversal | Capital goods sector drops 12% intraday on election results | **`🔴 AVOID`** | **`LOSS`** | **TN** |
-| **SCEN-005** | 2022-02-24 | TATASTEEL | FUT | Russia-Ukraine War Outbreak | Commodity price shock; global equity gap-down through stops | **`🔴 AVOID`** | **`LOSS`** | **TN** |
+| **SCEN-005** | 2022-02-24 | TATASTEEL | FUT | Russia-Ukraine War Outbreak | Commodity price shock; global equity gap-down through stops | **`🔴 AVOID`** | **`WIN`** | **FN** |
 | **SCEN-006** | 2022-05-04 | HDFCBANK | FUT | RBI Surprise 40 bps Rate Hike | Unscheduled off-cycle policy rate hike; Bank NIFTY crack | **`🔴 AVOID`** | **`LOSS`** | **TN** |
 | **SCEN-007** | 2023-01-25 | ADANIENT | FUT | Adani-Hindenburg Governance Shock | Promoter pledge > 25%, offshore debt; multi-day lower circuits | **`🔴 AVOID`** | **`LOSS`** | **TN** |
 | **SCEN-008** | 2023-01-27 | ADANIPORTS | FUT | Adani Contagion Liquidity Freeze | Cascading lender margin call liquidations; bid liquidity dries | **`🔴 AVOID`** | **`LOSS`** | **TN** |
 | **SCEN-009** | 2019-01-25 | ZEEL | CASH | Zee Entertainment Collateral Dump | Promoters pledged > 60%; lenders sold collateral; -33% in 1 day | **`🔴 AVOID`** | **`LOSS`** | **TN** |
 | **SCEN-010** | 2019-09-20 | YESBANK | CASH | NPA Crisis & Capital Inadequacy | Severe Altman Z distress; promoter holding dilution | **`🔴 AVOID`** | **`LOSS`** | **TN** |
-| **SCEN-011** | 2019-10-01 | IBULHSGFIN | FUT | NBFC Liquidity Contagion | Rating downgrades, promoter pledging 32%, cash flow deficit | **`🔴 AVOID`** | **`LOSS`** | **TN** |
+| **SCEN-011** | 2019-10-01 | IBULHSGFIN | FUT | NBFC Liquidity Contagion | Rating downgrades, promoter pledging 32%, cash flow deficit | **`🔴 AVOID`** | **`WIN`** | **FN** |
 | **SCEN-012** | 2023-03-15 | VEDL | FUT | Vedanta Debt & Parent Pledge Stress | Parent debt refinancing concerns; promoter pledged 99% of stake | **`🔴 AVOID`** | **`LOSS`** | **TN** |
 | **SCEN-013** | 2023-04-17 | INFY | FUT | Q4 Guidance Shock Gap-Down | Results in 2 days; guidance cut caused immediate -10% gap-down | **`🔴 AVOID`** | **`LOSS`** | **TN** |
 | **SCEN-014** | 2022-07-11 | TCS | FUT | Margin Compression Pre-Earnings | IT rally into earnings; margin compression triggered instant drop | **`🔴 AVOID`** | **`LOSS`** | **TN** |
@@ -110,7 +110,9 @@ The suite spans 60 real historical situations across 9 distinct Indian market st
 | **SCEN-057** | 2023-08-14 | RELIANCE | FUT | Stewardship Success: Trailing Stop Harvest | GO trade reached +1.8R; trailed stop booked +1.2R before reversal | **`🟢 GO`** | **`WIN`** | **TP** |
 | **SCEN-058** | 2024-02-28 | SBIN | FUT | Stewardship Success: Shakeout Absorption | GO trade; Day 3 shakeout held above AVWAP; held to target (+4.5%) | **`🟢 GO`** | **`WIN`** | **TP** |
 | **SCEN-059** | 2023-12-18 | HDFCBANK | FUT | Stewardship Noise Immunity: Normal Pullback | Drawdown 0.7× ATR held within normal noise buffer; reached target | **`🟢 GO`** | **`WIN`** | **TP** |
-| **SCEN-060** | 2024-03-20 | LT | CASH | Overfitted Analog Trap (Too-Good-To-Be-True) | DTW analog matched 98% with 2017 rally, but macro regime inverted | **`🔴 AVOID`** | **`LOSS`** | **TN** |
+| **SCEN-060** | 2024-03-20 | LT | CASH | Overfitted Analog Trap (Too-Good-To-Be-True) | DTW analog matched 98% with 2017 rally, but macro regime inverted | **`🔴 AVOID`** | **`LOSS`** | **TN** |> **Re-freeze R1 (owner-commanded, 2026-10-10):** SCEN-001 and SCEN-005 move `LOSS`/`TN` → `WIN`/`FN`. Their recorded point-in-time tape (frozen resolution: outcome bars strictly after `T_rec`) reaches the `2R` target without ever touching even the tightest documented advisory stop (`0.32×ATR`): both advisories rejected realized winners — the honest false-negative accounting of §4.1, never a geometry tuned to preserve the prior claim. Evidence and row provenance: `docs/agents/scenario-manifest-schema.md` §10.
+
+> **Re-freeze R2 (reconciliation, 2026-10-11):** SCEN-011 moves `LOSS`/`TN` → `WIN`/`FN`, and `SCEN-009`'s basis label is corrected to `stop_first` (its `LOSS` never moved). The pinned forward tape prints the target `259.14` on 2019-10-03 — the first bar after `T_rec` — and the stop `208.71` only on 2019-10-07, so the frozen order-aware resolution (`dataset_refs.resolution_of`, first touch wins) is `WIN`/`target_first`; the seeded `LOSS` came from the retired window-level scan (any stop touch inside the window ⇒ `LOSS`). One rule now decides everywhere: the curator's seed scan, the catalog scaffolder, the migration tool and the `$derive` rule all delegate to `resolution_of`, so this row is the honest false negative of §4.1 — an AVOID that rejected a realized winner, never a tuned loss. Evidence and row provenance: `docs/agents/scenario-manifest-schema.md` §10.
 
 ---
 
@@ -186,8 +188,8 @@ Every suite execution calculates this definitive business scorecard:
   CONFUSION MATRIX:
   ├── True Positives  (TP) : 21  (Realized Winners stamped GO / GO_WEAK)
   ├── False Positives (FP) :  4  (Realized Losers stamped GO — Critical Error)
-  ├── True Negatives  (TN) : 28  (Realized Hazards/Traps blocked by AVOID)
-  └── False Negatives (FN) :  7  (Realized Winners rejected — Cost of Strictness)
+  ├── True Negatives  (TN) : 25  (Realized Hazards/Traps blocked by AVOID)
+  └── False Negatives (FN) : 10  (Realized Winners rejected — Cost of Strictness)
 
   THE THREE BUSINESS METRICS:
   1. Directional Calibration (Brier Score) :  0.138  (Threshold <= 0.180)  [PASS]

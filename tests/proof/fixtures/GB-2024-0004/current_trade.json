@@ -1,0 +1,15 @@
+{
+  "symbol": "SBIN",
+  "exchange": "NSE",
+  "instrument_type": "CASH",
+  "action": "BUY",
+  "entry_price": 825.0,
+  "entry_range_min": 824.0,
+  "entry_range_max": 826.0,
+  "live_price": 825.0,
+  "target": 890.0,
+  "stoploss": 795.0,
+  "lot_size": 1,
+  "recommended_date": "2024-07-08",
+  "user_capital_inr": 500000.0
+}

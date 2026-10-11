@@ -1,0 +1,12 @@
+{
+  "symbol": "SBIN",
+  "instrument_type": "FUT",
+  "raw_rr": 2.000000000000007,
+  "live_rr": 2.000000000000007,
+  "risk_inr": 8893.5,
+  "reward_inr": 17787.0,
+  "quantity": 550,
+  "outside_range_pct": 0.0,
+  "inverted_rr_flag": false,
+  "capital_allocation_pct": 1.7787
+}

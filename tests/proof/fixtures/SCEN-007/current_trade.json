@@ -1,0 +1,18 @@
+{
+  "symbol": "ADANIENT",
+  "exchange": "NSE",
+  "instrument_type": "FUT",
+  "expiry": "2023-02-23",
+  "action": "BUY",
+  "entry_price": 3422.0,
+  "entry_range_min": 3418.58,
+  "entry_range_max": 3425.42,
+  "live_price": 3422.0,
+  "target": 3530.66,
+  "stoploss": 3367.67,
+  "lot_size": 150,
+  "margin": 513300.0,
+  "recommended_date": "2023-01-25",
+  "app_warning": "catalog scaffold",
+  "user_capital_inr": 500000.0
+}

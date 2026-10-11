@@ -54,7 +54,7 @@ The owner's calibration is stated plainly:
 
 ### 2.1 Verdicts are probability statements, not pass/fail grades
 
-The current BRD triplet (GO / CONDITIONAL_GO / NO_GO) is too coarse and too final.
+The retired BRD triplet (`GO` / `CONDITIONAL_GO` / `NO_GO`), superseded by ADR-006, was too coarse and too final.
 Freeze this vocabulary instead:
 
 | Verdict | When used | Required JSON fields |

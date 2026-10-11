@@ -1,0 +1,15 @@
+{
+  "symbol": "VEDL",
+  "exchange": "NSE",
+  "instrument_type": "CASH",
+  "action": "BUY",
+  "entry_price": 316.7,
+  "entry_range_min": 315.7,
+  "entry_range_max": 317.7,
+  "live_price": 308.75,
+  "target": 342.0,
+  "stoploss": 303.0,
+  "lot_size": 1,
+  "recommended_date": "2023-02-13",
+  "user_capital_inr": 500000.0
+}

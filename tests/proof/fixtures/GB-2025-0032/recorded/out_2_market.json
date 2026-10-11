@@ -1,0 +1,15 @@
+{
+  "symbol": "SBIN",
+  "atr_14": 12.414286,
+  "sl_atr_ratio": 2.000115074798623,
+  "is_tight_sl": false,
+  "ema_20": 863.62,
+  "above_50_ema": true,
+  "above_200_sma": true,
+  "trend_state": "BULLISH",
+  "bollinger_upper": 885.53,
+  "bollinger_lower": 848.9,
+  "bollinger_bandwidth": 4.2236,
+  "waived": false,
+  "as_of": "2025-10-15"
+}

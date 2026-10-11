@@ -1,0 +1,15 @@
+{
+  "symbol": "TATASTEEL",
+  "exchange": "NSE",
+  "instrument_type": "CASH",
+  "action": "BUY",
+  "entry_price": 131.95,
+  "entry_range_min": 130.95,
+  "entry_range_max": 132.95,
+  "live_price": 131.95,
+  "target": 135.63,
+  "stoploss": 127.86,
+  "lot_size": 1,
+  "recommended_date": "2022-04-15",
+  "user_capital_inr": 500000.0
+}

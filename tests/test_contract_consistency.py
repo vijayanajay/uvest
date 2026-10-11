@@ -9,6 +9,8 @@ pipeline contract drifts between any of its mirrors —
   4. ``docs/tickets/INDEX.md`` ticket rows and test seams
   5. The sliced ticket files themselves
   6. ``tests/evals/golden_dataset.json`` per-stage payload keys (below)
+  7. The verdict vocabulary itself — retired tokens may not reappear, and every
+     ``§N`` citation must resolve to a real section (BRD §10.4, ADR-006)
 
 Zero-dependency, fast, and network-free (Kailash Nadh style): a broken doc link
 or a renamed script must fail the build, not a code review.
@@ -18,10 +20,14 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 import unittest
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT_DIR / "tests" / "evals"))
+
+import dataset_refs  # noqa: E402  (sibling eval module, spliced onto the path above)
 BRD_FILE = ROOT_DIR / "BRD.md"
 PROMPT_FILE = ROOT_DIR / "prompt.md"
 INDEX_FILE = ROOT_DIR / "docs" / "tickets" / "INDEX.md"
@@ -66,6 +72,26 @@ CONCRETE_REPORT_RE = re.compile(r"^reports/report_[A-Z0-9]+_\d{8}\.html$")
 
 SKILLS_DIR = ROOT_DIR / "skills"
 AGENT_SKILLS_DIR = ROOT_DIR / ".agents" / "skills"
+UNDERSTANDING_FILE = ROOT_DIR / "docs" / "understanding.md"
+
+# The frozen verdict vocabulary is the 7-state lifecycle set (BRD §10.4, ADR-006).
+CANONICAL_VERDICTS = ("GO", "GO_WEAK", "WAIT", "AVOID", "HOLD", "PRESSURE", "EXIT")
+PRE_ENTRY_VERDICTS = CANONICAL_VERDICTS[:4]
+# Tokens the 7-state set replaced (ADR-006). They may survive only as quoted
+# history on a line that says so out loud — never as live instructions.
+RETIRED_VERDICT_RE = re.compile(r"\b(NO[ _-]?GO|CONDITIONAL[ _-]?GO)\b", re.IGNORECASE)
+HISTORICAL_MARKER_RE = re.compile(
+    r"\b(retired|original|legacy|superseded|deprecated|rejected)\b", re.IGNORECASE
+)
+TOKEN_SPAN_RE = re.compile(r"`[^`]*`")
+
+# A §N citation may carry a document qualifier (``BRD.md §10.3 #5``,
+# ``docs/agents/evals.md §3``); unqualified citations resolve against the BRD,
+# against understanding.md, or within the citing document itself.
+CITATION_RE = re.compile(r"§\s*(\d+(?:\.\d+)?)(?:\s*#(\d+))?")
+QUALIFIER_RE = re.compile(r"([\w./-]+\.md)`?\s*$")
+BRD_HEADING_RE = re.compile(r"^#{1,6}\s*(\d+(?:\.\d+)?)[.):]?\s", re.MULTILINE)
+BRD_ITEM_RE = re.compile(r"^(\d+)\.\s+\*\*", re.MULTILINE)
 
 SLICED_MARKER = "sliced"
 PENDING_MARKER = "pending"
@@ -86,6 +112,31 @@ def pipeline_calls(text: str) -> list[str]:
             f"expected exactly one 'python scripts/' pipeline block, found {len(blocks)}"
         )
     return PIPELINE_CALL_RE.findall(blocks[0])
+
+
+def _ascii(text: str) -> str:
+    """Keep failure output printable on a CP1252 console, emojis and all."""
+    return text.encode("ascii", "replace").decode("ascii")
+
+
+def section_headings(text: str) -> set[str]:
+    """Numbered section identifiers declared by a document's headings."""
+    return set(BRD_HEADING_RE.findall(text))
+
+
+def section_block(text: str, section: str) -> str:
+    """One numbered section: from its heading to the next heading or rule."""
+    match = re.search(
+        rf"^#{{1,6}}\s*{re.escape(section)}[.):]?\s.*?(?=^#{{1,6}}\s|\n---)",
+        text,
+        re.MULTILINE | re.DOTALL,
+    )
+    return match.group(0) if match else ""
+
+
+def numbered_items(block: str) -> list[str]:
+    """The 1., 2., … items of a section, which are what `#K` citations count."""
+    return BRD_ITEM_RE.findall(block)
 
 
 class TestContractConsistency(unittest.TestCase):
@@ -153,6 +204,15 @@ class TestContractConsistency(unittest.TestCase):
             cls.payload_fields[artifact_name] = set(
                 re.findall(r"`([A-Za-z_][A-Za-z0-9_]*)`", payload_cell or "")
             )
+
+    @classmethod
+    def vocabulary_docs(cls) -> list[Path]:
+        """Every prose document that can hand a verdict token to a human or agent."""
+        docs = sorted(ROOT_DIR.glob("*.md"))
+        docs += sorted((ROOT_DIR / "docs").rglob("*.md"))
+        docs += sorted(SKILLS_DIR.rglob("*.md"))
+        docs += sorted(AGENT_SKILLS_DIR.rglob("*.md"))
+        return docs
 
     @classmethod
     def contract_docs(cls) -> list[Path]:
@@ -357,21 +417,36 @@ class TestContractConsistency(unittest.TestCase):
     # ------------------------------------------------------------- eval dataset
 
     def test_golden_dataset_payload_keys_exist_in_contract(self):
-        """Every `script_outputs` artifact and field in the golden dataset must be
-        declared in the frozen contract inventory (BRD §9 Script Inventory).
+        """An *inline* `script_outputs` artifact and field must be declared in the
+        frozen contract inventory (BRD §9 Script Inventory).
 
         Dataset records encode 'what a stage would emit' for historical trades.
         A hand-typed key that the contract never froze (e.g. a phantom
         `risk_reward_ratio` when stage 1 actually emits `raw_rr`/`live_rr`)
         would grade a universe no script can ever produce — caught here, at
         freeze time, rather than the first time a real replay lands.
+
+        Records that `$ref` a proof-root artifact are out of scope: those bytes
+        are a stage's full recorded stdout (which legitimately carries fields the
+        §9 inventory, a list of *graded* fields, never enumerates), and they are
+        enforced where they belong — by `test_proof_manifest.py` (the ref must
+        equal the row's declared, hash-frozen artifact, and a recorded artifact
+        may never also be inlined) and by the dataset seam that re-checks the
+        breaker encoding on the resolved bytes.
         """
         if not DATASET_FILE.exists():
             self.skipTest("golden dataset not yet frozen")
-        dataset = json.loads(DATASET_FILE.read_text(encoding="utf-8"))
+        raw = json.loads(DATASET_FILE.read_text(encoding="utf-8"))
+        try:
+            referenced = {(tid, artifact) for tid, artifact, _ref in dataset_refs.refs(raw)}
+            dataset, _ref_notes, _derive_notes = dataset_refs.materialize(raw)
+        except dataset_refs.RefError as exc:
+            self.fail(f"golden dataset has an unresolvable artifact reference: {exc}")
         for trade in dataset.get("trades", []):
             tid = trade.get("trade_id", "<?>")
             for artifact, payload in trade.get("script_outputs", {}).items():
+                if (tid, artifact) in referenced:
+                    continue
                 self.assertIn(
                     artifact,
                     self.payload_fields,
@@ -399,6 +474,114 @@ class TestContractConsistency(unittest.TestCase):
                 self.scripts,
                 f"test_prompt_integrity.py requires non-canonical script: {name}",
             )
+
+
+    # ------------------------------------------------------- verdict vocabulary
+
+    def test_documents_use_only_the_canonical_verdict_vocabulary(self):
+        """Retired verdict tokens must not reappear anywhere in prose.
+
+        A retired token is tolerated on a line only when that line explicitly
+        frames it as history (an ADR context bullet, a migration note) *and*
+        quotes it as a literal token. So `NO_GO` may be explained, never used.
+        """
+        offenders = []
+        for path in self.vocabulary_docs():
+            for lineno, line in enumerate(read_normalized(path).splitlines(), start=1):
+                matches = list(RETIRED_VERDICT_RE.finditer(line))
+                if not matches:
+                    continue
+                spans = [m.span() for m in TOKEN_SPAN_RE.finditer(line)]
+                quoted = all(
+                    any(start <= m.start() and m.end() <= end for start, end in spans)
+                    for m in matches
+                )
+                if not (HISTORICAL_MARKER_RE.search(line) and quoted):
+                    offenders.append(
+                        f"{path.relative_to(ROOT_DIR).as_posix()}:{lineno}: {_ascii(line.strip())}"
+                    )
+        self.assertFalse(
+            offenders,
+            "retired verdict vocabulary reappeared — use the 7-state set "
+            "(BRD §10.4, ADR-006):\n" + "\n".join(offenders),
+        )
+
+    def test_canonical_verdict_vocabulary_is_declared(self):
+        """The 7-state set must stay declared where the contract points at it."""
+        block = section_block(self.brd, "10.4")
+        self.assertTrue(block, "BRD §10.4 (Canonical 7-State Verdict Vocabulary) is missing")
+        for verdict in CANONICAL_VERDICTS:
+            self.assertRegex(
+                block, rf"\b{verdict}\b", f"BRD §10.4 no longer declares {verdict}"
+            )
+
+        for path, where, verdicts in (
+            (PROMPT_FILE, "prompt.md's report template", PRE_ENTRY_VERDICTS),
+            (AGENTS_DIR / "domain.md", "ADR-006", CANONICAL_VERDICTS),
+        ):
+            text = read_normalized(path)
+            for verdict in verdicts:
+                self.assertRegex(
+                    text, rf"\b{verdict}\b", f"{where} no longer declares the {verdict} verdict"
+                )
+
+    def test_section_references_resolve(self):
+        """A `§N` citation must name a section that exists, and `§X.Y #K` its K-th item.
+
+        Section numbers are load-bearing: when the breaker list moved from §10.2
+        to §10.3 (the retired pledge-pricing compromise was replaced by ADR-005),
+        every ticket citing the old anchor silently pointed at the wrong rule.
+        The `#K` half is checked against BRD sections only — that is where rule
+        lists live and where renumbering is invisible.
+        """
+        brd = self.brd
+        documents = self.vocabulary_docs()
+        known: dict[str, Path] = {}
+        for doc in documents:
+            known[doc.name] = doc
+            known[doc.relative_to(ROOT_DIR).as_posix()] = doc
+        global_sections = section_headings(brd) | section_headings(
+            read_normalized(UNDERSTANDING_FILE)
+        )
+
+        problems: list[str] = []
+        for path in documents:
+            text = read_normalized(path)
+            local_sections = section_headings(text)
+            where = path.relative_to(ROOT_DIR).as_posix()
+            for line in text.splitlines():
+                for citation in CITATION_RE.finditer(line):
+                    ref, index = citation.group(1), citation.group(2)
+                    qualifier = QUALIFIER_RE.search(line[: citation.start()])
+                    target = known.get(qualifier.group(1)) if qualifier else None
+                    if qualifier and target is None:
+                        problems.append(
+                            f"{where}: `{qualifier.group(1)}` is not a repo document"
+                        )
+                        continue
+                    if target is not None:
+                        if ref not in section_headings(read_normalized(target)):
+                            problems.append(
+                                f"{where}: §{ref} is not a section of {qualifier.group(1)}"
+                            )
+                            continue
+                        document, cited = target, qualifier.group(1)
+                    else:
+                        if ref not in global_sections | local_sections:
+                            problems.append(f"{where}: §{ref} resolves to no section")
+                            continue
+                        document, cited = brd, "BRD.md"
+                    if index and document == BRD_FILE:
+                        items = numbered_items(section_block(brd, ref))
+                        if len(items) < int(index):
+                            problems.append(
+                                f"{where}: {cited} §{ref} #{index} cited but that section "
+                                f"declares {len(items)} numbered item(s)"
+                            )
+        self.assertFalse(
+            problems,
+            "dangling section citations:\n" + "\n".join(_ascii(line) for line in problems),
+        )
 
 
 if __name__ == "__main__":

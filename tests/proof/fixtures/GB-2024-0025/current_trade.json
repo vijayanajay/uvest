@@ -1,0 +1,15 @@
+{
+  "symbol": "ICICIBANK",
+  "exchange": "NSE",
+  "instrument_type": "CASH",
+  "action": "BUY",
+  "entry_price": 1078.35,
+  "entry_range_min": 1077.27,
+  "entry_range_max": 1079.43,
+  "live_price": 1078.35,
+  "target": 1155.5,
+  "stoploss": 1043.28,
+  "lot_size": 1,
+  "recommended_date": "2024-04-15",
+  "user_capital_inr": 500000.0
+}

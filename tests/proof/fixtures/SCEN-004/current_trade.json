@@ -1,0 +1,18 @@
+{
+  "symbol": "LT",
+  "exchange": "NSE",
+  "instrument_type": "FUT",
+  "expiry": "2024-06-27",
+  "action": "BUY",
+  "entry_price": 3852.0,
+  "entry_range_min": 3848.15,
+  "entry_range_max": 3855.85,
+  "live_price": 3852.0,
+  "target": 3971.7,
+  "stoploss": 3792.15,
+  "lot_size": 125,
+  "margin": 481500.0,
+  "recommended_date": "2024-06-04",
+  "app_warning": "catalog scaffold",
+  "user_capital_inr": 500000.0
+}

@@ -1,0 +1,18 @@
+{
+  "symbol": "HDFCBANK",
+  "exchange": "NSE",
+  "instrument_type": "FUT",
+  "expiry": "2022-05-26",
+  "action": "BUY",
+  "entry_price": 700.0,
+  "entry_range_min": 699.0,
+  "entry_range_max": 701.0,
+  "live_price": 700.0,
+  "target": 718.98,
+  "stoploss": 690.51,
+  "lot_size": 725,
+  "margin": 507500.0,
+  "recommended_date": "2022-05-04",
+  "app_warning": "catalog scaffold",
+  "user_capital_inr": 500000.0
+}

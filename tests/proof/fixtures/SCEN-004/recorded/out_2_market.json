@@ -1,0 +1,15 @@
+{
+  "symbol": "LT",
+  "atr_14": 119.696421,
+  "sl_atr_ratio": 0.5000149485314002,
+  "is_tight_sl": true,
+  "ema_20": 3571.62,
+  "above_50_ema": false,
+  "above_200_sma": true,
+  "trend_state": "MIXED",
+  "bollinger_upper": 3817.31,
+  "bollinger_lower": 3194.68,
+  "bollinger_bandwidth": 17.7589,
+  "waived": false,
+  "as_of": "2024-06-04"
+}

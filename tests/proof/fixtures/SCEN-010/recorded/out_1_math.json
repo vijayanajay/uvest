@@ -1,0 +1,12 @@
+{
+  "symbol": "YESBANK",
+  "instrument_type": "CASH",
+  "raw_rr": 1.9999999999999973,
+  "live_rr": 1.9999999999999973,
+  "risk_inr": 2.74,
+  "reward_inr": 5.48,
+  "quantity": 1,
+  "outside_range_pct": 0.0,
+  "inverted_rr_flag": false,
+  "capital_allocation_pct": 0.0005
+}

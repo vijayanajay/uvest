@@ -1,0 +1,18 @@
+{
+  "symbol": "IBULHSGFIN",
+  "exchange": "NSE",
+  "instrument_type": "FUT",
+  "expiry": "2019-10-31",
+  "action": "BUY",
+  "entry_price": 225.52,
+  "entry_range_min": 224.52,
+  "entry_range_max": 226.52,
+  "live_price": 225.52,
+  "target": 259.14,
+  "stoploss": 208.71,
+  "lot_size": 2225,
+  "margin": 501782.0,
+  "recommended_date": "2019-10-01",
+  "app_warning": "catalog scaffold",
+  "user_capital_inr": 500000.0
+}

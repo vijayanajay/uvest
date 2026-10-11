@@ -1,0 +1,15 @@
+{
+  "symbol": "TATASTEEL",
+  "atr_14": 3.405357,
+  "sl_atr_ratio": 1.2010487676979507,
+  "is_tight_sl": false,
+  "ema_20": 132.26,
+  "above_50_ema": true,
+  "above_200_sma": true,
+  "trend_state": "BULLISH",
+  "bollinger_upper": 138.02,
+  "bollinger_lower": 127.74,
+  "bollinger_bandwidth": 7.7351,
+  "waived": false,
+  "as_of": "2022-04-13"
+}

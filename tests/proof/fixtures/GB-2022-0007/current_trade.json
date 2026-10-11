@@ -1,0 +1,15 @@
+{
+  "symbol": "HDFCBANK",
+  "exchange": "NSE",
+  "instrument_type": "CASH",
+  "action": "BUY",
+  "entry_price": 732.48,
+  "entry_range_min": 731.48,
+  "entry_range_max": 733.48,
+  "live_price": 732.48,
+  "target": 758.87,
+  "stoploss": 703.16,
+  "lot_size": 1,
+  "recommended_date": "2022-04-15",
+  "user_capital_inr": 500000.0
+}

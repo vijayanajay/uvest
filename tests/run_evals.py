@@ -9,6 +9,15 @@ the JSON file drives the score exactly. When a gate's inputs exist for the grade
 it is graded. When its inputs are absent (only 5 of 50 trades seeded so far),
 the runner prints [SKIP] rather than inventing a number.
 
+Record payloads may be references (`$ref`, see `tests/evals/dataset_refs.py`) into
+the proof root, which is where those bytes are frozen. A referenced artifact whose
+provenance is `quarantined` is disclosed and excluded from grading — unverified
+legacy bytes are never treated as evidence (E5, scenario-manifest-schema.md).
+
+Outcome claims may instead be `$derive` objects naming a pinned forward tape and a
+frozen rule (`tests/evals/dataset_refs.py`); the runner recomputes them from the
+tape's own bars at load and prints every derivation on the scorecard.
+
 Exit codes:
     0 → no gate FAILED and dataset integrity OK (SKIP is allowed, per "tests that
         can't run yet stay SKIP" rather than being graded 0 on absent inputs),
@@ -30,14 +39,28 @@ for _stream in (sys.stdout, sys.stderr):
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_BENCHMARK = REPO_ROOT / "tests" / "evals" / "golden_dataset.json"
 
+sys.path.insert(0, str(Path(__file__).resolve().parent / "evals"))
+
+import dataset_refs  # noqa: E402  (sibling eval module, spliced onto the path above)
+import report_diff  # noqa: E402
+
 # Class-level hard-disqualifier registry, per BRD §15.1's trade-class roster.
-# Each class names exactly one BRD §10.2 breaker; projecting it is the runner's
+# Each class names exactly one BRD §10.3 breaker; projecting it is the runner's
 # job, encoding it is the dataset's.
 BREAKER_BY_CLASS: dict[str, str] = {
     "inverted_rr": "inverted_risk_reward",
     "pledge_hazard": "promoter_pledging_gt_25pct",
     "earnings_hazard": "earnings_within_7d",
     "tight_stop": "tighter_than_0_75x_atr",
+}
+
+# Which artifact each breaker reads — needed to know whether that breaker's
+# evidence is even gradeable (a quarantined artifact carries no evidence).
+BREAKER_ARTIFACT: dict[str, str] = {
+    "inverted_risk_reward": "out_1_math.json",
+    "promoter_pledging_gt_25pct": "out_6_fundamental.json",
+    "earnings_within_7d": "out_6_fundamental.json",
+    "tighter_than_0_75x_atr": "out_2_market.json",
 }
 
 # evals.md §3 pass thresholds — frozen before any implementation code exists.
@@ -90,11 +113,18 @@ class Gate:
 # --------------------------------------------------------------------------
 # Gate 2: hard circuit breakers
 # --------------------------------------------------------------------------
-def class_breaker_observed(trade: dict) -> bool:
+def class_breaker_observed(trade: dict, breaker: str | None = None) -> bool | None:
     """True iff the breaker corresponding to the trade's *class* is present
-    with the threshold-level value — i.e., encoding projected the right value."""
+    with the threshold-level value — i.e., encoding projected the right value.
+
+    `None` means *ungradeable*, never *clean*: the breaker's artifact is
+    registered quarantined, so its bytes are legacy debt kept on disk for
+    migration continuity and contribute nothing to a gate.
+    """
     cls = trade.get("trade_class")
-    breaker = BREAKER_BY_CLASS[cls]
+    breaker = breaker or BREAKER_BY_CLASS[cls]
+    if BREAKER_ARTIFACT[breaker] in dataset_refs.quarantined_in(trade):
+        return None
     outputs = trade.get("script_outputs", {})
     if breaker == "inverted_risk_reward":
         # Stage 1 (TICK-002) emits BOTH frozen fields: `raw_rr` at the
@@ -132,22 +162,32 @@ def gate_hard_breakers(trades: list[dict]) -> Gate:
     g = Gate("Hard Circuit Breaker Accuracy", BREAKER_MIN, higher_is_pass=True)
     graded: list[float] = []
     per_trade: list[str] = []
+    ungraded: list[str] = []
     violations = 0
     for t in trades:
         cls = t.get("trade_class")
         if cls == "clean_bullish":
-            # Correct behaviour here: NO breaker observed.
-            observed = any(
-                class_breaker_observed({**t, "trade_class": c})
-                for c in BREAKER_BY_CLASS
-            )
-            graded.append(1.0 if not observed else 0.0)
-            per_trade.append(f"{t['trade_id']}: {'ok' if not observed else 'LEAK'}")
-            violations += 0 if not observed else 1
+            # Correct behaviour here: NO breaker observed. A breaker whose own
+            # evidence is quarantined abstains rather than counting either way.
+            verdicts = [class_breaker_observed({**t, "trade_class": c}, BREAKER_BY_CLASS[c])
+                        for c in BREAKER_BY_CLASS]
+            observed = [v for v in verdicts if v is not None]
+            if not observed:
+                ungraded.append(f"{t['trade_id']}: every breaker artifact quarantined")
+                continue
+            leaked = any(observed)
+            graded.append(0.0 if leaked else 1.0)
+            per_trade.append(f"{t['trade_id']}: {'LEAK' if leaked else 'ok'}")
+            violations += 1 if leaked else 0
             continue
         if cls not in BREAKER_BY_CLASS:
             continue  # classes without a defined breaker are out of scope
-        if not class_breaker_observed(t):
+        verdict = class_breaker_observed(t)
+        if verdict is None:
+            ungraded.append(
+                f"{t['trade_id']}: {BREAKER_ARTIFACT[BREAKER_BY_CLASS[cls]]} quarantined")
+            continue
+        if not verdict:
             per_trade.append(f"{t['trade_id']}: breaker value not encoded")
             violations += 1
             graded.append(0.0)
@@ -159,7 +199,9 @@ def gate_hard_breakers(trades: list[dict]) -> Gate:
     else:
         g.value = 100.0 * (sum(graded) / len(graded))
         g.detail = (f"{len(graded)} graded, {violations} violation(s)"
-                    + (f"; {'; '.join(per_trade)}" if per_trade else ""))
+                    + (f"; {'; '.join(per_trade)}" if per_trade else "")
+                    + (f"; not graded (quarantined evidence): {'; '.join(ungraded)}"
+                       if ungraded else ""))
     return g
 
 
@@ -193,13 +235,56 @@ def gate_option_rejection(trades: list[dict]) -> Gate:
 # --------------------------------------------------------------------------
 # Gate 3: Zero Hallucination (evals.md §3 #1)
 # --------------------------------------------------------------------------
-def gate_hallucination(trades: list[dict]) -> Gate:
+def report_path_for(trade: dict) -> Path:
+    """The stage-12 artifact name of a record (BRD §13, TICK-010's template).
+
+    `reports/report_{SYMBOL}_{DATE}.html`, DATE being the recommendation date
+    as YYYYMMDD — the one name the contract pins, so the gate, the visualizer
+    and the differ all meet at the same file.
+    """
+    symbol = str(trade.get("symbol") or "").upper()
+    day = str(trade.get("recommendation_date") or "").replace("-", "")
+    return REPO_ROOT / "reports" / f"report_{symbol}_{day}.html"
+
+
+def gate_hallucination(trades: list[dict], reports_dir: Path | None = None) -> Gate:
+    """Every number a report shows must trace to that record's own JSON.
+
+    The retired `reported_numbers_match_json` boolean was a curator's *claim*
+    about a report; `tests/evals/report_diff.py` is the check itself, run here
+    against the stage-12 artifact whenever one has been generated. A record
+    with no report is ungraded (like the HTML-validity gate): absence of a
+    report is not evidence of honesty.
+    """
     g = Gate("Zero Hallucination Audit", HALLUCINATION_MIN, higher_is_pass=True)
-    graded = [1.0 if t.get("reported_numbers_match_json") else 0.0
-              for t in trades if "reported_numbers_match_json" in t]
-    g.value = 100.0 * (sum(graded) / len(graded)) if graded else None
+    reports = reports_dir or (REPO_ROOT / "reports")
+    graded: list[float] = []
+    per_trade: list[str] = []
+    ungraded: list[str] = []
+    for t in trades:
+        path = reports / report_path_for(t).name
+        if not path.exists():
+            ungraded.append(str(t.get("trade_id")))
+            continue
+        problems = report_diff.diff(
+            path.read_text(encoding="utf-8", errors="replace"), t)
+        graded.append(1.0 if not problems else 0.0)
+        if problems:
+            shown = "; ".join(problems[:3])
+            more = f" (+{len(problems) - 3} more)" if len(problems) > 3 else ""
+            per_trade.append(f"{t.get('trade_id')}: {shown}{more}")
     g.skipped = not graded
-    g.detail = f"{sum(1 for v in graded if v == 0.0)} discrepancies in {len(graded)} graded"
+    if g.skipped:
+        g.detail = (f"no stage-12 reports generated yet — the differ stands over "
+                    f"reports/report_{{SYMBOL}}_{{DATE}}.html "
+                    f"({len(ungraded)} record(s) without a report)")
+    else:
+        g.value = 100.0 * (sum(graded) / len(graded))
+        g.detail = (f"{len(graded)} graded, "
+                    f"{sum(1 for v in graded if v == 0.0)} with discrepancies"
+                    + (f"; {'; '.join(per_trade)}" if per_trade else "")
+                    + (f"; not graded (no report generated): {len(ungraded)}"
+                       if ungraded else ""))
     return g
 
 
@@ -249,7 +334,9 @@ def gate_cone_coverage(trades: list[dict]) -> Gate:
         graded.append(1.0 if cone_p10 <= lo and hi <= cone_p90 else 0.0)
     g.value = 100.0 * (sum(graded) / len(graded)) if graded else None
     g.skipped = not graded
-    g.detail = f"{len(graded)} cone-labeled trades"
+    g.detail = (f"{len(graded)} cone-labeled trades" if graded
+                else "no trades with an engine-produced cone envelope yet — "
+                     "stage 4 unimplemented")
     return g
 
 
@@ -269,7 +356,8 @@ def gate_mae_reduction(trades: list[dict]) -> Gate:
         graded.append(1.0 if lim < mkt else 0.0)
     if not graded:
         g.skipped = True
-        g.detail = "no trades with market/limit MAE pairs yet"
+        g.detail = ("no market/limit MAE pairs with an engine-derived limit entry "
+                    "yet — stage 8 unimplemented")
         return g
     # Report pass-fraction as the headline metric (threshold is a fraction),
     g.value = 100.0 * (sum(graded) / len(graded))
@@ -378,7 +466,13 @@ def main(argv: list[str] | None = None) -> int:
                         help="Path to the golden dataset JSON.")
     args = parser.parse_args(argv)
 
-    data = load_benchmark(Path(args.benchmark))
+    raw = load_benchmark(Path(args.benchmark))
+    try:
+        data, ref_notes, derive_notes = dataset_refs.materialize(raw)
+    except dataset_refs.RefError as exc:
+        print(f"❌ Benchmark dataset has an unresolvable reference/derivation: {exc}",
+              file=sys.stderr)
+        sys.exit(2)
     trades = data.get("trades", [])
     if not trades:
         print("❌ Benchmark dataset contains no trades.", file=sys.stderr)
@@ -402,6 +496,14 @@ def main(argv: list[str] | None = None) -> int:
 
     print(render_scorecard(gates, verdict_ok))
     print(f"  Dataset integrity: {'OK' if dist_ok else 'MISMATCH'} ({dist_reason})")
+    if ref_notes or derive_notes:
+        quarantined = sum(1 for note in ref_notes if note.endswith("(quarantined)"))
+        suffix = (f" ({quarantined} quarantined — excluded from grading)"
+                  if quarantined else "")
+        print(f"  Artifact refs resolved: {len(ref_notes)} artifact ref(s), "
+              f"{len(derive_notes)} derived field(s) from tests/proof{suffix}")
+        for note in [*ref_notes, *derive_notes]:
+            print(f"    ↳ {note}")
 
     return 0 if verdict_ok else 1
 

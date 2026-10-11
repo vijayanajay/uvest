@@ -1,0 +1,15 @@
+{
+  "symbol": "YESBANK",
+  "atr_14": 5.482143,
+  "sl_atr_ratio": 0.4998045602605869,
+  "is_tight_sl": true,
+  "ema_20": 64.87,
+  "above_50_ema": false,
+  "above_200_sma": false,
+  "trend_state": "BEARISH",
+  "bollinger_upper": 70.97,
+  "bollinger_lower": 52.77,
+  "bollinger_bandwidth": 29.4102,
+  "waived": false,
+  "as_of": "2019-09-20"
+}

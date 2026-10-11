@@ -1,0 +1,12 @@
+{
+  "symbol": "HDFCBANK",
+  "instrument_type": "FUT",
+  "raw_rr": 2.0,
+  "live_rr": 2.0,
+  "risk_inr": 6880.25,
+  "reward_inr": 13760.5,
+  "quantity": 725,
+  "outside_range_pct": 0.0,
+  "inverted_rr_flag": false,
+  "capital_allocation_pct": 1.3761
+}

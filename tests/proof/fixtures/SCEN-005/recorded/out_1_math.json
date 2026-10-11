@@ -1,0 +1,12 @@
+{
+  "symbol": "TATASTEEL",
+  "instrument_type": "FUT",
+  "raw_rr": 1.9999999999999931,
+  "live_rr": 1.9999999999999931,
+  "risk_inr": 9561.75,
+  "reward_inr": 19123.5,
+  "quantity": 4575,
+  "outside_range_pct": 0.0,
+  "inverted_rr_flag": false,
+  "capital_allocation_pct": 1.9124
+}

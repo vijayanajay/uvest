@@ -1,0 +1,15 @@
+{
+  "symbol": "ICICIBANK",
+  "atr_14": 17.535714,
+  "sl_atr_ratio": 1.9999185336048844,
+  "is_tight_sl": false,
+  "ema_20": 1086.48,
+  "above_50_ema": true,
+  "above_200_sma": true,
+  "trend_state": "BULLISH",
+  "bollinger_upper": 1106.87,
+  "bollinger_lower": 1068.44,
+  "bollinger_bandwidth": 3.5331,
+  "waived": false,
+  "as_of": "2024-04-15"
+}

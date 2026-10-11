@@ -1,0 +1,15 @@
+{
+  "symbol": "TITAN",
+  "atr_14": 59.260679,
+  "sl_atr_ratio": 0.6000606280121904,
+  "is_tight_sl": true,
+  "ema_20": 2520.67,
+  "above_50_ema": false,
+  "above_200_sma": true,
+  "trend_state": "MIXED",
+  "bollinger_upper": 2720.15,
+  "bollinger_lower": 2401.0,
+  "bollinger_bandwidth": 12.4643,
+  "waived": false,
+  "as_of": "2022-04-13"
+}

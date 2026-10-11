@@ -24,8 +24,8 @@ Stage 4 is the **Machine Learning Directional and Volatility Range Engine** (BRD
 - `BRD.md` §4 (The Three Core Predictions: Direction & Expected Range).
 - `BRD.md` §5.2 (LightGBM 1-Month Direction Engine).
 - `BRD.md` §9 Script Inventory: `prob_target_hit_22d`, `price_cone_p10_p50_p90`, `mae_projected`, `shap_drivers`.
-- `BRD.md` §10.3 Waiver Rule: If model weights or features are missing, returns `waived: true` with all metrics `null` and exit code 0.
-- `docs/agents/evals.md` §3 (Dimension 4: Directional Brier Score $\le 0.18$; Dimension 5: Price cone range coverage $\ge 80\%$).
+- `BRD.md` §10.4 Waiver Rule: If model weights or features are missing, returns `waived: true` with all metrics `null` and exit code 0. A waived stage caps the eventual verdict at 🟡 `GO_WEAK` (BRD §10.4).
+- `BRD.md` §15.3 — **S2 (Calibration:** $|\text{predicted } P_{\text{win}} - \text{realized win frequency}| \le 10\text{pp}$ per verdict bucket) and **S7 (Marginal Band Honesty)**. These are the authoritative gates; `docs/agents/evals.md` §3 dimensions 4–5 (Brier $\le 0.18$, cone coverage $\ge 80\%$) remain this stage's own thresholds.
 
 **Canonical output contract** (mirrors `BRD.md` §9 inventory):
 

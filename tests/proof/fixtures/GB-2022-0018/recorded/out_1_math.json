@@ -1,0 +1,12 @@
+{
+  "symbol": "BAJFINANCE",
+  "instrument_type": "CASH",
+  "raw_rr": 2.499999999999994,
+  "live_rr": 2.499999999999994,
+  "risk_inr": 8.86,
+  "reward_inr": 22.15,
+  "quantity": 1,
+  "outside_range_pct": 0.0,
+  "inverted_rr_flag": false,
+  "capital_allocation_pct": 0.0018
+}

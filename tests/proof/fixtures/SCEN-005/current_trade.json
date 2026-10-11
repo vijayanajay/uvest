@@ -1,0 +1,18 @@
+{
+  "symbol": "TATASTEEL",
+  "exchange": "NSE",
+  "instrument_type": "FUT",
+  "expiry": "2022-03-31",
+  "action": "BUY",
+  "entry_price": 109.4,
+  "entry_range_min": 108.4,
+  "entry_range_max": 110.4,
+  "live_price": 109.4,
+  "target": 113.58,
+  "stoploss": 107.31,
+  "lot_size": 4575,
+  "margin": 500505.0,
+  "recommended_date": "2022-02-24",
+  "app_warning": "catalog scaffold",
+  "user_capital_inr": 500000.0
+}

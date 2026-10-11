@@ -18,7 +18,7 @@ Generate a self-contained, standalone interactive HTML dashboard (`reports/repor
 
 ### 3. TDD Acceptance Criteria
 - [ ] Generates valid HTML5 with 0 external resource errors (self-contained CSS and SVG charts).
-- [ ] Displays Decision Badge (🟢 GO / 🟡 CONDITIONAL / 🔴 NO-GO) and Score (0–100).
+- [ ] Displays the verdict badge in the canonical 7-state vocabulary (pre-entry 🟢 GO / 🟡 GO_WEAK / ⏳ WAIT / 🔴 AVOID; post-entry 🔵 HOLD / 🟠 PRESSURE / ⛔ EXIT — BRD §10.4) alongside the composite score, the calibrated $P(\text{win})$, and expectancy.
 - [ ] Visualizes the 3 Core Predictions: Direction gauge, 22-day Volatility Price Cone chart, and Optimal Limit Entry vs Univest Entry Range bar.
 - [ ] Displays Institutional Flow Matrix (Bhavcopy Delivery % + Futures OI buildup).
 - [ ] Displays Fundamental Health card (Piotroski, Altman Z, 0% Pledge check).

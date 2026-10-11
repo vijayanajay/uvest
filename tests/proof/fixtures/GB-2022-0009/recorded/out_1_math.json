@@ -1,0 +1,12 @@
+{
+  "symbol": "SBIN",
+  "instrument_type": "CASH",
+  "raw_rr": 0.9004219409282649,
+  "live_rr": 0.9004219409282649,
+  "risk_inr": 11.85,
+  "reward_inr": 10.67,
+  "quantity": 1,
+  "outside_range_pct": 0.0,
+  "inverted_rr_flag": true,
+  "capital_allocation_pct": 0.0024
+}

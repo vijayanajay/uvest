@@ -1,0 +1,17 @@
+{
+  "symbol": "SBIN",
+  "exchange": "NSE",
+  "instrument_type": "CASH",
+  "action": "BUY",
+  "entry_price": 190.95,
+  "entry_range_min": 189.95,
+  "entry_range_max": 191.95,
+  "live_price": 190.95,
+  "target": 216.93,
+  "stoploss": 177.96,
+  "lot_size": 2625,
+  "margin": 501243.74999999994,
+  "recommended_date": "2020-03-24",
+  "app_warning": "catalog scaffold",
+  "user_capital_inr": 500000.0
+}

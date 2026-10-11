@@ -26,7 +26,7 @@ block (25 pts) and the directional calibration eval (evals.md §3 #4).
 - §9 Script Inventory payload row for `3_dtw_pattern.py`: `dtw_win_rate_22d`,
   `dtw_median_return`, `dtw_mae_drawdown`, `analog_confidence`.
 - `requirements.txt` pin: `fastdtw==0.3.4` (with `scipy` distance metric).
-- `BRD.md` §10.3 Waiver Rule: `null`s, never fabricated defaults.
+- `BRD.md` §10.4 Waiver Rule: `null`s, never fabricated defaults.
 - `BRD.md` §16 worked example symbols (`RELIANCE`, 2026-10-09 bundle).
 
 **Canonical output contract** (frozen here; mirrors §9 inventory):
@@ -79,7 +79,7 @@ must stay bit-stable:
 - [ ] Boundary case: an analog return *exactly* `+4%` does **not** count
       toward the win rate (strict `>`, mirroring stage 2's strict gate).
 - [ ] **Waiver path:** missing/short history → every metric `null`,
-      `waived: true`, exit 0. Never a fabricated `false`/`0.0` (§10.3).
+      `waived: true`, exit 0. Never a fabricated `false`/`0.0` (§10.4).
 - [ ] Missing `live_price` in `current_trade.json` → exit 2 with
       `ERR_MISSING_LIVE_PRICE` (mirrors stages 0/2 conventions).
 - [ ] Emits `as_of` provenance so every reported rate traces to a dated

@@ -1,0 +1,15 @@
+{
+  "symbol": "SUNPHARMA",
+  "atr_14": 14.917857,
+  "sl_atr_ratio": 2.0002872875269353,
+  "is_tight_sl": false,
+  "ema_20": 969.41,
+  "above_50_ema": false,
+  "above_200_sma": true,
+  "trend_state": "MIXED",
+  "bollinger_upper": 993.47,
+  "bollinger_lower": 941.48,
+  "bollinger_bandwidth": 5.3736,
+  "waived": false,
+  "as_of": "2023-03-15"
+}

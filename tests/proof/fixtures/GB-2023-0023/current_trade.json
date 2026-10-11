@@ -1,0 +1,15 @@
+{
+  "symbol": "TITAN",
+  "exchange": "NSE",
+  "instrument_type": "CASH",
+  "action": "BUY",
+  "entry_price": 2399.1,
+  "entry_range_min": 2396.7,
+  "entry_range_max": 2401.5,
+  "live_price": 2399.1,
+  "target": 2597.45,
+  "stoploss": 2308.94,
+  "lot_size": 1,
+  "recommended_date": "2023-03-15",
+  "user_capital_inr": 500000.0
+}

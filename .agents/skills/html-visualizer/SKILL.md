@@ -13,7 +13,7 @@ Generate a standalone, zero-dependency, dark-mode interactive HTML report card f
 
 ## Core Visual Components
 1. **Decision Header & Badge:**
-   - 🟢 GO / 🟡 CONDITIONAL GO / 🔴 NO-GO badge with final score (0–100).
+   - Canonical 7-state verdict badge (pre-entry 🟢 GO / 🟡 GO_WEAK / ⏳ WAIT / 🔴 AVOID; post-entry 🔵 HOLD / 🟠 PRESSURE / ⛔ EXIT) with final score (0–100), calibrated P(Win), and expectancy.
    - Ticker, instrument type (EQUITY / FUTURES), lot size, and margin.
 2. **The Three Core Predictions:**
    - **Direction Speedometer:** Visual probability gauge for $P(\text{Bullish})$, $P(\text{Neutral})$, $P(\text{Bearish})$.
@@ -26,7 +26,7 @@ Generate a standalone, zero-dependency, dark-mode interactive HTML report card f
 5. **Sector & Macro Barometer:**
    - Mansfield RS vs NIFTY 50, India VIX volatility needle, and FII/DII net flows.
 6. **Decision Flip Table & Actionable Execution Ticket:**
-   - Exact limit price that turns a NO-GO into a GO, plus order placement parameters.
+   - Exact limit price that turns a 🔴 AVOID or ⏳ WAIT into a 🟢 GO, plus order placement parameters.
 
 ## Execution
 ```bash

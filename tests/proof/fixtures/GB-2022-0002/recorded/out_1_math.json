@@ -1,0 +1,12 @@
+{
+  "symbol": "TATAMOTORS",
+  "instrument_type": "CASH",
+  "raw_rr": 0.9000644745325626,
+  "live_rr": 0.9000644745325626,
+  "risk_inr": 15.51,
+  "reward_inr": 13.96,
+  "quantity": 1,
+  "outside_range_pct": 0.0,
+  "inverted_rr_flag": true,
+  "capital_allocation_pct": 0.0031
+}

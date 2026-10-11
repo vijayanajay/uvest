@@ -1,0 +1,15 @@
+{
+  "symbol": "INFY",
+  "exchange": "NSE",
+  "instrument_type": "CASH",
+  "action": "BUY",
+  "entry_price": 1748.55,
+  "entry_range_min": 1746.8,
+  "entry_range_max": 1750.3,
+  "live_price": 1748.55,
+  "target": 1782.99,
+  "stoploss": 1710.28,
+  "lot_size": 1,
+  "recommended_date": "2022-04-15",
+  "user_capital_inr": 500000.0
+}

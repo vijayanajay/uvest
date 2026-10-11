@@ -1,0 +1,15 @@
+{
+  "symbol": "TATAMOTORS",
+  "atr_14": 12.921429,
+  "sl_atr_ratio": 1.2003316749585404,
+  "is_tight_sl": false,
+  "ema_20": 414.27,
+  "above_50_ema": false,
+  "above_200_sma": false,
+  "trend_state": "BEARISH",
+  "bollinger_upper": 458.35,
+  "bollinger_lower": 386.21,
+  "bollinger_bandwidth": 17.0843,
+  "waived": false,
+  "as_of": "2022-06-20"
+}

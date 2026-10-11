@@ -1,0 +1,15 @@
+{
+  "symbol": "ITC",
+  "atr_14": 6.441221,
+  "sl_atr_ratio": 1.2000829478881023,
+  "is_tight_sl": false,
+  "ema_20": 245.34,
+  "above_50_ema": true,
+  "above_200_sma": true,
+  "trend_state": "BULLISH",
+  "bollinger_upper": 260.41,
+  "bollinger_lower": 231.41,
+  "bollinger_bandwidth": 11.7943,
+  "waived": false,
+  "as_of": "2022-04-13"
+}

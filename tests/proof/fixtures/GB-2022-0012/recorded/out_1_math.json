@@ -1,0 +1,12 @@
+{
+  "symbol": "LT",
+  "instrument_type": "CASH",
+  "raw_rr": 0.9000740192450047,
+  "live_rr": 0.9000740192450047,
+  "risk_inr": 40.53,
+  "reward_inr": 36.48,
+  "quantity": 1,
+  "outside_range_pct": 0.0,
+  "inverted_rr_flag": true,
+  "capital_allocation_pct": 0.0081
+}

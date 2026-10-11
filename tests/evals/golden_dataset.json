@@ -1,5 +1,5 @@
 {
-  "_schema_note": "Field contracts frozen per EVAL-001 (tests/run_evals.py), docs/agents/evals.md \u00a72, BRD.md \u00a715 and \u00a710.2.",
+  "_schema_note": "Field contracts frozen per EVAL-001 (tests/run_evals.py), docs/agents/evals.md §2, BRD.md §15 and §10.2. A `script_outputs` value may be a reference object `{\"$ref\": \"<repo-relative path>\"}` naming a proof-root artifact (tests/proof/): its bytes are frozen by manifest.sha256 and its provenance by quarantine_register.json, and such a value never also carries payload keys.",
   "meta": {
     "name": "UVEST Golden Benchmark Dataset",
     "generated_on": "2026-10-10",
@@ -16,8 +16,16 @@
     "notes": [
       "20 of 50 records seeded. Remaining 30 pending manual curation; budget blocks filling all 50 now.",
       "distribution_verified=false until all 50 records are present and class counts match class_counts_expected.",
-      "31 of 50 records: the three stage-0..2-supportable classes are FULLY seeded (clean_bullish 15/15, inverted_rr 10/10, tight_stop 5/5) and the tight-stop breaker grades from recorded stage-2 bundles (tests/fixtures/history/). pledge_hazard 1/5, earnings_hazard 0/5, institutional_distribution 0/10 await stages 5/6 engines; hand-typed in the existing records until then.",
-      "GB-2022-0019 dropped: 6th evidence-tight row exceeded the frozen tight_stop quota (5); the five remaining rows all carry recorded is_tight_sl=true from stage-2 bundles."
+      "31 of 50 records: the three stage-0..2-supportable classes are FULLY seeded (clean_bullish 15/15, inverted_rr 10/10, tight_stop 5/5) and the tight-stop breaker grades from recorded stage-2 bundles (tests/fixtures/history/). pledge_hazard 1/5, earnings_hazard 0/5, institutional_distribution 0/10 await stages 5/6 engines; every pre-proof record's stage-6 payload is now retired to absence (`waived`, the proof rows' declarations) and GB-2023-0003's is referenced from there as quarantined debt — disclosed, excluded from grading, and never grown (tests/evals/pin_legacy_records.py).",
+      "GB-2022-0019 dropped: 6th evidence-tight row exceeded the frozen tight_stop quota (5); the five remaining rows all carry recorded is_tight_sl=true from stage-2 bundles.",
+      "GB-2023-0003 references its stage 1/2/6 payloads from the proof root (tests/proof/fixtures/GB-2023-0003/) instead of embedding copies: stages 1-2 are recorded evidence, stage 6 is quarantined legacy debt (excluded from grading, retired only when stage 6 records real evidence).",
+      "GB-2023-0003's forward outcome claims (forward min/max, resolution date/outcome, market MAE, actual direction) are now `$derive` references to its pinned proof-root forward tape; the legacy hand-typed block (268/325, 2023-03-09, 6.5% MAE) is retired. The cone envelopes and limit-entry MAE that the cone/MAE gates used to grade were hand-typed on four records with no engine behind them — they are retired to null, so those gates SKIP until stages 4/8 exist rather than grading unverifiable claims.",
+      "GB-2022-0001 geometry: rebased_from_tape — re-derived at the class shape from ≤T_rec tape; the superseded levels are recorded in the row's authoring note; tape-derived outcome WIN (target_first)",
+      "GB-2022-0002 geometry: rebased_from_tape — re-derived at the class shape from ≤T_rec tape; the superseded levels are recorded in the row's authoring note; tape-derived outcome WIN (target_first)",
+      "GB-2024-0004 geometry: preserved_as_published — published levels kept (the tape corroborates them); tape-derived outcome WIN (target_first)",
+      "GB-2025-0005 geometry: preserved_as_published — published levels kept (the tape corroborates them); tape-derived outcome TIME (horizon_end)",
+      "26 record(s) migrated onto proof-root rows (GB-2022-0006, GB-2022-0007, GB-2022-0008, GB-2022-0009, GB-2022-0010, GB-2022-0011, GB-2022-0012, GB-2022-0013, GB-2022-0014, GB-2022-0015, GB-2022-0016, GB-2022-0017, GB-2022-0018, GB-2022-0020, GB-2023-0021, GB-2023-0022, GB-2023-0023, GB-2023-0024, GB-2024-0025, GB-2024-0026, GB-2024-0027, GB-2024-0028, GB-2025-0029, GB-2025-0030, GB-2025-0031, GB-2025-0032, authoring source `dataset-migration/1`): stage 1–2 payloads are recorded evidence (`$ref`), forward outcome claims are `$derive` references to each row's pinned tape, the engine-less claims (cone envelope, limit-entry MAE, predicted direction, plus the legacy stage-6 pledge/days-to-earnings payloads on the records that carried them) are retired to absence and declared `waived`, and no artifact was added to the quarantine register — the E5 migration meter is unchanged by design. The tape superseded 2 legacy claim value(s) and confirmed 76 identical; every supersession is frozen in its row's `authoring.superseded`.",
+      "reported_numbers_match_json retired (2026-10-11): Zero-Hallucination is graded by the runner-side report-vs-JSON differ (tests/evals/report_diff.py diffing reports/report_{SYMBOL}_{DATE}.html against the record's own JSON) instead of a dataset boolean; a record without a generated stage-12 report stays ungraded."
     ]
   },
   "trades": [
@@ -27,39 +35,55 @@
       "symbol": "RELIANCE",
       "instrument": "FUT",
       "recommendation_date": "2022-04-11",
-      "resolution_date": "2022-05-10",
-      "resolution_outcome": "WIN",
-      "entry_price": 2774.0,
-      "stop_loss": 2704.0,
-      "target_price": 2915.0,
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0001/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0001/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
+      "entry_price": 1204.61,
+      "stop_loss": 1159.13,
+      "target_price": 1304.67,
       "script_outputs": {
         "out_2_market.json": {
-          "atr_14": 34.5,
-          "is_tight_sl": false
-        },
-        "out_6_fundamental.json": {
-          "promoter_pledge_pct": 0.0,
-          "days_to_earnings": 28
+          "$ref": "tests/proof/fixtures/GB-2022-0001/recorded/out_2_market.json"
         },
         "current_trade.json": {
           "type": "FUT",
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "live_rr": 2.01
+          "$ref": "tests/proof/fixtures/GB-2022-0001/recorded/out_1_math.json"
         }
       },
       "forward_prices_22d": {
-        "min": 2690.0,
-        "max": 2930.0
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0001/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "cone_p10": 2650.0,
-      "cone_p90": 2950.0,
-      "market_mae_pct": 1.1,
-      "limit_mae_pct": 0.65,
-      "predicted_direction": 1,
-      "actual_direction": 1,
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0001/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0001/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -68,39 +92,55 @@
       "symbol": "TATAMOTORS",
       "instrument": "FUT",
       "recommendation_date": "2022-06-20",
-      "resolution_date": "2022-07-14",
-      "resolution_outcome": "LOSS",
-      "entry_price": 486.6,
-      "stop_loss": 474.0,
-      "target_price": 498.0,
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0002/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0002/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
+      "entry_price": 382.7,
+      "stop_loss": 367.19,
+      "target_price": 396.66,
       "script_outputs": {
         "out_2_market.json": {
-          "atr_14": 12.8,
-          "is_tight_sl": false
-        },
-        "out_6_fundamental.json": {
-          "promoter_pledge_pct": 0.0,
-          "days_to_earnings": 34
+          "$ref": "tests/proof/fixtures/GB-2022-0002/recorded/out_2_market.json"
         },
         "current_trade.json": {
           "type": "FUT",
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "live_rr": 0.9
+          "$ref": "tests/proof/fixtures/GB-2022-0002/recorded/out_1_math.json"
         }
       },
       "forward_prices_22d": {
-        "min": 452.0,
-        "max": 505.0
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0002/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "cone_p10": 440.0,
-      "cone_p90": 515.0,
-      "market_mae_pct": 2.7,
-      "limit_mae_pct": 3.2,
-      "predicted_direction": 1,
-      "actual_direction": 0,
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0002/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0002/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -109,8 +149,18 @@
       "symbol": "RELIANCE",
       "instrument": "FUT",
       "recommendation_date": "2022-04-15",
-      "resolution_date": "2022-05-18",
-      "resolution_outcome": "LOSS",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0006/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0006/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 1177.59,
       "stop_loss": 1150.86,
       "target_price": 1201.65,
@@ -120,21 +170,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 0.900112,
-          "live_rr": 0.900112,
-          "inverted_rr_flag": true
+          "$ref": "tests/proof/fixtures/GB-2022-0006/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 22.273964,
-          "sl_atr_ratio": 1.200056,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2022-0006/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 1093.7546,
-        "max": 1318.1128
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0006/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0006/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0006/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -143,8 +206,18 @@
       "symbol": "HDFCBANK",
       "instrument": "FUT",
       "recommendation_date": "2022-04-15",
-      "resolution_date": "2022-05-18",
-      "resolution_outcome": "LOSS",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0007/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0007/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 732.48,
       "stop_loss": 703.16,
       "target_price": 758.87,
@@ -154,21 +227,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 0.900068,
-          "live_rr": 0.900068,
-          "inverted_rr_flag": true
+          "$ref": "tests/proof/fixtures/GB-2022-0007/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 24.433929,
-          "sl_atr_ratio": 1.199971,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2022-0007/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 642.65,
-        "max": 715.825
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0007/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0007/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0007/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -177,8 +263,18 @@
       "symbol": "ICICIBANK",
       "instrument": "FUT",
       "recommendation_date": "2022-04-15",
-      "resolution_date": "2022-05-18",
-      "resolution_outcome": "LOSS",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0008/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0008/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 762.25,
       "stop_loss": 743.86,
       "target_price": 778.8,
@@ -188,21 +284,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 0.899946,
-          "live_rr": 0.899946,
-          "inverted_rr_flag": true
+          "$ref": "tests/proof/fixtures/GB-2022-0008/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 15.321429,
-          "sl_atr_ratio": 1.20028,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2022-0008/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 675.0,
-        "max": 777.9
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0008/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0008/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0008/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -211,8 +320,18 @@
       "symbol": "SBIN",
       "instrument": "FUT",
       "recommendation_date": "2022-04-15",
-      "resolution_date": "2022-05-18",
-      "resolution_outcome": "LOSS",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0009/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0009/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 517.7,
       "stop_loss": 505.85,
       "target_price": 528.37,
@@ -222,21 +341,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 0.900422,
-          "live_rr": 0.900422,
-          "inverted_rr_flag": true
+          "$ref": "tests/proof/fixtures/GB-2022-0009/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 9.875,
-          "sl_atr_ratio": 1.2,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2022-0009/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 438.85,
-        "max": 520.95
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0009/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0009/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0009/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -245,8 +377,18 @@
       "symbol": "INFY",
       "instrument": "FUT",
       "recommendation_date": "2022-04-15",
-      "resolution_date": "2022-05-18",
-      "resolution_outcome": "LOSS",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0010/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0010/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 1748.55,
       "stop_loss": 1710.28,
       "target_price": 1782.99,
@@ -256,21 +398,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 0.899922,
-          "live_rr": 0.899922,
-          "inverted_rr_flag": true
+          "$ref": "tests/proof/fixtures/GB-2022-0010/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 31.892857,
-          "sl_atr_ratio": 1.199955,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2022-0010/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 1478.65,
-        "max": 1650.0
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0010/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0010/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0010/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -279,8 +434,18 @@
       "symbol": "TCS",
       "instrument": "FUT",
       "recommendation_date": "2022-04-15",
-      "resolution_date": "2022-05-18",
-      "resolution_outcome": "LOSS",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0011/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0011/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 3661.95,
       "stop_loss": 3591.3,
       "target_price": 3725.53,
@@ -290,21 +455,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 0.899929,
-          "live_rr": 0.899929,
-          "inverted_rr_flag": true
+          "$ref": "tests/proof/fixtures/GB-2022-0011/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 58.871421,
-          "sl_atr_ratio": 1.200073,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2022-0011/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 3346.8501,
-        "max": 3644.0
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0011/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0011/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0011/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -313,8 +491,18 @@
       "symbol": "LT",
       "instrument": "FUT",
       "recommendation_date": "2022-04-15",
-      "resolution_date": "2022-05-18",
-      "resolution_outcome": "LOSS",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0012/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0012/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 1760.8,
       "stop_loss": 1720.27,
       "target_price": 1797.28,
@@ -324,21 +512,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 0.900074,
-          "live_rr": 0.900074,
-          "inverted_rr_flag": true
+          "$ref": "tests/proof/fixtures/GB-2022-0012/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 33.771429,
-          "sl_atr_ratio": 1.200127,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2022-0012/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 1502.0,
-        "max": 1760.75
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0012/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0012/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0012/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -347,8 +548,18 @@
       "symbol": "TATASTEEL",
       "instrument": "FUT",
       "recommendation_date": "2022-04-15",
-      "resolution_date": "2022-05-18",
-      "resolution_outcome": "LOSS",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0013/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0013/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 131.95,
       "stop_loss": 127.86,
       "target_price": 135.63,
@@ -358,21 +569,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 0.899756,
-          "live_rr": 0.899756,
-          "inverted_rr_flag": true
+          "$ref": "tests/proof/fixtures/GB-2022-0013/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 3.405357,
-          "sl_atr_ratio": 1.201049,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2022-0013/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 109.2,
-        "max": 136.665
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0013/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0013/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0013/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -381,8 +605,18 @@
       "symbol": "ITC",
       "instrument": "FUT",
       "recommendation_date": "2022-04-15",
-      "resolution_date": "2022-05-18",
-      "resolution_outcome": "LOSS",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0014/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0014/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 259.55,
       "stop_loss": 251.82,
       "target_price": 266.51,
@@ -392,21 +626,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 0.900388,
-          "live_rr": 0.900388,
-          "inverted_rr_flag": true
+          "$ref": "tests/proof/fixtures/GB-2022-0014/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 6.441221,
-          "sl_atr_ratio": 1.200083,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2022-0014/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 239.9103,
-        "max": 262.3944
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0014/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0014/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0014/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -415,8 +662,18 @@
       "symbol": "TITAN",
       "instrument": "FUT",
       "recommendation_date": "2022-04-15",
-      "resolution_date": "2022-05-18",
-      "resolution_outcome": "LOSS",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0015/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0015/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 2461.35,
       "stop_loss": 2425.79,
       "target_price": 2550.25,
@@ -426,21 +683,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 2.5,
-          "live_rr": 2.5,
-          "inverted_rr_flag": false
+          "$ref": "tests/proof/fixtures/GB-2022-0015/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 59.260679,
-          "sl_atr_ratio": 0.600061,
-          "is_tight_sl": true
+          "$ref": "tests/proof/fixtures/GB-2022-0015/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 2035.55,
-        "max": 2552.1499
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0015/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0015/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0015/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -449,8 +719,18 @@
       "symbol": "MARUTI",
       "instrument": "FUT",
       "recommendation_date": "2022-04-15",
-      "resolution_date": "2022-05-18",
-      "resolution_outcome": "LOSS",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0016/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0016/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 7469.5,
       "stop_loss": 7364.77,
       "target_price": 7731.32,
@@ -460,21 +740,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 2.499952,
-          "live_rr": 2.499952,
-          "inverted_rr_flag": false
+          "$ref": "tests/proof/fixtures/GB-2022-0016/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 174.546493,
-          "sl_atr_ratio": 0.600012,
-          "is_tight_sl": true
+          "$ref": "tests/proof/fixtures/GB-2022-0016/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 7062.3501,
-        "max": 8067.5
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0016/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0016/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0016/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -483,8 +776,18 @@
       "symbol": "AXISBANK",
       "instrument": "FUT",
       "recommendation_date": "2022-04-15",
-      "resolution_date": "2022-05-18",
-      "resolution_outcome": "LOSS",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0017/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0017/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 793.05,
       "stop_loss": 782.56,
       "target_price": 819.27,
@@ -494,21 +797,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 2.499523,
-          "live_rr": 2.499523,
-          "inverted_rr_flag": false
+          "$ref": "tests/proof/fixtures/GB-2022-0017/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 17.482143,
-          "sl_atr_ratio": 0.600041,
-          "is_tight_sl": true
+          "$ref": "tests/proof/fixtures/GB-2022-0017/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 630.05,
-        "max": 816.2
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0017/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0017/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0017/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -517,8 +833,18 @@
       "symbol": "BAJFINANCE",
       "instrument": "FUT",
       "recommendation_date": "2022-04-15",
-      "resolution_date": "2022-05-18",
-      "resolution_outcome": "LOSS",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0018/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0018/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 732.85,
       "stop_loss": 723.99,
       "target_price": 755.0,
@@ -528,21 +854,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 2.5,
-          "live_rr": 2.5,
-          "inverted_rr_flag": false
+          "$ref": "tests/proof/fixtures/GB-2022-0018/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 14.762143,
-          "sl_atr_ratio": 0.600184,
-          "is_tight_sl": true
+          "$ref": "tests/proof/fixtures/GB-2022-0018/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 548.8,
-        "max": 744.33
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0018/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0018/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0018/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -551,8 +890,18 @@
       "symbol": "SUNPHARMA",
       "instrument": "FUT",
       "recommendation_date": "2022-09-15",
-      "resolution_date": "2022-10-18",
-      "resolution_outcome": "WIN",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0020/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0020/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 874.3,
       "stop_loss": 842.99,
       "target_price": 943.18,
@@ -562,21 +911,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 2.199936,
-          "live_rr": 2.199936,
-          "inverted_rr_flag": false
+          "$ref": "tests/proof/fixtures/GB-2022-0020/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 15.657143,
-          "sl_atr_ratio": 1.999726,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2022-0020/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 856.8,
-        "max": 985.0
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0020/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0020/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0020/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -585,39 +947,58 @@
       "symbol": "VEDL",
       "instrument": "FUT",
       "recommendation_date": "2023-02-13",
-      "resolution_date": "2023-03-09",
-      "resolution_outcome": "LOSS",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0003/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0003/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 316.7,
       "stop_loss": 303.0,
       "target_price": 342.0,
       "script_outputs": {
         "out_2_market.json": {
-          "atr_14": 11.7,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2023-0003/recorded/out_2_market.json"
         },
         "out_6_fundamental.json": {
-          "promoter_pledge_pct": 54.2,
-          "days_to_earnings": 40
+          "$ref": "tests/proof/fixtures/GB-2023-0003/quarantined/out_6_fundamental.json"
         },
         "current_trade.json": {
           "type": "FUT",
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "live_rr": 1.85
+          "$ref": "tests/proof/fixtures/GB-2023-0003/recorded/out_1_math.json"
         }
       },
       "forward_prices_22d": {
-        "min": 268.0,
-        "max": 325.0
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0003/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "cone_p10": 250.0,
-      "cone_p90": 340.0,
-      "market_mae_pct": 6.5,
-      "limit_mae_pct": 3.1,
-      "predicted_direction": 1,
-      "actual_direction": 0,
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0003/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0003/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -626,8 +1007,18 @@
       "symbol": "HDFCBANK",
       "instrument": "FUT",
       "recommendation_date": "2023-03-15",
-      "resolution_date": "2023-04-20",
-      "resolution_outcome": "WIN",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0021/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0021/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 770.95,
       "stop_loss": 742.98,
       "target_price": 832.48,
@@ -637,21 +1028,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 2.199857,
-          "live_rr": 2.199857,
-          "inverted_rr_flag": false
+          "$ref": "tests/proof/fixtures/GB-2023-0021/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 13.9875,
-          "sl_atr_ratio": 1.999643,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2023-0021/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 766.025,
-        "max": 860.0
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0021/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0021/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0021/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -660,8 +1064,18 @@
       "symbol": "ICICIBANK",
       "instrument": "FUT",
       "recommendation_date": "2023-03-15",
-      "resolution_date": "2023-04-20",
-      "resolution_outcome": "WIN",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0022/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0022/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 825.9,
       "stop_loss": 792.99,
       "target_price": 898.3,
@@ -671,21 +1085,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 2.199939,
-          "live_rr": 2.199939,
-          "inverted_rr_flag": false
+          "$ref": "tests/proof/fixtures/GB-2023-0022/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 16.453571,
-          "sl_atr_ratio": 2.000174,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2023-0022/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 810.3,
-        "max": 917.3
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0022/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0022/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0022/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -694,8 +1121,18 @@
       "symbol": "TITAN",
       "instrument": "FUT",
       "recommendation_date": "2023-03-15",
-      "resolution_date": "2023-04-20",
-      "resolution_outcome": "WIN",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0023/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0023/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 2399.1,
       "stop_loss": 2308.94,
       "target_price": 2597.45,
@@ -705,21 +1142,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 2.199978,
-          "live_rr": 2.199978,
-          "inverted_rr_flag": false
+          "$ref": "tests/proof/fixtures/GB-2023-0023/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 45.082107,
-          "sl_atr_ratio": 1.999907,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2023-0023/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 2413.0,
-        "max": 2619.0
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0023/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0023/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0023/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -728,8 +1178,18 @@
       "symbol": "SUNPHARMA",
       "instrument": "FUT",
       "recommendation_date": "2023-03-15",
-      "resolution_date": "2023-04-20",
-      "resolution_outcome": "WIN",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0024/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0024/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 951.4,
       "stop_loss": 921.56,
       "target_price": 1017.05,
@@ -739,21 +1199,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 2.200067,
-          "live_rr": 2.200067,
-          "inverted_rr_flag": false
+          "$ref": "tests/proof/fixtures/GB-2023-0024/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 14.917857,
-          "sl_atr_ratio": 2.000287,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2023-0024/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 947.35,
-        "max": 1023.85
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0024/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0024/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0024/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -762,39 +1235,55 @@
       "symbol": "SBIN",
       "instrument": "FUT",
       "recommendation_date": "2024-07-08",
-      "resolution_date": "2024-08-06",
-      "resolution_outcome": "WIN",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0004/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0004/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 825.0,
       "stop_loss": 795.0,
       "target_price": 890.0,
       "script_outputs": {
         "out_2_market.json": {
-          "atr_14": 15.1,
-          "is_tight_sl": false
-        },
-        "out_6_fundamental.json": {
-          "promoter_pledge_pct": 2.1,
-          "days_to_earnings": 41
+          "$ref": "tests/proof/fixtures/GB-2024-0004/recorded/out_2_market.json"
         },
         "current_trade.json": {
           "type": "FUT",
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "live_rr": 2.17
+          "$ref": "tests/proof/fixtures/GB-2024-0004/recorded/out_1_math.json"
         }
       },
       "forward_prices_22d": {
-        "min": 780.0,
-        "max": 900.0
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0004/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "cone_p10": 755.0,
-      "cone_p90": 915.0,
-      "market_mae_pct": 1.4,
-      "limit_mae_pct": 0.9,
-      "predicted_direction": 1,
-      "actual_direction": 1,
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0004/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0004/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -803,8 +1292,18 @@
       "symbol": "ICICIBANK",
       "instrument": "FUT",
       "recommendation_date": "2024-04-15",
-      "resolution_date": "2024-05-17",
-      "resolution_outcome": "WIN",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0025/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0025/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 1078.35,
       "stop_loss": 1043.28,
       "target_price": 1155.5,
@@ -814,21 +1313,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 2.199886,
-          "live_rr": 2.199886,
-          "inverted_rr_flag": false
+          "$ref": "tests/proof/fixtures/GB-2024-0025/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 17.535714,
-          "sl_atr_ratio": 1.999919,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2024-0025/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 1048.1,
-        "max": 1169.55
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0025/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0025/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0025/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -837,8 +1349,18 @@
       "symbol": "SBIN",
       "instrument": "FUT",
       "recommendation_date": "2024-04-15",
-      "resolution_date": "2024-05-17",
-      "resolution_outcome": "WIN",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0026/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0026/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 757.5,
       "stop_loss": 729.35,
       "target_price": 819.43,
@@ -848,21 +1370,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 2.2,
-          "live_rr": 2.2,
-          "inverted_rr_flag": false
+          "$ref": "tests/proof/fixtures/GB-2024-0026/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 14.075,
-          "sl_atr_ratio": 2.0,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2024-0026/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 732.05,
-        "max": 839.65
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0026/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0026/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0026/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -871,8 +1406,18 @@
       "symbol": "ICICIBANK",
       "instrument": "FUT",
       "recommendation_date": "2024-09-15",
-      "resolution_date": "2024-10-16",
-      "resolution_outcome": "WIN",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0027/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0027/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 1250.35,
       "stop_loss": 1209.83,
       "target_price": 1339.49,
@@ -882,21 +1427,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 2.199901,
-          "live_rr": 2.199901,
-          "inverted_rr_flag": false
+          "$ref": "tests/proof/fixtures/GB-2024-0027/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 20.260714,
-          "sl_atr_ratio": 1.999929,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2024-0027/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 1217.4,
-        "max": 1362.35
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0027/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0027/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0027/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -905,8 +1463,18 @@
       "symbol": "MARUTI",
       "instrument": "FUT",
       "recommendation_date": "2024-09-15",
-      "resolution_date": "2024-10-16",
-      "resolution_outcome": "WIN",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0028/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0028/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 12316.05,
       "stop_loss": 11938.33,
       "target_price": 13147.03,
@@ -916,21 +1484,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 2.199989,
-          "live_rr": 2.199989,
-          "inverted_rr_flag": false
+          "$ref": "tests/proof/fixtures/GB-2024-0028/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 188.860629,
-          "sl_atr_ratio": 1.999993,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2024-0028/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 12151.6504,
-        "max": 13541.6504
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0028/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0028/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2024-0028/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -939,8 +1520,18 @@
       "symbol": "HDFCBANK",
       "instrument": "FUT",
       "recommendation_date": "2025-01-15",
-      "resolution_date": "2025-02-13",
-      "resolution_outcome": "TIME",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0005/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0005/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 821.52,
       "stop_loss": 812.24,
       "target_price": 1700.0,
@@ -950,21 +1541,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 94.663793,
-          "live_rr": 94.663793,
-          "inverted_rr_flag": false
+          "$ref": "tests/proof/fixtures/GB-2025-0005/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 15.467857,
-          "sl_atr_ratio": 0.599954,
-          "is_tight_sl": true
+          "$ref": "tests/proof/fixtures/GB-2025-0005/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 812.725,
-        "max": 883.5
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0005/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0005/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0005/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -973,8 +1577,18 @@
       "symbol": "MARUTI",
       "instrument": "FUT",
       "recommendation_date": "2025-01-15",
-      "resolution_date": "2025-02-13",
-      "resolution_outcome": "WIN",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0029/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0029/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 11947.4,
       "stop_loss": 11397.05,
       "target_price": 13158.17,
@@ -984,21 +1598,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 2.2,
-          "live_rr": 2.2,
-          "inverted_rr_flag": false
+          "$ref": "tests/proof/fixtures/GB-2025-0029/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 275.175086,
-          "sl_atr_ratio": 1.999999,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2025-0029/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 11811.0498,
-        "max": 13461.2002
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0029/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0029/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0029/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -1007,8 +1634,18 @@
       "symbol": "BAJFINANCE",
       "instrument": "FUT",
       "recommendation_date": "2025-01-15",
-      "resolution_date": "2025-02-13",
-      "resolution_outcome": "WIN",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0030/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0030/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 717.74,
       "stop_loss": 680.57,
       "target_price": 799.51,
@@ -1018,21 +1655,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 2.199892,
-          "live_rr": 2.199892,
-          "inverted_rr_flag": false
+          "$ref": "tests/proof/fixtures/GB-2025-0030/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 18.5875,
-          "sl_atr_ratio": 1.999731,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2025-0030/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 715.63,
-        "max": 866.28
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0030/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0030/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0030/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -1041,8 +1691,18 @@
       "symbol": "RELIANCE",
       "instrument": "FUT",
       "recommendation_date": "2025-10-15",
-      "resolution_date": "2025-11-18",
-      "resolution_outcome": "WIN",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0031/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0031/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 1374.3,
       "stop_loss": 1341.37,
       "target_price": 1446.75,
@@ -1052,21 +1712,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 2.200121,
-          "live_rr": 2.200121,
-          "inverted_rr_flag": false
+          "$ref": "tests/proof/fixtures/GB-2025-0031/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 16.464286,
-          "sl_atr_ratio": 2.000087,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2025-0031/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 1375.0,
-        "max": 1527.8
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0031/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0031/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0031/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     },
     {
@@ -1075,8 +1748,18 @@
       "symbol": "SBIN",
       "instrument": "FUT",
       "recommendation_date": "2025-10-15",
-      "resolution_date": "2025-11-18",
-      "resolution_outcome": "WIN",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0032/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0032/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
       "entry_price": 886.1,
       "stop_loss": 861.27,
       "target_price": 940.73,
@@ -1086,21 +1769,34 @@
           "instrument_type": "FUT"
         },
         "out_1_math.json": {
-          "raw_rr": 2.200161,
-          "live_rr": 2.200161,
-          "inverted_rr_flag": false
+          "$ref": "tests/proof/fixtures/GB-2025-0032/recorded/out_1_math.json"
         },
         "out_2_market.json": {
-          "atr_14": 12.414286,
-          "sl_atr_ratio": 2.000115,
-          "is_tight_sl": false
+          "$ref": "tests/proof/fixtures/GB-2025-0032/recorded/out_2_market.json"
         }
       },
       "forward_prices_22d": {
-        "min": 882.45,
-        "max": 976.7
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0032/forward_tape.json",
+          "rule": "forward_min_max"
+        }
       },
-      "reported_numbers_match_json": true,
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0032/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2025-0032/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      },
       "html_report_valid": null
     }
   ]

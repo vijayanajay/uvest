@@ -1,0 +1,15 @@
+{
+  "symbol": "INFY",
+  "atr_14": 41.332143,
+  "sl_atr_ratio": 0.5000950488205264,
+  "is_tight_sl": true,
+  "ema_20": 1405.49,
+  "above_50_ema": false,
+  "above_200_sma": false,
+  "trend_state": "BEARISH",
+  "bollinger_upper": 1469.06,
+  "bollinger_lower": 1323.66,
+  "bollinger_bandwidth": 10.4129,
+  "waived": false,
+  "as_of": "2023-04-17"
+}

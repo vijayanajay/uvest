@@ -1,0 +1,15 @@
+{
+  "symbol": "VEDL",
+  "atr_14": 11.125,
+  "sl_atr_ratio": 0.49977528089887646,
+  "is_tight_sl": true,
+  "ema_20": 290.11,
+  "above_50_ema": false,
+  "above_200_sma": false,
+  "trend_state": "BEARISH",
+  "bollinger_upper": 320.43,
+  "bollinger_lower": 263.14,
+  "bollinger_bandwidth": 19.6331,
+  "waived": false,
+  "as_of": "2023-03-15"
+}

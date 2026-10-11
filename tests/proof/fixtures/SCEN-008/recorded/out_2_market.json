@@ -1,0 +1,15 @@
+{
+  "symbol": "ADANIPORTS",
+  "atr_14": 30.946429,
+  "sl_atr_ratio": 0.4998961338718992,
+  "is_tight_sl": true,
+  "ema_20": 771.45,
+  "above_50_ema": false,
+  "above_200_sma": false,
+  "trend_state": "BEARISH",
+  "bollinger_upper": 880.94,
+  "bollinger_lower": 683.34,
+  "bollinger_bandwidth": 25.2649,
+  "waived": false,
+  "as_of": "2023-01-27"
+}

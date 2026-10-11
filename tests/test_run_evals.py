@@ -26,6 +26,10 @@ RUNNER_FILE = TESTS_DIR / "run_evals.py"
 DATASET_FILE = TESTS_DIR / "evals" / "golden_dataset.json"
 REPO_ROOT = TESTS_DIR.parent
 
+sys.path.insert(0, str(TESTS_DIR / "evals"))
+
+import dataset_refs  # noqa: E402  (sibling eval module, spliced onto the path above)
+
 
 def run_run_evals(benchmark: Path) -> subprocess.CompletedProcess:
     """Execute `tests/run_evals.py` against `benchmark` in a clean interpreter.
@@ -71,6 +75,8 @@ class TestEvalRunnerContract(unittest.TestCase):
         self.assertIn("[SKIP] Option Rejection Guardrail", scorecard)
         self.assertIn("[SKIP] Directional Brier Score", scorecard)
         self.assertIn("[SKIP] HTML Visualizer Validation", scorecard)
+        self.assertIn("[SKIP] Zero Hallucination Audit", scorecard)
+            # honest until stage 12 generates reports for the differ to grade
         self.assertIn("[PASS] Hard Circuit Breaker Accuracy", scorecard)
         self.assertLess(scorecard.count("[SKIP]"), 7,
                         "runner hardcoded a full-skip beat instead of grading")
@@ -87,7 +93,11 @@ class TestGoldenDatasetContract(unittest.TestCase):
     def setUpClass(cls):
         if not DATASET_FILE.exists():
             raise AssertionError(f"golden dataset missing: {DATASET_FILE}")
-        cls.dataset = json.loads(DATASET_FILE.read_text(encoding="utf-8"))
+        # Payloads may be `$ref`s into the proof root; resolve them so this seam
+        # grades the same bytes the runner does. Quarantine provenance (which
+        # gates must ignore) is the runner's and the proof seam's concern.
+        cls.dataset, cls.ref_notes, cls.derive_notes = dataset_refs.materialize(
+            json.loads(DATASET_FILE.read_text(encoding="utf-8")))
         cls.trades = cls.dataset.get("trades", [])
         cls.expected_counts = cls.dataset.get("meta", {}).get("class_counts_expected", {})
 

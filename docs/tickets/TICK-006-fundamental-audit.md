@@ -15,14 +15,14 @@ This stage evaluates three core risk dimensions:
 1. **Financial Health & Solvency:** Piotroski F-Score (scale 0–9, penalty if $F \le 4$), Altman Z''-score (distress check).
 2. **Cash Flow Quality:** CFO-to-PAT ratio ($\text{CFO}/\text{PAT} < 0.6$ flags accrual anomaly / paper profits).
 3. **Indian Governance Kill Switches & Calendar Hazards:**
-   - **Promoter Pledging (BRD §10.2 #2):** If pledged shares $> 15\%$, warning. If $> 25\%$, **INSTANT HARD REJECTION (NO-GO)**.
-   - **Corporate Earnings Calendar Hazard (BRD §10.2 #4):** If quarterly results are scheduled within $< 7$ days on Futures $\implies$ **HARD NO-GO**; within $< 10$ days on Cash $\implies$ **CONDITIONAL GO (50% size)**.
+   - **Promoter Pledging (BRD §10.3 #1):** If pledged shares $> 15\%$, warning. If $> 25\%$, **INSTANT HARD REJECTION → 🔴 AVOID**.
+   - **Corporate Earnings Calendar Hazard (BRD §10.3 #4):** If quarterly results are scheduled within $< 7$ days on Futures $\implies$ **🔴 AVOID**; within $< 10$ days on Cash $\implies$ **🟡 `GO_WEAK` (50% size)** (BRD §6.4, §10.4).
 
 ### 2. Frozen Specification Reference
 
 - `BRD.md` §6.1, §6.2, §6.3, §6.4.
 - `BRD.md` §9 Script Inventory: `piotoski_score`, `promoter_pledge_pct`, `pledge_circuit_breaker`, `cfo_pat_ratio`, `days_to_earnings`.
-- `BRD.md` §10.2 #2 (Promoter Pledging $> 25\%$ hard kill switch) & #4 (Earnings $< 7$d on Futures).
+- `BRD.md` §10.3 #1 (Promoter Pledging $> 25\%$ hard kill switch) & #4 (Earnings $< 7$d on Futures), and §10.4 for the verdict each breaker produces.
 - `docs/agents/evals.md` — Golden dataset classes *"5 High Promoter Pledging Traps"* and *"5 Impending Earnings Event Traps"*.
 - **Input:** `current_trade.json`. **Output:** `out_6_fundamental.json`.
 
@@ -33,7 +33,7 @@ This stage evaluates three core risk dimensions:
 | `piotoski_score` | int \| null | Piotroski F-score (0–9) |
 | `altman_z_score` | float \| null | Altman Z''-score for emerging markets |
 | `promoter_pledge_pct` | float \| null | Promoter pledged shares as % of promoter holding |
-| `pledge_circuit_breaker` | bool \| null | `true` if promoter pledge $> 25.0\%$ (instant NO-GO) |
+| `pledge_circuit_breaker` | bool \| null | `true` if promoter pledge $> 25.0\%$ (forces 🔴 AVOID, BRD §10.3 #1) |
 | `cfo_pat_ratio` | float \| null | Operating Cash Flow / Net Profit After Tax |
 | `days_to_earnings` | int \| null | Trading days until next scheduled quarterly earnings announcement |
 | `earnings_hazard_flag` | bool \| null | `true` if earnings within $< 7$ days on Futures trade |

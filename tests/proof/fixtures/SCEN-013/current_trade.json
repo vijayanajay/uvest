@@ -1,0 +1,18 @@
+{
+  "symbol": "INFY",
+  "exchange": "NSE",
+  "instrument_type": "FUT",
+  "expiry": "2023-04-27",
+  "action": "BUY",
+  "entry_price": 1250.3,
+  "entry_range_min": 1249.05,
+  "entry_range_max": 1251.55,
+  "live_price": 1250.3,
+  "target": 1291.64,
+  "stoploss": 1229.63,
+  "lot_size": 400,
+  "margin": 500120.0,
+  "recommended_date": "2023-04-17",
+  "app_warning": "catalog scaffold",
+  "user_capital_inr": 500000.0
+}

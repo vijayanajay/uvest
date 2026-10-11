@@ -1,0 +1,15 @@
+{
+  "symbol": "MARUTI",
+  "exchange": "NSE",
+  "instrument_type": "CASH",
+  "action": "BUY",
+  "entry_price": 12316.05,
+  "entry_range_min": 12303.73,
+  "entry_range_max": 12328.37,
+  "live_price": 12316.05,
+  "target": 13147.03,
+  "stoploss": 11938.33,
+  "lot_size": 1,
+  "recommended_date": "2024-09-15",
+  "user_capital_inr": 500000.0
+}

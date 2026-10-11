@@ -1,0 +1,17 @@
+{
+  "symbol": "YESBANK",
+  "exchange": "NSE",
+  "instrument_type": "CASH",
+  "action": "BUY",
+  "entry_price": 53.7,
+  "entry_range_min": 52.7,
+  "entry_range_max": 54.7,
+  "live_price": 53.7,
+  "target": 59.18,
+  "stoploss": 50.96,
+  "lot_size": 9300,
+  "margin": 499410.0,
+  "recommended_date": "2019-09-20",
+  "app_warning": "catalog scaffold",
+  "user_capital_inr": 500000.0
+}

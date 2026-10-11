@@ -1,0 +1,12 @@
+{
+  "symbol": "TCS",
+  "instrument_type": "CASH",
+  "raw_rr": 0.899929228591659,
+  "live_rr": 0.899929228591659,
+  "risk_inr": 70.65,
+  "reward_inr": 63.58,
+  "quantity": 1,
+  "outside_range_pct": 0.0,
+  "inverted_rr_flag": true,
+  "capital_allocation_pct": 0.0141
+}

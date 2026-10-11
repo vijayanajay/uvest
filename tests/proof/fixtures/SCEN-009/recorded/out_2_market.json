@@ -1,0 +1,15 @@
+{
+  "symbol": "ZEEL",
+  "atr_14": 23.953571,
+  "sl_atr_ratio": 0.500134188161623,
+  "is_tight_sl": true,
+  "ema_20": 435.78,
+  "above_50_ema": false,
+  "above_200_sma": false,
+  "trend_state": "BEARISH",
+  "bollinger_upper": 510.06,
+  "bollinger_lower": 380.52,
+  "bollinger_bandwidth": 29.0921,
+  "waived": false,
+  "as_of": "2019-01-25"
+}

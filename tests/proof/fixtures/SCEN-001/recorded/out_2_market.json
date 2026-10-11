@@ -1,0 +1,15 @@
+{
+  "symbol": "RELIANCE",
+  "atr_14": 43.180979,
+  "sl_atr_ratio": 0.49998866895261673,
+  "is_tight_sl": true,
+  "ema_20": 524.19,
+  "above_50_ema": false,
+  "above_200_sma": false,
+  "trend_state": "BEARISH",
+  "bollinger_upper": 707.27,
+  "bollinger_lower": 380.65,
+  "bollinger_bandwidth": 60.0445,
+  "waived": false,
+  "as_of": "2020-03-23"
+}

@@ -3,7 +3,11 @@
 
 Evidence rule (Zero Hallucination): every `out_1_math.json` / `out_2_market.json`
 payload embedded in the dataset is a recorded pipeline stdout for that record's
-canonical trade — never hand-typed. Trades are *authored* (no Univest archive
+canonical trade — never hand-typed. A record whose artifacts the proof root owns
+still carries no copy at all: it holds `{"$ref": "tests/proof/…"}` and the bytes
+are read from their one frozen home (`tests/evals/dataset_refs.py`). The
+extract-a-subset path below remains only for records with no proof-root bundle,
+and disappears as those bundles are recorded (`docs/agents/scenario-manifest-schema.md` §8). Trades are *authored* (no Univest archive
 exists), but prices are real (yfinance daily bars, one fetch per symbol-month,
 cached under `tests/fixtures/history/`), ATR sizing derives from stage 2's own
 frozen convention, and forward outcomes come from the symbol's real closes.
@@ -21,10 +25,14 @@ hand-typed tight_stop record (GB-2025-0005) is REBASED onto recorded evidence
 below. Final dataset: 31/50 records.
 
 Outcome conventions frozen here (derived from data, never asserted by fiat):
-  Resolution: WIN iff the 22-session forward window's HIGH reaches target
-  before its LOW reaches the stop; LOSS iff the LOW reaches the stop;
-  if both levels sit inside the window, daily bars cannot order the touches,
-  so the outcome is the *worse* one (LOSS) — curatorial bias errs sceptical.
+  Resolution: the frozen order-aware rule (`dataset_refs.resolution_of`, the
+  same rule the dataset's `$derive` resolves through) — bars are scanned in
+  order and the first of stop/target to print decides; a bar carrying both
+  levels resolves to the worse one (LOSS), because daily bars cannot order
+  touches within a bar. Until 2026-10-11 the seed scan was window-level (any
+  stop touch inside the window was a LOSS); the two disagreed exactly when the
+  target printed first and both levels sat inside the window, and the frozen
+  rule now governs both admission and the stored resolution.
   Class acceptance scans: clean_bullish accepts WIN forwards only,
   inverted_rr and tight_stop accept LOSS forwards only (matching each class's
   historical characterization in docs/agents/evals.md §2).
@@ -38,6 +46,8 @@ import sys
 import tempfile
 from datetime import date, timedelta
 from pathlib import Path
+
+import dataset_refs as dr   # the frozen resolution rule, shared with $derive
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPTS = REPO_ROOT / "scripts"
@@ -98,8 +108,14 @@ def fetch(symbol: str, start: str, end: str) -> list[dict] | None:
 _DEAD_SYMBOLS: set[str] = set()  # memoized fetch failures (delisted, etc.)
 
 
-def load_history(symbol: str, rec_date: str) -> list[dict] | None:
-    """Cached full window (prefix ≤ rec_date + 22-session forward) per symbol-month."""
+def load_history(symbol: str, rec_date: str,
+                 fetch_symbol: str | None = None) -> list[dict] | None:
+    """Cached full window (prefix ≤ rec_date + 22-session forward) per symbol-month.
+
+    `fetch_symbol` overrides only the network ticker (issuer renames): the cache
+    file and payload keep the point-in-time `symbol`, and the payload records the
+    ticker actually fetched in `source_ticker`.
+    """
     if symbol in _DEAD_SYMBOLS:
         return None
     ym = rec_date[:7].replace("-", "")
@@ -109,7 +125,7 @@ def load_history(symbol: str, rec_date: str) -> list[dict] | None:
     rec = date.fromisoformat(rec_date)
     start = (rec - timedelta(days=WINDOW_DAYS)).isoformat()
     end = (rec + timedelta(days=40)).isoformat()
-    sessions = fetch(symbol, start, end)
+    sessions = fetch(fetch_symbol or symbol, start, end)
     if not sessions:
         print(f"  {symbol}: no usable history (marked dead for this run)",
               file=sys.stderr)
@@ -117,6 +133,8 @@ def load_history(symbol: str, rec_date: str) -> list[dict] | None:
         return None
     payload = {"symbol": symbol, "exchange": "NSE", "interval": "1d",
                "source": "yfinance", "rec_date": rec_date, "sessions": sessions}
+    if fetch_symbol and fetch_symbol != symbol:
+        payload["source_ticker"] = f"{fetch_symbol}.NS"
     HIST_DIR.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
     return sessions
@@ -150,19 +168,17 @@ def split_history(sessions: list[dict], rec_date: str):
 
 
 def outcome(forward: list[dict], live: float, target: float, stop: float) -> dict | None:
+    """What the forward window did, by the frozen order-aware rule.
+
+    The resolution comes from `dataset_refs.resolution_of` — the very rule the
+    dataset's `$derive` uses — so a record can never be admitted for one
+    outcome and derive to another.
+    """
     if len(forward) < FORWARD:
         return None
     hi = max(s["high"] for s in forward)
     lo = min(s["low"] for s in forward)
-    hit_target, hit_stop = hi >= target, lo <= stop
-    if hit_target and hit_stop:
-        res = "LOSS"          # ambiguous ordering -> sceptical resolution
-    elif hit_target:
-        res = "WIN"
-    elif hit_stop:
-        res = "LOSS"
-    else:
-        res = "TIME"
+    res, _basis = dr.resolution_of(forward, stop, target)
     return {"resolution_date": forward[-1]["date"], "resolution_outcome": res,
             "forward_prices_22d": {"min": round(lo, 4), "max": round(hi, 4)}}
 
@@ -252,7 +268,6 @@ def record_for(trade_id: str, trade_class: str, symbol: str, rec_date: str,
             },
         },
         "forward_prices_22d": out["forward_prices_22d"],
-        "reported_numbers_match_json": True,
         "html_report_valid": None,
     }
 
@@ -318,7 +333,6 @@ def rebase_tight_stop(row: dict | None) -> dict | None:
             },
         },
         "forward_prices_22d": out["forward_prices_22d"],
-        "reported_numbers_match_json": True,
         "html_report_valid": None,
     }
     # Class invariant: the tight-stop breaker must grade true on recorded evidence.
@@ -404,8 +418,11 @@ def main() -> int:
         "seeded (clean_bullish 15/15, inverted_rr 10/10, tight_stop 5/5) and "
         "the tight-stop breaker grades from recorded stage-2 bundles "
         "(tests/fixtures/history/). pledge_hazard 1/5, earnings_hazard 0/5, "
-        "institutional_distribution 0/10 await stages 5/6 engines; hand-typed "
-        "in the existing records until then.")
+        "institutional_distribution 0/10 await stages 5/6 engines; every pre-proof "
+        "record's stage-6 payload is now retired to absence (`waived`, the proof "
+        "rows' declarations) and GB-2023-0003's is referenced from there as "
+        "quarantined debt — disclosed, excluded from grading, and never grown "
+        "(tests/evals/pin_legacy_records.py).")
     data["meta"]["notes"] = notes
     data["meta"]["generated_on"] = "2026-10-10"
     DATASET_FILE.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")

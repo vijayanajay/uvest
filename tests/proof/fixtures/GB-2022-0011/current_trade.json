@@ -1,0 +1,15 @@
+{
+  "symbol": "TCS",
+  "exchange": "NSE",
+  "instrument_type": "CASH",
+  "action": "BUY",
+  "entry_price": 3661.95,
+  "entry_range_min": 3658.29,
+  "entry_range_max": 3665.61,
+  "live_price": 3661.95,
+  "target": 3725.53,
+  "stoploss": 3591.3,
+  "lot_size": 1,
+  "recommended_date": "2022-04-15",
+  "user_capital_inr": 500000.0
+}

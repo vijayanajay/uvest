@@ -1,0 +1,12 @@
+{
+  "symbol": "HDFCBANK",
+  "instrument_type": "CASH",
+  "raw_rr": 94.66379310344855,
+  "live_rr": 94.66379310344855,
+  "risk_inr": 9.28,
+  "reward_inr": 878.48,
+  "quantity": 1,
+  "outside_range_pct": 0.0,
+  "inverted_rr_flag": false,
+  "capital_allocation_pct": 0.0019
+}

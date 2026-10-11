@@ -1,0 +1,12 @@
+{
+  "symbol": "VEDL",
+  "instrument_type": "CASH",
+  "raw_rr": 1.8467153284671556,
+  "live_rr": 5.782608695652174,
+  "risk_inr": 5.75,
+  "reward_inr": 33.25,
+  "quantity": 1,
+  "outside_range_pct": 347.49999999999943,
+  "inverted_rr_flag": false,
+  "capital_allocation_pct": 0.0011
+}

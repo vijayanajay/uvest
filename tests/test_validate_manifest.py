@@ -171,13 +171,24 @@ def _write_hashes(root: Path) -> None:
     (root / vm.HASH_FILE).write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def _write_register(root: Path, rows: list[dict]) -> None:
+    _write_json(root / vm.REGISTER_FILE, {"schema": vm.REGISTER_SCHEMA, "rows": rows})
+
+
 def _write_baseline(root: Path) -> None:
+    register_path = root / vm.REGISTER_FILE
+    rows = []
+    if register_path.exists():
+        rows = json.loads(register_path.read_text(encoding="utf-8")).get("rows") or []
     _write_json(root / vm.BASELINE_FILE, {
         "schema": "uvest-baseline-scorecard/1",
         "scenario_manifest_sha256": hashlib.sha256(
             (root / vm.MANIFEST_FILE).read_bytes()).hexdigest(),
         "manifest_sha256": hashlib.sha256(
             (root / vm.HASH_FILE).read_bytes()).hexdigest(),
+        "quarantined_count": len(rows),
+        "quarantine_register_sha256": hashlib.sha256(
+            register_path.read_bytes()).hexdigest() if register_path.exists() else None,
     })
 
 
@@ -185,9 +196,32 @@ def build(root: Path, manifest: dict | None = None) -> dict:
     """Materialize a fully consistent synthetic proof; returns its manifest."""
     manifest = manifest if manifest is not None else _base_manifest()
     _write_evidence(root)
+    _write_register(root, [])
     _write_manifest(root, manifest)
     _write_hashes(root)
     _write_baseline(root)
+    return manifest
+
+
+def _dataset_digests(root: Path) -> dict:
+    return {
+        "scenario_manifest_sha256": hashlib.sha256(
+            (root / vm.MANIFEST_FILE).read_bytes()).hexdigest(),
+        "manifest_sha256": hashlib.sha256(
+            (root / vm.HASH_FILE).read_bytes()).hexdigest(),
+    }
+
+
+def _add_quarantined_stage6(root: Path, manifest: dict) -> dict:
+    """Attach the legacy hand-typed stage-6 payload as the first quarantined row."""
+    row = manifest["scenarios"][1]
+    row["recorded_artifacts"].append({
+        "stage": 6, "artifact": "out_6_fundamental.json", "path": None,
+        "evidence": "quarantined", "reason": "legacy hand-typed payload"})
+    row["gate_focus"] = ["ZERO_HALLUCINATION"]
+    _write_register(root, [{"scenario_id": row["scenario_id"], "stage": 6,
+                            "artifact": "out_6_fundamental.json"}])
+    refresh(root, manifest)
     return manifest
 
 
@@ -382,6 +416,50 @@ class TestEveryFrozenCheckHasAViolation(ManifestFixture):
             refresh(root, manifest)
             report = vm.validate_manifest(manifest, root, baseline=None)
             self.assertIn("V2_OPTIONS_PROHIBITED", [f.code for f in report.errors])
+
+
+class TestQuarantineMeter(ManifestFixture):
+    """The register's non-increasing migration meter, end to end."""
+
+    def test_frozen_meter_passes_on_matching_state(self):
+        manifest = build(self.root)
+        _add_quarantined_stage6(self.root, manifest)
+        report = vm.validate_manifest(manifest, self.root)
+        self.assertTrue(report.ok, [(f.code, f.message) for f in report.errors])
+
+    def test_growth_is_rejected(self):
+        manifest = build(self.root)
+        _add_quarantined_stage6(self.root, manifest)
+        frozen = {**_dataset_digests(self.root), "quarantined_count": 0,
+                  "quarantine_register_sha256": hashlib.sha256(
+                      (self.root / vm.REGISTER_FILE).read_bytes()).hexdigest()}
+        report = vm.validate_manifest(manifest, self.root, baseline=frozen)
+        self.assertIn("V11_QUARANTINE_REGRESSION", [f.code for f in report.errors])
+
+    def test_decrease_is_allowed_as_shrink_warning(self):
+        manifest = build(self.root)
+        _add_quarantined_stage6(self.root, manifest)
+        frozen = {**_dataset_digests(self.root), "quarantined_count": 2,
+                  "quarantine_register_sha256": hashlib.sha256(
+                      (self.root / vm.REGISTER_FILE).read_bytes()).hexdigest()}
+        report = vm.validate_manifest(manifest, self.root, baseline=frozen)
+        self.assertTrue(report.ok, [(f.code, f.message) for f in report.errors])
+        self.assertIn("V11_QUARANTINE_SHRUNK", [f.code for f in report.warnings])
+
+    def test_equal_count_swap_is_rejected(self):
+        manifest = build(self.root)
+        _add_quarantined_stage6(self.root, manifest)
+        frozen = {**_dataset_digests(self.root), "quarantined_count": 1,
+                  "quarantine_register_sha256": "0" * 64}
+        report = vm.validate_manifest(manifest, self.root, baseline=frozen)
+        self.assertIn("V11_REGISTER_DIGEST_MISMATCH", [f.code for f in report.errors])
+
+    def test_missing_meter_field_is_rejected(self):
+        manifest = build(self.root)
+        _add_quarantined_stage6(self.root, manifest)
+        report = vm.validate_manifest(manifest, self.root,
+                                      baseline=_dataset_digests(self.root))
+        self.assertIn("V11_BASELINE_METER_MISSING", [f.code for f in report.errors])
 
 
 class TestCliContract(ManifestFixture):

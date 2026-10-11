@@ -11,7 +11,7 @@
 
 Stage 2 is the **sole owner of price-derived volatility and trend state** for the whole pipeline. It consumes `current_trade.json`, fetches free daily OHLCV, and emits the volatility buffer that gates the recommendation.
 
-It exists for one reason: BRD §10.2 #5 — a stop-loss tighter than $0.75 \times \text{Daily ATR}$ is a noise trap that will be stopped out by ordinary intraday wicks. Nothing else in the suite computes ATR, so this stage is a hard prerequisite for the **Volatility Noise Stop** circuit breaker (`prompt.md` §3), the **Volatility Buffer** row of the report template, and the §11 adverse-movement triage levels.
+It exists for one reason: BRD §10.3 #5 — a stop-loss tighter than $0.75 \times \text{Daily ATR}$ is a noise trap that will be stopped out by ordinary intraday wicks. Nothing else in the suite computes ATR, so this stage is a hard prerequisite for the **Volatility Noise Stop** circuit breaker (`prompt.md` §3), the **Volatility Buffer** row of the report template, and the §11 adverse-movement triage levels.
 
 **Deliberately out of scope (do not build here):**
 - Intraday 5m/10m candles, VWAP, order blocks → stage 8 (`8_dhan_precision.py`, Tier 2 Dhan fallback).
@@ -24,8 +24,8 @@ It exists for one reason: BRD §10.2 #5 — a stop-loss tighter than $0.75 \time
 ### 2. Frozen Specification Reference
 
 - `BRD.md` §9.1 stage 2 (contract row) and §2 (`2_market_data.py` — ATR, 50/200 EMA, Volatility Regime).
-- `BRD.md` §10.2 #5 — **Severe Volatility Noise Trap:** SL tighter than $0.75 \times \text{Daily ATR}$ $\implies$ instant 🔴 NO-GO.
-- `BRD.md` §10.3 — **Waiver Rule:** on data failure the check is marked `waived`, earns 0 points, and is subtracted from `max_available_score`. Missing data never inflates and never penalizes. This is why `is_tight_sl` is **tri-state**, never a defaulted `false`.
+- `BRD.md` §10.3 #5 — **Severe Volatility Noise Trap:** SL tighter than $0.75 \times \text{Daily ATR}$ $\implies$ instant 🔴 AVOID (or ⏳ `WAIT` when a limit order at the optimal zone restores the noise buffer; BRD §10.4).
+- `BRD.md` §10.4 — **Waiver Rule:** on data failure the check is marked `waived`, earns 0 points, and is subtracted from `max_available_score`. Missing data never inflates and never penalizes. This is why `is_tight_sl` is **tri-state**, never a defaulted `false`.
 - `BRD.md` §11 — Level 1 ($\le 1.0 \times \text{ATR}$ drawdown) and Level 2 ($> 1.0 \times \text{ATR}$ **or breaks 20 EMA**): the 20 EMA level is consumed by stage 10 triage.
 - `BRD.md` §5.1 — feature naming (`ATR/Price ratio`, `Bollinger Bandwidth`) consumed downstream by stage 4.
 - `prompt.md` §3 — **Volatility Noise Stop**, source script `2_market_data.py`.
@@ -64,7 +64,7 @@ It exists for one reason: BRD §10.2 #5 — a stop-loss tighter than $0.75 \time
 - [ ] **Boundary:** a ratio of exactly 0.75 yields `is_tight_sl: false` (strict inequality — the gate must not fire on the boundary).
 - [ ] `trend_state` is `BULLISH` when close > `ema_50` > `sma_200`, `BEARISH` when close < `ema_50` < `sma_200`, else `MIXED`.
 - [ ] `ema_20` is present and equals the frozen EMA convention, so stage 10 can evaluate the §11 Level-2 "breaks 20 EMA" rule.
-- [ ] **Waiver path:** throttled/short-history/unavailable OHLCV yields `waived: true` with every metric `null` — and exit code 0. It must **never** fabricate a value and never report `is_tight_sl: false` as a default (Zero Hallucination + BRD §10.3).
+- [ ] **Waiver path:** throttled/short-history/unavailable OHLCV yields `waived: true` with every metric `null` — and exit code 0. It must **never** fabricate a value and never report `is_tight_sl: false` as a default (Zero Hallucination + BRD §10.4).
 - [ ] A `current_trade.json` missing `live_price` exits with code 2 and `ERR_MISSING_LIVE_PRICE` (mirrors stage 0's `ERR_OPTIONS_PROHIBITED` convention).
 - [ ] Runs and passes with **zero network calls**: the seam replays a recorded fixture, so the test is deterministic and offline.
 - [ ] Emits `as_of` provenance so every reported ATR traces to a dated local payload (Zero Hallucination, evals dimension 1).
@@ -76,4 +76,4 @@ It exists for one reason: BRD §10.2 #5 — a stop-loss tighter than $0.75 \time
 - [ ] Implement the minimum code in `scripts/2_market_data.py`.
 - [ ] Verify the boundary case (exactly $0.75 \times \text{ATR}$) and the waiver path are both covered.
 - [ ] Confirm `tests/run_all_tests.py` stays green, including `tests/test_contract_consistency.py`.
-- [ ] Once the *"5 High Volatility / Tight Stop Traps"* records exist, verify this stage's flag yields the expected 🔴 NO-GO within `tests/run_evals.py` (evals dimension 2).
+- [ ] Once the *"5 High Volatility / Tight Stop Traps"* records exist, verify this stage's flag yields the expected 🔴 AVOID within `tests/run_evals.py` (BRD §15.3 gate 9 — circuit-breaker enforcement; `docs/agents/evals.md` §3 dimension 2).

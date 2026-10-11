@@ -1,0 +1,18 @@
+{
+  "symbol": "SBIN",
+  "exchange": "NSE",
+  "instrument_type": "FUT",
+  "expiry": "2024-06-27",
+  "action": "BUY",
+  "entry_price": 897.0,
+  "entry_range_min": 896.0,
+  "entry_range_max": 898.0,
+  "live_price": 897.0,
+  "target": 929.34,
+  "stoploss": 880.83,
+  "lot_size": 550,
+  "margin": 493350.0,
+  "recommended_date": "2024-06-04",
+  "app_warning": "catalog scaffold",
+  "user_capital_inr": 500000.0
+}
