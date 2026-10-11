@@ -310,4 +310,4 @@
 - [ ] Create environment variables template file `.env.example` in repository root for Dhan credentials ([BRD.md §8.1](file:///d:/Code/uvest/BRD.md#L272)).
 - [ ] Formalize SQLite schema definitions & table migrations for `uvest_history.db` (`trades`, `triage_history`, `autopsy_records` tables; [BRD.md §11](file:///d:/Code/uvest/BRD.md#L416), [BRD.md §12.2](file:///d:/Code/uvest/BRD.md#L512)).
 - [ ] Formalize SQLite schema definitions for `dhan_cache.db` (`market_cache` table with 15-minute TTL; [BRD.md §8.1](file:///d:/Code/uvest/BRD.md#L276)).
-- [ ] End-to-end pipeline runner CLI script to execute the sequential chain $0 \to 12$ in one invocation ([prompt.md §2](file:///d:/Code/uvest/prompt.md#L29)).
+- [x] End-to-end pipeline runner CLI script to execute the sequential chain $0 \to 12$ in one invocation ([prompt.md §2](file:///d:/Code/uvest/prompt.md#L29); [scripts/run_pipeline.py](file:///d:/Code/uvest/scripts/run_pipeline.py), seam [tests/test_run_pipeline.py](file:///d:/Code/uvest/tests/test_run_pipeline.py)).
