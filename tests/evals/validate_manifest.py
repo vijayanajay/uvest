@@ -31,9 +31,11 @@ evidence.
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import hashlib
 import json
 import math
+import os
 import re
 import sys
 from dataclasses import dataclass, field
@@ -477,15 +479,24 @@ def _v10_replay(rows: list[dict], proof_root: Path,
             report.warn("V10_REPLAY_NOT_PROVIDED",
                         "no replay runner supplied; byte-comparison of recorded artifacts skipped")
         return
+    tasks: list[tuple[dict, dict, str, str]] = []
     for row in rows:
-        sid = row.get("scenario_id")
+        sid = row.get("scenario_id") or "<unknown>"
         for artifact in row.get("recorded_artifacts") or []:
             if not isinstance(artifact, dict) or artifact.get("evidence") != "recorded":
                 continue
             norm = _safe_relpath(artifact.get("path"))
             if norm is None:
                 continue
-            fresh = rerun(row, artifact)
+            tasks.append((row, artifact, sid, norm))
+
+    workers = min(8, max(2, (os.cpu_count() or 4)))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+        results = executor.map(
+            lambda item: (item[0], item[1], item[2], item[3], rerun(item[0], item[1])),
+            tasks,
+        )
+        for row, artifact, sid, norm, fresh in results:
             if fresh is None:
                 report.warn("V10_REPLAY_UNCHECKED",
                             f"stage {artifact.get('stage')} not offline-runnable; not compared", sid)

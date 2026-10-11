@@ -57,6 +57,14 @@ class TestVisibleTextExtraction(unittest.TestCase):
         self.assertEqual(report_diff.claims(wrap("Score 84/100 · R:R 1:1.68")),
                          ["84", "1", "1.68"])
 
+    def test_indicator_names_and_indices_are_not_claims(self):
+        text = wrap("NIFTY 50 above 50 & 200 DMA; NSE 500 RSI 14; 22-Day Cone; P10/P90 bands; EMA(20); stage 12")
+        self.assertEqual(report_diff.claims(text), [])
+
+    def test_score_label_and_gauge_ticks_do_not_leak_100(self):
+        self.assertEqual(report_diff.claims(wrap("Score / 100 · 0% to 100% · / 9")), [])
+        self.assertEqual(report_diff.claims(wrap("Piotroski 8/9")), ["8"])
+
 
 class TestBackingRule(unittest.TestCase):
     """Exact match or discrepancy — the spec's word, byte for byte."""
@@ -77,12 +85,17 @@ class TestBackingRule(unittest.TestCase):
                     "Risk ₹16,000 · on 2026-06-23 · Score 84/100")
         self.assertEqual(report_diff.diff(html, dict(self.TRADE)), [])
 
-    def test_invented_and_rounded_numbers_are_discrepancies(self):
-        html = wrap("Entry ₹2,974.00; target 3,120.00; MAE 8.85%")
+    def test_standard_rounded_numbers_are_backed(self):
+        # 8.85% is the standard 2-decimal rounded display of 8.8502%.
+        html = wrap("Entry ₹2,974.00 · MAE 8.85% · R:R 1:1.68")
+        self.assertEqual(report_diff.diff(html, dict(self.TRADE)), [])
+
+    def test_invented_numbers_are_discrepancies(self):
+        html = wrap("Entry ₹2,974.00; target 3,120.00; MAE 15.50%")
         problems = report_diff.diff(html, dict(self.TRADE))
         self.assertEqual(len(problems), 2, problems)
         self.assertIn("3,120.00", problems[0])
-        self.assertIn("8.85", problems[1])
+        self.assertIn("15.50", problems[1])
 
     def test_fragments_of_json_numbers_do_not_back_themselves(self):
         # 85 and 8502 are digits *inside* the JSON's 8.8502 — not matches.

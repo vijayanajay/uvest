@@ -25,7 +25,8 @@
       "GB-2024-0004 geometry: preserved_as_published — published levels kept (the tape corroborates them); tape-derived outcome WIN (target_first)",
       "GB-2025-0005 geometry: preserved_as_published — published levels kept (the tape corroborates them); tape-derived outcome TIME (horizon_end)",
       "26 record(s) migrated onto proof-root rows (GB-2022-0006, GB-2022-0007, GB-2022-0008, GB-2022-0009, GB-2022-0010, GB-2022-0011, GB-2022-0012, GB-2022-0013, GB-2022-0014, GB-2022-0015, GB-2022-0016, GB-2022-0017, GB-2022-0018, GB-2022-0020, GB-2023-0021, GB-2023-0022, GB-2023-0023, GB-2023-0024, GB-2024-0025, GB-2024-0026, GB-2024-0027, GB-2024-0028, GB-2025-0029, GB-2025-0030, GB-2025-0031, GB-2025-0032, authoring source `dataset-migration/1`): stage 1–2 payloads are recorded evidence (`$ref`), forward outcome claims are `$derive` references to each row's pinned tape, the engine-less claims (cone envelope, limit-entry MAE, predicted direction, plus the legacy stage-6 pledge/days-to-earnings payloads on the records that carried them) are retired to absence and declared `waived`, and no artifact was added to the quarantine register — the E5 migration meter is unchanged by design. The tape superseded 2 legacy claim value(s) and confirmed 76 identical; every supersession is frozen in its row's `authoring.superseded`.",
-      "reported_numbers_match_json retired (2026-10-11): Zero-Hallucination is graded by the runner-side report-vs-JSON differ (tests/evals/report_diff.py diffing reports/report_{SYMBOL}_{DATE}.html against the record's own JSON) instead of a dataset boolean; a record without a generated stage-12 report stays ungraded."
+      "reported_numbers_match_json retired (2026-10-11): Zero-Hallucination is graded by the runner-side report-vs-JSON differ (tests/evals/report_diff.py diffing reports/report_{SYMBOL}_{DATE}.html against the record's own JSON) instead of a dataset boolean; a record without a generated stage-12 report stays ungraded.",
+      "html_report_valid retired (2026-10-11): HTML Visualizer validity is graded by the runner reading the stage-12 artifact itself (gate_html_validity in tests/run_evals.py validating reports/report_{SYMBOL}_{DATE}.html for HTML5 doctype, zero external resources, self-contained styling and inline SVG) instead of a dataset boolean; a record without a generated stage-12 report stays ungraded."
     ]
   },
   "trades": [
@@ -83,8 +84,7 @@
           "tape": "tests/proof/fixtures/GB-2022-0001/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2022-0002",
@@ -140,8 +140,7 @@
           "tape": "tests/proof/fixtures/GB-2022-0002/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2022-0006",
@@ -197,8 +196,7 @@
           "tape": "tests/proof/fixtures/GB-2022-0006/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2022-0007",
@@ -254,8 +252,7 @@
           "tape": "tests/proof/fixtures/GB-2022-0007/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2022-0008",
@@ -311,8 +308,7 @@
           "tape": "tests/proof/fixtures/GB-2022-0008/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2022-0009",
@@ -368,8 +364,7 @@
           "tape": "tests/proof/fixtures/GB-2022-0009/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2022-0010",
@@ -425,8 +420,7 @@
           "tape": "tests/proof/fixtures/GB-2022-0010/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2022-0011",
@@ -482,8 +476,7 @@
           "tape": "tests/proof/fixtures/GB-2022-0011/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2022-0012",
@@ -539,8 +532,7 @@
           "tape": "tests/proof/fixtures/GB-2022-0012/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2022-0013",
@@ -596,8 +588,7 @@
           "tape": "tests/proof/fixtures/GB-2022-0013/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2022-0014",
@@ -653,8 +644,7 @@
           "tape": "tests/proof/fixtures/GB-2022-0014/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2022-0015",
@@ -710,8 +700,7 @@
           "tape": "tests/proof/fixtures/GB-2022-0015/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2022-0016",
@@ -767,8 +756,7 @@
           "tape": "tests/proof/fixtures/GB-2022-0016/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2022-0017",
@@ -824,8 +812,7 @@
           "tape": "tests/proof/fixtures/GB-2022-0017/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2022-0018",
@@ -881,8 +868,7 @@
           "tape": "tests/proof/fixtures/GB-2022-0018/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2022-0020",
@@ -938,8 +924,7 @@
           "tape": "tests/proof/fixtures/GB-2022-0020/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2023-0003",
@@ -998,8 +983,7 @@
           "tape": "tests/proof/fixtures/GB-2023-0003/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2023-0021",
@@ -1055,8 +1039,7 @@
           "tape": "tests/proof/fixtures/GB-2023-0021/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2023-0022",
@@ -1112,8 +1095,7 @@
           "tape": "tests/proof/fixtures/GB-2023-0022/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2023-0023",
@@ -1169,8 +1151,7 @@
           "tape": "tests/proof/fixtures/GB-2023-0023/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2023-0024",
@@ -1226,8 +1207,7 @@
           "tape": "tests/proof/fixtures/GB-2023-0024/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2024-0004",
@@ -1283,8 +1263,7 @@
           "tape": "tests/proof/fixtures/GB-2024-0004/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2024-0025",
@@ -1340,8 +1319,7 @@
           "tape": "tests/proof/fixtures/GB-2024-0025/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2024-0026",
@@ -1397,8 +1375,7 @@
           "tape": "tests/proof/fixtures/GB-2024-0026/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2024-0027",
@@ -1454,8 +1431,7 @@
           "tape": "tests/proof/fixtures/GB-2024-0027/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2024-0028",
@@ -1511,8 +1487,7 @@
           "tape": "tests/proof/fixtures/GB-2024-0028/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2025-0005",
@@ -1568,8 +1543,7 @@
           "tape": "tests/proof/fixtures/GB-2025-0005/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2025-0029",
@@ -1625,8 +1599,7 @@
           "tape": "tests/proof/fixtures/GB-2025-0029/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2025-0030",
@@ -1682,8 +1655,7 @@
           "tape": "tests/proof/fixtures/GB-2025-0030/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2025-0031",
@@ -1739,8 +1711,7 @@
           "tape": "tests/proof/fixtures/GB-2025-0031/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     },
     {
       "trade_id": "GB-2025-0032",
@@ -1796,8 +1767,7 @@
           "tape": "tests/proof/fixtures/GB-2025-0032/forward_tape.json",
           "rule": "realized_direction"
         }
-      },
-      "html_report_valid": null
+      }
     }
   ]
 }

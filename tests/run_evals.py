@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -275,7 +276,8 @@ def gate_hallucination(trades: list[dict], reports_dir: Path | None = None) -> G
             per_trade.append(f"{t.get('trade_id')}: {shown}{more}")
     g.skipped = not graded
     if g.skipped:
-        g.detail = (f"no stage-12 reports generated yet — the differ stands over "
+        g.detail = (f"no stage-12 reports generated yet — regenerate with "
+                    "tests/evals/report_regen.py; the differ stands over "
                     f"reports/report_{{SYMBOL}}_{{DATE}}.html "
                     f"({len(ungraded)} record(s) without a report)")
     else:
@@ -369,22 +371,81 @@ def gate_mae_reduction(trades: list[dict]) -> Gate:
 # --------------------------------------------------------------------------
 # Gate 7: HTML Report Validity, evals.md §3 #7
 # --------------------------------------------------------------------------
-def gate_html_validity(trades: list[dict]) -> Gate:
-    """`html_report_valid: null` means the stage-12 report was not generated for
-    that trade yet — that is ungraded, not a 0% failure."""
+# Any element carrying a src/href pulls the report off its own bytes — a
+# missing stylesheet, a broken image, a CDN. `data:`, `#fragment` and
+# `mailto:` targets are self-contained and legal.
+_EXTERNAL_REF_RE = re.compile(
+    r"<(img|source|video|audio|iframe|frame|embed|object|script|link|track|applet)\b"
+    r"[^>]*\b(?:src|href)\s*=\s*[\"']?([^\"'\s>]+)",
+    re.IGNORECASE,
+)
+
+
+def html_validity_problems(text: str) -> list[str]:
+    """The headlessly-checkable half of the frozen §3 #7 criterion:
+
+    HTML5 doctype, zero external resources ("0 network dependencies"),
+    self-contained styling, and at least one inline SVG chart. The 300 ms
+    render budget is a browser property and is deliberately NOT graded here —
+    an unchecked criterion is disclosed by this docstring, never claimed pass.
+    """
+    problems: list[str] = []
+    if not text.lstrip()[:15].lower().startswith("<!doctype html"):
+        problems.append("missing <!doctype html> HTML5 doctype")
+    for match in _EXTERNAL_REF_RE.finditer(text):
+        target = match.group(2)
+        if not target.lower().startswith(("data:", "#", "mailto:")):
+            problems.append(
+                f"external resource <{match.group(1)} src={target[:40]}>")
+    if re.search(r"https?://", text, re.IGNORECASE):
+        problems.append("network URL present — 0 network dependencies required")
+    lowered = text.lower()
+    if "<style" not in lowered:
+        problems.append("no inline <style> block — CSS must be self-contained")
+    if "<svg" not in lowered:
+        problems.append("no inline <svg> chart")
+    return problems
+
+
+def gate_html_validity(trades: list[dict], reports_dir: Path | None = None) -> Gate:
+    """The stage-12 artifact itself must be standalone HTML5 (evals.md §3 #7).
+
+    The retired `html_report_valid` boolean was a curator's *claim* about a
+    report (ADR-007: the gate stays graded, the flag is gone). The check now
+    reads the artifact at the canonical path — the same
+    `reports/report_{SYMBOL}_{DATE}.html` the Zero-Hallucination differ grades
+    — and validates what can be validated without a browser. A record without
+    a generated report is ungraded, not a pass: absence is not evidence.
+    """
     g = Gate("HTML Visualizer Validation", HTML_VALIDITY_MIN, higher_is_pass=True)
-    graded = []
+    reports = reports_dir or (REPO_ROOT / "reports")
+    graded: list[float] = []
+    per_trade: list[str] = []
+    ungraded: list[str] = []
     for t in trades:
-        valid = t.get("html_report_valid")
-        if valid is None:
+        path = reports / report_path_for(t).name
+        if not path.exists():
+            ungraded.append(str(t.get("trade_id")))
             continue
-        graded.append(1.0 if valid else 0.0)
-    g.value = 100.0 * (sum(graded) / len(graded)) if graded else None
+        problems = html_validity_problems(
+            path.read_text(encoding="utf-8", errors="replace"))
+        graded.append(1.0 if not problems else 0.0)
+        if problems:
+            shown = "; ".join(problems[:3])
+            more = f" (+{len(problems) - 3} more)" if len(problems) > 3 else ""
+            per_trade.append(f"{t.get('trade_id')}: {shown}{more}")
     g.skipped = not graded
     if g.skipped:
-        g.detail = "no generated HTML reports graded yet — stage 12 unimplemented"
+        g.detail = (f"no stage-12 reports generated yet — regenerate with "
+                    f"tests/evals/report_regen.py ({len(ungraded)} record(s) "
+                    "without a report)")
     else:
-        g.detail = f"{sum(1 for v in graded if v == 0.0)} invalid of {len(graded)} graded"
+        g.value = 100.0 * (sum(graded) / len(graded))
+        g.detail = (f"{len(graded)} graded, "
+                    f"{sum(1 for v in graded if v == 0.0)} invalid"
+                    + (f"; {'; '.join(per_trade)}" if per_trade else "")
+                    + (f"; not graded (no report generated): {len(ungraded)}"
+                       if ungraded else ""))
     return g
 
 

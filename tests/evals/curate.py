@@ -268,7 +268,6 @@ def record_for(trade_id: str, trade_class: str, symbol: str, rec_date: str,
             },
         },
         "forward_prices_22d": out["forward_prices_22d"],
-        "html_report_valid": None,
     }
 
 
@@ -333,7 +332,6 @@ def rebase_tight_stop(row: dict | None) -> dict | None:
             },
         },
         "forward_prices_22d": out["forward_prices_22d"],
-        "html_report_valid": None,
     }
     # Class invariant: the tight-stop breaker must grade true on recorded evidence.
     assert rebased["script_outputs"]["out_2_market.json"]["is_tight_sl"] is True, (

@@ -537,7 +537,6 @@ def migrated_record(bundle: dict) -> dict:
         "limit_mae_pct": None,
         "predicted_direction": None,
         "actual_direction": bundle["derived"]["actual_direction"][0],
-        "html_report_valid": trade.get("html_report_valid"),
     }
     return record
 

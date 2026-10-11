@@ -71,6 +71,16 @@ def dtw_distance(x: np.ndarray, y: np.ndarray) -> float:
     return float(d)
 
 
+_CACHED_CANONICAL_RUN = None
+
+
+def get_canonical_in_process():
+    global _CACHED_CANONICAL_RUN
+    if _CACHED_CANONICAL_RUN is None:
+        _CACHED_CANONICAL_RUN = run_stage3(make_input())
+    return _CACHED_CANONICAL_RUN
+
+
 class TestDtwContract(unittest.TestCase):
     """Frozen payload keys and invariants from the ticket's output table.
 
@@ -83,7 +93,7 @@ class TestDtwContract(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.out, cls.code, cls.err = run_stage3(make_input())
+        cls.out, cls.code, cls.err = get_canonical_in_process()
         if cls.code != 0:
             raise AssertionError(f"stage 3 failed on canonical input: {cls.err}")
 
@@ -273,7 +283,7 @@ class TestDeterminismAndCli(unittest.TestCase):
         """Cross-mode determinism: a fresh in-process run must serialize to the
         exact sorted-payload bytes the subprocess printed (no time-of-day,
         ordering, or float-noise differences between modes)."""
-        a, code_a, err_a = run_stage3(make_input())
+        a, code_a, err_a = get_canonical_in_process()
         self.assertEqual(code_a, 0, err_a)
         self.assertEqual(json.dumps(a, sort_keys=True),
                          json.dumps(self.subprocess_payload, sort_keys=True))
