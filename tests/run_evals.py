@@ -9,6 +9,14 @@ the JSON file drives the score exactly. When a gate's inputs exist for the grade
 it is graded. When its inputs are absent (only 5 of 50 trades seeded so far),
 the runner prints [SKIP] rather than inventing a number.
 
+Stage-12 reports are gitignored *generated* artifacts, so the two
+artifact-graded gates (Zero Hallucination, HTML Validity) first replay any
+missing report from its proof root (`ensure_reports` →
+`tests/evals/report_regen.py`): a fresh clone grades the same bytes a dev
+machine does, a report absent at grading time is disclosed in the gate's
+detail (never a silent [SKIP]), and a replay that cannot run fails the run
+(exit 1) rather than quietly shrinking the graded set.
+
 Record payloads may be references (`$ref`, see `tests/evals/dataset_refs.py`) into
 the proof root, which is where those bytes are frozen. A referenced artifact whose
 provenance is `quarantined` is disclosed and excluded from grading — unverified
@@ -21,7 +29,8 @@ tape's own bars at load and prints every derivation on the scorecard.
 Exit codes:
     0 → no gate FAILED and dataset integrity OK (SKIP is allowed, per "tests that
         can't run yet stay SKIP" rather than being graded 0 on absent inputs),
-    1 → at least one gate FAILED, or class distribution ≠ expected counts,
+    1 → at least one gate FAILED, class distribution ≠ expected counts, or a
+        stage-12 report could not be regenerated before grading,
     2 → usage error / dataset missing / dataset unparseable.
 """
 
@@ -255,7 +264,9 @@ def gate_hallucination(trades: list[dict], reports_dir: Path | None = None) -> G
     about a report; `tests/evals/report_diff.py` is the check itself, run here
     against the stage-12 artifact whenever one has been generated. A record
     with no report is ungraded (like the HTML-validity gate): absence of a
-    report is not evidence of honesty.
+    report is not evidence of honesty. `main()` regenerates missing artifacts
+    first (`ensure_reports`), so a record still ungraded after that has no
+    replayable proof row — or its replay failed, which fails the run.
     """
     g = Gate("Zero Hallucination Audit", HALLUCINATION_MIN, higher_is_pass=True)
     reports = reports_dir or (REPO_ROOT / "reports")
@@ -276,10 +287,10 @@ def gate_hallucination(trades: list[dict], reports_dir: Path | None = None) -> G
             per_trade.append(f"{t.get('trade_id')}: {shown}{more}")
     g.skipped = not graded
     if g.skipped:
-        g.detail = (f"no stage-12 reports generated yet — regenerate with "
-                    "tests/evals/report_regen.py; the differ stands over "
-                    f"reports/report_{{SYMBOL}}_{{DATE}}.html "
-                    f"({len(ungraded)} record(s) without a report)")
+        g.detail = (f"no stage-12 reports generated yet — {len(ungraded)} "
+                    "record(s) without a report; the runner regenerates "
+                    "proof-backed reports on demand before grading "
+                    "(tests/evals/report_regen.py)")
     else:
         g.value = 100.0 * (sum(graded) / len(graded))
         g.detail = (f"{len(graded)} graded, "
@@ -416,6 +427,9 @@ def gate_html_validity(trades: list[dict], reports_dir: Path | None = None) -> G
     `reports/report_{SYMBOL}_{DATE}.html` the Zero-Hallucination differ grades
     — and validates what can be validated without a browser. A record without
     a generated report is ungraded, not a pass: absence is not evidence.
+    `main()` regenerates missing artifacts first (`ensure_reports`), so a
+    record still ungraded after that has no replayable proof row — or its
+    replay failed, which fails the run.
     """
     g = Gate("HTML Visualizer Validation", HTML_VALIDITY_MIN, higher_is_pass=True)
     reports = reports_dir or (REPO_ROOT / "reports")
@@ -436,9 +450,9 @@ def gate_html_validity(trades: list[dict], reports_dir: Path | None = None) -> G
             per_trade.append(f"{t.get('trade_id')}: {shown}{more}")
     g.skipped = not graded
     if g.skipped:
-        g.detail = (f"no stage-12 reports generated yet — regenerate with "
-                    f"tests/evals/report_regen.py ({len(ungraded)} record(s) "
-                    "without a report)")
+        g.detail = (f"no stage-12 reports generated yet — {len(ungraded)} "
+                    "record(s) without a report; the runner regenerates "
+                    "proof-backed reports on demand before grading")
     else:
         g.value = 100.0 * (sum(graded) / len(graded))
         g.detail = (f"{len(graded)} graded, "
@@ -521,6 +535,40 @@ def render_scorecard(gates: list[Gate], verdict_ok: bool) -> str:
     return "\n".join(lines)
 
 
+# --------------------------------------------------------------------------
+# On-demand stage-12 report replay (TICK-010 artifacts are gitignored)
+# --------------------------------------------------------------------------
+def ensure_reports(trades: list[dict],
+                   reports_dir: Path | None = None) -> tuple[list[Path], list[str]]:
+    """Regenerate every *missing* stage-12 report from its proof-root replay.
+
+    `reports/report_{SYMBOL}_{DATE}.html` is a generated, gitignored artifact,
+    so "no report on disk" is pending work — not a reason for the
+    artifact-graded gates (Zero Hallucination, HTML Validity) to silently
+    [SKIP] on a fresh clone. This replays exactly the missing ones through the
+    real stage-12 CLI (`tests/evals/report_regen.py`), the same workflow run by
+    hand, and never touches a report already on disk.
+
+    Returns `(regenerated, failures)`. A record with no proof row cannot be
+    replayed and stays ungraded (disclosed by the gates); a replay that fails
+    — unreadable canonical trade, identity mismatch, stage-12 non-zero exit,
+    missing manifest — lands in `failures`, and `main()` fails the run on it
+    instead of grading a quietly smaller set.
+    """
+    reports = reports_dir or (REPO_ROOT / "reports")
+    missing = [t for t in trades
+               if not (reports / report_path_for(t).name).exists()]
+    if not missing:
+        return [], []
+    import report_regen  # lazy: report_regen imports THIS module at its top
+    if not report_regen.MANIFEST_FILE.exists():
+        return [], [f"scenario manifest missing — {len(missing)} report(s) "
+                    f"cannot be replayed: {report_regen.MANIFEST_FILE}"]
+    manifest = json.loads(report_regen.MANIFEST_FILE.read_text(encoding="utf-8"))
+    jobs = report_regen.report_jobs({"trades": missing}, manifest)
+    return report_regen.regenerate(jobs, reports)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run UVEST behavioral evals (EVAL-001).")
     parser.add_argument("--benchmark", default=str(DEFAULT_BENCHMARK),
@@ -539,6 +587,20 @@ def main(argv: list[str] | None = None) -> int:
         print("❌ Benchmark dataset contains no trades.", file=sys.stderr)
         sys.exit(2)
 
+    # Replay missing stage-12 artifacts BEFORE grading, so the two
+    # artifact-graded gates never skip just because nobody has run
+    # report_regen.py on this clone yet (the fresh-clone path).
+    regenerated, regen_failures = ensure_reports(trades)
+    if regenerated:
+        print(f"  ↻ {len(regenerated)} missing stage-12 report(s) regenerated "
+              "from the proof root before grading")
+    if regen_failures:
+        print(f"❌ Stage-12 report regeneration failed for "
+              f"{len(regen_failures)} record(s) — the run fails rather than "
+              "grade a smaller set:", file=sys.stderr)
+        for failure in regen_failures:
+            print(f"   ✗ {failure}", file=sys.stderr)
+
     gates = [
         gate_option_rejection(trades),
         gate_hard_breakers(trades),
@@ -553,7 +615,7 @@ def main(argv: list[str] | None = None) -> int:
     failed = [g.name for g in gates if not g.skipped and g.value is not None
               and ((g.value >= g.threshold) if g.higher_is_pass
                    else (g.value <= g.threshold)) is False]
-    verdict_ok = (not failed) and dist_ok
+    verdict_ok = (not failed) and dist_ok and not regen_failures
 
     print(render_scorecard(gates, verdict_ok))
     print(f"  Dataset integrity: {'OK' if dist_ok else 'MISMATCH'} ({dist_reason})")
