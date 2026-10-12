@@ -93,12 +93,12 @@ class TestOneInvocationChain(unittest.TestCase):
 
             # 1. Ascending canonical order for every stage that exists.
             runs = [int(s) for s in re.findall(r"\[RUN\] stage (\d+)", out)]
-            self.assertEqual(runs, [0, 1, 2, 3, 5, 9, 12],
+            self.assertEqual(runs, [0, 1, 2, 3, 5, 6, 9, 12],
                              f"chain order wrong: {runs}\n{out}")
 
             # 2. Every absent stage is disclosed, and stage 11 is named as the
             #    conditional stage — silence would be a hidden gap.
-            for stage in (4, 6, 7, 8, 10):
+            for stage in (4, 7, 8, 10):
                 self.assertIn(f"[SKIP] stage {stage}:", out,
                               f"missing disclosure for stage {stage}")
             self.assertIn("[SKIP] stage 11:", out)
@@ -107,10 +107,21 @@ class TestOneInvocationChain(unittest.TestCase):
             # 3. Artifacts of every executed stage land in the workdir.
             for name in ("current_trade.json", "out_1_math.json",
                          "out_2_market.json", "out_3_dtw.json",
-                         "out_5_flow.json", "out_9_decision.json"):
+                         "out_5_flow.json", "out_6_fundamental.json",
+                         "out_9_decision.json"):
                 path = wd / name
                 self.assertTrue(path.exists(), f"artifact missing: {name}")
                 json.loads(path.read_text(encoding="utf-8"))  # must be real JSON
+
+            # Stage 6 ran without a financial-statement fixture, so its payload
+            # takes the waiver path: absence is disclosed, never a zero score
+            # (the decision engine redistributes the module weight).
+            fundamental = json.loads(
+                (wd / "out_6_fundamental.json").read_text(encoding="utf-8"))
+            self.assertTrue(fundamental["waived"],
+                            "no fixture means the waiver path, not fabricated metrics")
+            self.assertIsNone(fundamental["piotoski_score"])
+            self.assertIsNone(fundamental["pledge_circuit_breaker"])
 
             reports = sorted((wd / "reports").glob("report_RELIANCE_*.html"))
             self.assertEqual(len(reports), 1,

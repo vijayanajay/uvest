@@ -372,8 +372,8 @@ class TestRunRecordProvenance(unittest.TestCase):
         self.assertIn("Evidence provenance (run records)", block)
         self.assertIn(f"{self.workdir.name}/run_record.json", block,
                       "a record outside the repo is named by its directory")
-        self.assertIn("stages ran: [0, 1, 2, 3, 5, 9, 12]", block)
-        self.assertIn("skipped: [4, 6, 7, 8, 10, 11]", block)
+        self.assertIn("stages ran: [0, 1, 2, 3, 5, 6, 9, 12]", block)
+        self.assertIn("skipped: [4, 7, 8, 10, 11]", block)
         self.assertIn("Stage-12 reports proven: 1/1", block)
 
         disclosed = "\n".join(run_evals.render_provenance(

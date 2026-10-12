@@ -117,21 +117,21 @@
 ## Stage 6: Fundamental & Corporate Governance Auditor (`TICK-006`)
 *Ref: [BRD.md §6](file:///d:/Code/uvest/BRD.md#L187), [BRD.md §10.3 #1, #4](file:///d:/Code/uvest/BRD.md#L386), [docs/tickets/TICK-006-fundamental-audit.md](file:///d:/Code/uvest/docs/tickets/TICK-006-fundamental-audit.md)*
 
-- [ ] Test seam implementation: `tests/test_6_fundamental_audit.py` ([TICK-006 §3](file:///d:/Code/uvest/docs/tickets/TICK-006-fundamental-audit.md#L42)).
-- [ ] Script creation: `scripts/6_fundamental_audit.py`.
-- [ ] Piotroski F-Score (0–9 scale) computation (`piotoski_score`; [BRD.md §6.1 #1](file:///d:/Code/uvest/BRD.md#L192)).
-- [ ] Score penalty (-15 pts) gate when $F \le 4$ ([BRD.md §6.1 #1](file:///d:/Code/uvest/BRD.md#L196)).
-- [ ] Emerging market Altman Z''-Score computation (`altman_z_score`: distress $<1.1$, safe $>2.6$; [BRD.md §6.1 #2](file:///d:/Code/uvest/BRD.md#L197)).
-- [ ] Beneish M-Score earnings manipulation check ($M > -1.78$ red flag; [BRD.md §6.1 #3](file:///d:/Code/uvest/BRD.md#L199)).
-- [ ] Cash flow quality ratio: Operating Cash Flow to Net Profit (`cfo_pat_ratio` < 0.6 accrual warning; [BRD.md §6.2](file:///d:/Code/uvest/BRD.md#L202)).
-- [ ] Promoter pledging check (`promoter_pledge_pct`): warning if $>15\%$, hard kill switch `pledge_circuit_breaker: true` if $>25.0\%$ (forces `AVOID`; [BRD.md §6.3 #1](file:///d:/Code/uvest/BRD.md#L206), [BRD.md §10.3 #1](file:///d:/Code/uvest/BRD.md#L387)).
-- [ ] Promoter holding trajectory check (2-quarter decline $>2\%$) and FII/DII retail divergence ([BRD.md §6.3 #2-3](file:///d:/Code/uvest/BRD.md#L208)).
-- [ ] Auditor disclosures screening for non-routine resignations within 12 months ([BRD.md §6.3 #4](file:///d:/Code/uvest/BRD.md#L212)).
-- [ ] Corporate earnings calendar hazard: `days_to_earnings`, flag `earnings_hazard_flag: true` if $<7$d on Futures (forces `AVOID`; [BRD.md §6.4](file:///d:/Code/uvest/BRD.md#L215), [BRD.md §10.3 #4](file:///d:/Code/uvest/BRD.md#L390)).
-- [ ] Earnings calendar size-cap: flag `confidence_deficit` / cap size to 50% (`GO_WEAK`) if $<10$d on Cash Equities ([BRD.md §6.4](file:///d:/Code/uvest/BRD.md#L217), [BRD.md §10.4](file:///d:/Code/uvest/BRD.md#L400)).
-- [ ] Tri-state waiver path (`waived: true`, null metrics, exit 0) on missing financial reports ([BRD.md §10.4](file:///d:/Code/uvest/BRD.md#L409)).
-- [ ] Replay bundle recorder support via [_recorder.py](file:///d:/Code/uvest/scripts/_recorder.py).
-- [ ] Contract output emission to `out_6_fundamental.json`.
+- [x] Test seam implementation: `tests/test_6_fundamental_audit.py` ([TICK-006 §3](file:///d:/Code/uvest/docs/tickets/TICK-006-fundamental-audit.md#L42)).
+- [x] Script creation: `scripts/6_fundamental_audit.py`.
+- [x] Piotroski F-Score (0–9 scale) computation (`piotoski_score`; [BRD.md §6.1 #1](file:///d:/Code/uvest/BRD.md#L192)).
+- [x] Score penalty (-15 pts) gate when $F \le 4$ ([BRD.md §6.1 #1](file:///d:/Code/uvest/BRD.md#L196)).
+- [x] Emerging market Altman Z''-Score computation (`altman_z_score`: distress $<1.1$, safe $>2.6$; [BRD.md §6.1 #2](file:///d:/Code/uvest/BRD.md#L197)).
+- [x] Beneish M-Score earnings manipulation check ($M > -1.78$ red flag; [BRD.md §6.1 #3](file:///d:/Code/uvest/BRD.md#L199)).
+- [x] Cash flow quality ratio: Operating Cash Flow to Net Profit (`cfo_pat_ratio` < 0.6 accrual warning; [BRD.md §6.2](file:///d:/Code/uvest/BRD.md#L202)).
+- [x] Promoter pledging check (`promoter_pledge_pct`): warning if $>15\%$, hard kill switch `pledge_circuit_breaker: true` if $>25.0\%$ (forces `AVOID`; [BRD.md §6.3 #1](file:///d:/Code/uvest/BRD.md#L206), [BRD.md §10.3 #1](file:///d:/Code/uvest/BRD.md#L387)).
+- [x] Promoter holding trajectory check (2-quarter decline $>2\%$) and FII/DII retail divergence ([BRD.md §6.3 #2-3](file:///d:/Code/uvest/BRD.md#L208)).
+- [x] Auditor disclosures screening for non-routine resignations within 12 months ([BRD.md §6.3 #4](file:///d:/Code/uvest/BRD.md#L212)).
+- [x] Corporate earnings calendar hazard: `days_to_earnings`, flag `earnings_hazard_flag: true` if $<7$d on Futures (forces `AVOID`; [BRD.md §6.4](file:///d:/Code/uvest/BRD.md#L215), [BRD.md §10.3 #4](file:///d:/Code/uvest/BRD.md#L390)).
+- [x] Earnings calendar size-cap: flag `confidence_deficit` / cap size to 50% (`GO_WEAK`) if $<10$d on Cash Equities ([BRD.md §6.4](file:///d:/Code/uvest/BRD.md#L217), [BRD.md §10.4](file:///d:/Code/uvest/BRD.md#L400)).
+- [x] Tri-state waiver path (`waived: true`, null metrics, exit 0) on missing financial reports ([BRD.md §10.4](file:///d:/Code/uvest/BRD.md#L409)).
+- [x] Replay bundle recorder support via [_recorder.py](file:///d:/Code/uvest/scripts/_recorder.py).
+- [x] Contract output emission to `out_6_fundamental.json`.
 - [ ] Public data connector for Screener.in / NSE corporate filings with offline fixture fallback ([BRD.md §8](file:///d:/Code/uvest/BRD.md#L249)).
 
 ---

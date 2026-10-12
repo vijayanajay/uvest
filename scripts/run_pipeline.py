@@ -40,7 +40,7 @@ Discipline (BRD §10.4, §9.1):
 Usage:
     python scripts/run_pipeline.py --input input.txt [--workdir DIR]
         [--ohlcv-fixture PATH] [--history-fixture PATH]
-        [--bhavcopy-fixture PATH] [--record DIR]
+        [--bhavcopy-fixture PATH] [--financials-fixture PATH] [--record DIR]
 """
 
 from __future__ import annotations
@@ -98,10 +98,11 @@ FIXTURE_FLAG: dict[int, str] = {
     2: "--ohlcv-fixture",
     3: "--history-fixture",
     5: "--bhavcopy-fixture",
+    6: "--financials-fixture",
 }
 
 # Stages whose CLI carries _recorder.add_record_arg (stage 12 has no recorder).
-RECORD_STAGES = {0, 1, 2, 3, 5, 9}
+RECORD_STAGES = {0, 1, 2, 3, 5, 6, 9}
 
 # BRD §9.1 pipeline block: stage 10 logs the new trade before the report.
 STAGE10_ARGS = ["--action", "track"]
@@ -368,6 +369,9 @@ def main(argv: list[str] | None = None) -> int:
                         help="recorded 10-year history file for stage 3.")
     parser.add_argument("--bhavcopy-fixture", default=None,
                         help="recorded bhavcopy file for stage 5.")
+    parser.add_argument("--financials-fixture", default=None,
+                        help="recorded financial-statement bundle for stage 6 "
+                             "(omit for the waiver path).")
     parser.add_argument("--record", default=None,
                         help="replay-bundle directory passed to every "
                              "recorder-capable stage.")
@@ -385,6 +389,7 @@ def main(argv: list[str] | None = None) -> int:
         2: resolve(args.ohlcv_fixture),
         3: resolve(args.history_fixture),
         5: resolve(args.bhavcopy_fixture),
+        6: resolve(args.financials_fixture),
     }
     record_dir = resolve(args.record)
 
