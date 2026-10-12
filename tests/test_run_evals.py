@@ -112,6 +112,13 @@ class TestEvalRunnerContract(unittest.TestCase):
         # The record that proved the graded reports is named by path, not by a
         # filename every run shares.
         self.assertIn("reports/run_record.json", scorecard)
+        # ...and gate 2 states which breaker classes it graded, so a 100.0% PASS
+        # cannot stand in for a class that contributed no graded record.
+        self.assertIn("class coverage:", scorecard)
+        for cls_name in ("clean_bullish", "inverted_rr", "pledge_hazard",
+                         "earnings_hazard", "tight_stop"):
+            self.assertIn(cls_name, scorecard,
+                          f"gate 2's coverage must name {cls_name}")
 
     def test_a_deleted_report_is_regenerated_and_graded(self):
         """Fresh-clone proof: delete one canonical artifact; the runner must
@@ -765,6 +772,72 @@ class TestProofRootPayloadEvidence(unittest.TestCase):
         self.assertEqual(unbacked_clean, {("GB-TEST-2", "out_6_fundamental.json")})
         self.assertEqual(run_evals.gate_hard_breakers([clean], set()).value, 0.0)
         self.assertEqual(run_evals.gate_hard_breakers([clean], unbacked_clean).value, 100.0)
+
+    def test_gate_2_discloses_the_classes_it_graded(self):
+        """The disclosure is the gate's own roster, per class, with counts.
+
+        Gate 2's value is an average over the records it could grade, so a class
+        with no graded record cannot move it. The coverage line is what makes that
+        visible: every breaker class is named, and the counts asserted here are
+        recomputed from the same projection the gate uses, so the line cannot
+        drift into a decorative summary.
+        """
+        unbacked = run_evals.unbacked_payloads(self.trades, self.targets)
+        gate = run_evals.gate_hard_breakers(
+            self.trades, unbacked, self.raw["meta"]["class_counts_expected"])
+        coverage = gate.coverage
+        self.assertTrue(coverage.startswith("class coverage: "), coverage)
+        for cls in run_evals.BREAKER_BY_CLASS:
+            graded = sum(1 for t in self.trades if t["trade_class"] == cls
+                         and run_evals.class_breaker_observed(t, unbacked=unbacked)
+                         is not None)
+            total = sum(1 for t in self.trades if t["trade_class"] == cls)
+            self.assertIn(f"{cls} {graded}/{total} graded", coverage)
+        clean = sum(1 for t in self.trades if t["trade_class"] == "clean_bullish")
+        self.assertIn(f"clean_bullish {clean}/{clean} graded", coverage)
+        # A class nobody grades is named too, so it is not invisible either.
+        self.assertIn("no registered breaker", coverage)
+        self.assertEqual(gate.value, 100.0, gate.detail)
+
+    def test_a_class_with_no_graded_record_is_named_not_hidden(self):
+        """`0/N graded, N abstained` — what a 100.0% PASS would otherwise hide.
+
+        Two pledge records whose payload no recording backs and one fully
+        recorded clean record: the gate still averages 100.0 over what it graded,
+        and the coverage line states that the pledge class was not part of it —
+        including the quota it is short of. The line is printed on the scorecard
+        for a PASS, not only for a failure.
+        """
+        abstained = [
+            {"trade_id": f"GB-TEST-{i}", "trade_class": "pledge_hazard",
+             "script_outputs": {"out_6_fundamental.json":
+                                {"promoter_pledge_pct": 54.2}}}
+            for i in (1, 2)]
+        clean = {"trade_id": "GB-TEST-3", "trade_class": "clean_bullish",
+                 "script_outputs": {"out_1_math.json": {"raw_rr": 1.8, "live_rr": 1.8},
+                                    "out_2_market.json": {"is_tight_sl": False}}}
+        trades = [*abstained, clean]
+        unbacked = run_evals.unbacked_payloads(trades, {})
+        gate = run_evals.gate_hard_breakers(trades, unbacked,
+                                           {"clean_bullish": 15, "pledge_hazard": 5})
+        self.assertFalse(gate.skipped, gate.detail)
+        self.assertEqual(gate.value, 100.0, gate.detail)
+        self.assertIn("pledge_hazard 0/2 graded", gate.coverage)
+        self.assertIn("(quota 5), 2 abstained", gate.coverage)
+        self.assertIn("clean_bullish 1/1 graded (quota 15)", gate.coverage)
+        rendered = run_evals.render_scorecard([gate], True)
+        self.assertIn("[PASS] Hard Circuit Breaker Accuracy", rendered)
+        self.assertIn("pledge_hazard 0/2 graded", rendered,
+                      "a PASS must carry its coverage line onto the scorecard")
+
+    def test_coverage_is_a_read_of_the_gate_not_a_second_opinion(self):
+        """A fully graded benchmark has no abstention clause to show."""
+        unbacked = run_evals.unbacked_payloads(self.trades, self.targets)
+        gate = run_evals.gate_hard_breakers(
+            self.trades, unbacked, self.raw["meta"]["class_counts_expected"])
+        self.assertNotIn("abstained", gate.coverage, gate.coverage)
+        self.assertEqual(gate.detail.split(";")[0],
+                         f"{len(self.trades)} graded, 0 violation(s)")
 
     def test_a_recorded_payload_covers_the_record(self):
         """The negative case: coverage is a proof, not a permanent complaint.

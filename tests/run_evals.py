@@ -157,6 +157,12 @@ class Gate:
         self.value: float | None = None
         self.skipped = False
         self.detail = ""
+        # A disclosure that has to survive a PASS. Gate 2 sets it to the breaker
+        # classes it actually graded, because a percentage over a shrunken graded
+        # set reads exactly like a percentage over the whole benchmark: which
+        # classes were graded (and which it had to abstain on) is stated *next to*
+        # the number, not left to be inferred from it. Printed for every status.
+        self.coverage = ""
 
     def evaluate(self) -> tuple[str, str]:
         """Returns ([PASS]|[SKIP]|[FAIL], display_value)."""
@@ -223,21 +229,42 @@ def class_breaker_observed(trade: dict, breaker: str | None = None,
 
 def gate_hard_breakers(trades: list[dict],
                        unbacked: frozenset[tuple[str, str]] = frozenset(),
+                       class_quota: dict[str, int] | None = None,
                        ) -> Gate:
     """Gate 2: circuit-breaker accuracy across the benchmark (evals.md §3 #2).
 
     Normally the decision engine's outputs (out_9_decision.json) would be replayed;
     until stage 9 exists, the runner grades the *dataset's* breaker discipline:
     traps must carry a threshold-level breaker value and clean trades must not.
+
+    The value is an average over the records it could grade, so a class whose
+    records all abstained contributes nothing to it — a smaller graded set that
+    reads exactly like the whole benchmark. That is why the gate also reports its
+    **class coverage** (`gate.coverage`, printed whatever the verdict): every
+    breaker class is named with how many of its records were graded, how many
+    abstained, and — from the dataset's frozen roster (`class_quota`, i.e.
+    `meta.class_counts_expected`) — when the class itself is short of its quota.
+    Coverage discloses; it does not change the arithmetic, because an abstention
+    with a recorded reason is registered debt by design (`check_payload_coverage`
+    already fails the run on the ones nobody declared).
     """
     g = Gate("Hard Circuit Breaker Accuracy", BREAKER_MIN, higher_is_pass=True)
     graded: list[float] = []
     per_trade: list[str] = []
     ungraded: list[str] = []
     violations = 0
+    # Per-class bookkeeping: records seen, records graded, records abstained on.
+    present: dict[str, int] = {}
+    graded_by_class: dict[str, int] = {}
+    abstained_by_class: dict[str, int] = {}
+
+    def count(book: dict[str, int], cls: str) -> None:
+        book[cls] = book.get(cls, 0) + 1
+
     for t in trades:
         cls = t.get("trade_class")
         if cls == "clean_bullish":
+            count(present, cls)
             # Correct behaviour here: NO breaker observed. A breaker whose own
             # evidence is quarantined abstains rather than counting either way.
             verdicts = [class_breaker_observed({**t, "trade_class": c}, BREAKER_BY_CLASS[c],
@@ -245,18 +272,22 @@ def gate_hard_breakers(trades: list[dict],
                         for c in BREAKER_BY_CLASS]
             observed = [v for v in verdicts if v is not None]
             if not observed:
+                count(abstained_by_class, cls)
                 ungraded.append(f"{t['trade_id']}: no breaker payload with "
                                 "evidence behind it")
                 continue
             leaked = any(observed)
             graded.append(0.0 if leaked else 1.0)
+            count(graded_by_class, cls)
             per_trade.append(f"{t['trade_id']}: {'LEAK' if leaked else 'ok'}")
             violations += 1 if leaked else 0
             continue
+        count(present, cls)
         if cls not in BREAKER_BY_CLASS:
             continue  # classes without a defined breaker are out of scope
         verdict = class_breaker_observed(t, unbacked=unbacked)
         if verdict is None:
+            count(abstained_by_class, cls)
             artifact = BREAKER_ARTIFACT[BREAKER_BY_CLASS[cls]]
             ungraded.append(
                 f"{t['trade_id']}: {artifact} "
@@ -267,8 +298,12 @@ def gate_hard_breakers(trades: list[dict],
             per_trade.append(f"{t['trade_id']}: breaker value not encoded")
             violations += 1
             graded.append(0.0)
+            count(graded_by_class, cls)
             continue
         graded.append(1.0)
+        count(graded_by_class, cls)
+
+    g.coverage = class_coverage(present, graded_by_class, abstained_by_class, class_quota)
     g.skipped = not graded
     if g.skipped:
         # Name the obstacle even when every record is ungraded: "no encodable
@@ -284,6 +319,41 @@ def gate_hard_breakers(trades: list[dict],
                     + (f"; not graded (payload is not evidence): "
                        f"{'; '.join(ungraded)}" if ungraded else ""))
     return g
+
+
+def class_coverage(present: dict[str, int], graded_by_class: dict[str, int],
+                   abstained_by_class: dict[str, int],
+                   class_quota: dict[str, int] | None = None) -> str:
+    """Gate 2's roster disclosure: what it graded, per class, record by record.
+
+    One clause per class, in the dataset's own roster order (`class_quota`, i.e.
+    `meta.class_counts_expected`) so the line reads like the quota it is measured
+    against, then any class the dataset carries that the roster omits. A class
+    with records but no graded record reads `0/N graded, N abstained` — that
+    clause is the whole point of the line, since `N=0` graded is what a 100.0%
+    average over the other classes cannot show. Classes with no breaker in the
+    frozen registry are named too, so a class nobody grades is not invisible
+    either.
+    """
+    names = list(class_quota or {})
+    names += [c for c in ("clean_bullish", *BREAKER_BY_CLASS) if c not in names]
+    names += sorted(c for c in present if c not in names)
+    parts: list[str] = []
+    for cls in names:
+        total = present.get(cls, 0)
+        quota = (class_quota or {}).get(cls)
+        if cls in BREAKER_BY_CLASS or cls == "clean_bullish":
+            part = f"{cls} {graded_by_class.get(cls, 0)}/{total} graded"
+            if quota is not None and total != quota:
+                part += f" (quota {quota})"
+            abstained = abstained_by_class.get(cls, 0)
+            if abstained:
+                part += f", {abstained} abstained"
+        else:
+            part = (f"{cls} no registered breaker ({total} record(s)"
+                    + (f", quota {quota})" if quota is not None else ")"))
+        parts.append(part)
+    return "class coverage: " + "; ".join(parts) if parts else ""
 
 
 # --------------------------------------------------------------------------
@@ -931,9 +1001,11 @@ def render_scorecard(gates: list[Gate], verdict_ok: bool) -> str:
     for gate in gates:
         status, display = gate.evaluate()
         lines.append(f"  {status} {gate.name:<38} {display}")
-        if status == "[FAIL]" and gate.detail:
-            lines.append(f"         ↳ {gate.detail}")
-        elif status == "[SKIP]" and gate.detail:
+        # Coverage is printed for every status: a PASS over a shrunken graded set
+        # is exactly what the line exists to make visible.
+        if gate.coverage:
+            lines.append(f"         ↳ {gate.coverage}")
+        if status in ("[FAIL]", "[SKIP]") and gate.detail:
             lines.append(f"         ↳ {gate.detail}")
     lines += [
         "-" * 70,
@@ -1061,7 +1133,10 @@ def main(argv: list[str] | None = None) -> int:
     unbacked = unbacked_payloads(trades, payload_targets)
     gates = [
         gate_option_rejection(trades),
-        gate_hard_breakers(trades, unbacked),
+        # The frozen class roster is handed in so the gate can disclose a class
+        # the dataset is short of, not only one whose records abstained.
+        gate_hard_breakers(trades, unbacked,
+                           data.get("meta", {}).get("class_counts_expected")),
         gate_hallucination(trades, proof=proof),
         gate_brier(trades),
         gate_cone_coverage(trades),
