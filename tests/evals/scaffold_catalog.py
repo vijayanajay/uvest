@@ -515,6 +515,11 @@ def re_freeze_baseline() -> None:
         (PROOF_ROOT / MANIFEST_FILE).read_bytes()).hexdigest()
     baseline["manifest_sha256"] = hashlib.sha256(
         (PROOF_ROOT / HASH_FILE).read_bytes()).hexdigest()
+    # The runner lives one directory up (`tests/run_evals.py`), which a plain
+    # `python tests/evals/scaffold_catalog.py` run does not have on `sys.path`.
+    runner_dir = str(REPO_ROOT / "tests")
+    if runner_dir not in sys.path:
+        sys.path.insert(0, runner_dir)
     import run_evals  # noqa: PLC0415 (deferred: sibling runner, see docstring)
     baseline["rule_exercises"] = run_evals.dataset_rule_census()
     write_json(PROOF_ROOT / BASELINE_FILE, baseline)

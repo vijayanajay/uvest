@@ -4,12 +4,12 @@
     {
       "stage": 1,
       "artifact": "out_1_math.json",
-      "recorded_at": "2026-10-10T19:11:38+00:00"
+      "recorded_at": "2026-10-12T18:58:18+00:00"
     },
     {
       "stage": 2,
       "artifact": "out_2_market.json",
-      "recorded_at": "2026-10-10T19:11:38+00:00"
+      "recorded_at": "2026-10-12T18:58:18+00:00"
     }
   ]
 }

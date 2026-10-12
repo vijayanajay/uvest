@@ -1,12 +1,12 @@
 {
   "symbol": "AXISBANK",
   "instrument_type": "CASH",
-  "raw_rr": 2.49952335557674,
-  "live_rr": 2.49952335557674,
-  "risk_inr": 10.49,
-  "reward_inr": 26.22,
+  "raw_rr": 2.49936467598476,
+  "live_rr": 2.49936467598476,
+  "risk_inr": 7.87,
+  "reward_inr": 19.67,
   "quantity": 1,
   "outside_range_pct": 0.0,
   "inverted_rr_flag": false,
-  "capital_allocation_pct": 0.0021
+  "capital_allocation_pct": 0.0016
 }

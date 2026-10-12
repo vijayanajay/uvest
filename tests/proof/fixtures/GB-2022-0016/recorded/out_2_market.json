@@ -1,7 +1,7 @@
 {
   "symbol": "MARUTI",
   "atr_14": 174.546493,
-  "sl_atr_ratio": 0.6000120557318536,
+  "sl_atr_ratio": 0.40000803715456906,
   "is_tight_sl": true,
   "ema_20": 7615.85,
   "above_50_ema": false,

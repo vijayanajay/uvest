@@ -1,7 +1,7 @@
 {
   "symbol": "SBIN",
   "atr_14": 9.875,
-  "sl_atr_ratio": 1.2000000000000033,
+  "sl_atr_ratio": 0.9002531645569672,
   "is_tight_sl": false,
   "ema_20": 503.97,
   "above_50_ema": true,

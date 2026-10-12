@@ -1,7 +1,7 @@
 {
   "symbol": "TITAN",
   "atr_14": 59.260679,
-  "sl_atr_ratio": 0.6000606280121904,
+  "sl_atr_ratio": 0.3499791176876467,
   "is_tight_sl": true,
   "ema_20": 2520.67,
   "above_50_ema": false,

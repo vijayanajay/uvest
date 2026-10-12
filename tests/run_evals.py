@@ -231,9 +231,12 @@ RULE_ARMS: dict[str, tuple[tuple[str, str, object, int, str | None], ...]] = {
     ),
     "tighter_than_0_75x_atr": (TIGHT_STOP_ARM,),
 }
-# The negative class's exercise: "no breaker leaked", which is one rule exercised
-# however many clean records prove it.
-LEAK_CHECK_ARM = "no_breaker_leaked"
+# How a clear arm's exercise is named: the same rule as the trap's, on the other
+# side of its threshold (`raw_rr_below_1` → `raw_rr_below_1:clear`). A clean
+# record's exercise is not one constant "nothing leaked" but the boundary check
+# itself, per arm, at the measurement that stayed clear — otherwise a class of
+# fifteen rows at one shape reads exactly like fifteen rows spread over fifteen.
+CLEAR_ARM_SUFFIX = ":clear"
 
 
 def _field(trade: dict, artifact: str, field: object):
@@ -295,37 +298,58 @@ def class_breaker_observed(trade: dict, breaker: str | None = None,
     return None if arms is None else any(arms.values())
 
 
+def _granulated(value, granule: int):
+    """A measurement at the granule the rule speaks in; booleans are their own value."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return value
+    return round(float(value), granule) if granule else int(value)
+
+
 def rule_exercises(trade_class: str, trade: dict,
                    unbacked: frozenset[tuple[str, str]] = frozenset(),
                    ) -> frozenset[tuple[str, object]]:
     """The *rule exercises* a graded record stands for.
 
-    One exercise per arm that actually tripped, identified as `(arm, value)` with
-    the value rounded to the granule that comparison speaks in. Records are not
-    exercises: ten rows admitting themselves to the same "R:R ≈ 0.90 below 1.0"
-    rule are one exercise of it, ten times over — and the census below is what
-    says so out loud instead of letting the record count imply ten rules were
-    probed. A clean record's exercise is the negative check itself (`no breaker
-    leaked`), which is likewise one rule however many records prove it.
+    One exercise per arm, identified as `(arm, value)` with the value rounded to
+    the granule that comparison speaks in. Records are not exercises: ten rows
+    admitting themselves to the same "R:R ≈ 0.90 below 1.0" rule are one exercise
+    of it, ten times over — and the census below is what says so out loud instead
+    of letting the record count imply ten rules were probed.
+
+    A trap row exercises the arm that tripped. A clean row exercises the same
+    arms from the other side — the boundary check that stayed clear, at the value
+    that cleared it (`raw_rr_below_1:clear` at 2.2) — because "nothing leaked" is
+    not one rule but one rule per arm, and how far under each threshold the clean
+    rows sit is the only thing a class of clean rows can be measured on. Rows at
+    one shape probe one point under the thresholds; the same rows spread over
+    fourteen shapes probe fourteen, and the census is what shows the difference.
     """
     if trade_class == "clean_bullish":
-        arms = [breaker_arms(trade, BREAKER_BY_CLASS[c], unbacked)
-                for c in BREAKER_BY_CLASS]
-        if all(a is None for a in arms):
-            return frozenset()
-        return frozenset({(LEAK_CHECK_ARM, None)})
+        found: set[tuple[str, object]] = set()
+        for cls in BREAKER_BY_CLASS:
+            breaker = BREAKER_BY_CLASS[cls]
+            arms = breaker_arms(trade, breaker, unbacked)
+            if arms is None:
+                continue
+            for arm, source, field, granule, measure in RULE_ARMS[breaker]:
+                value = _field(trade, source, measure or field)
+                if value is None:
+                    continue
+                key = arm if arms.get(arm) else f"{arm}{CLEAR_ARM_SUFFIX}"
+                found.add((key, _granulated(value, granule)))
+        return frozenset(found)
     breaker = BREAKER_BY_CLASS[trade_class]
     arms = breaker_arms(trade, breaker, unbacked)
     if arms is None:
         return frozenset()
-    found: set[tuple[str, object]] = set()
+    found = set()
     for arm, source, field, granule, measure in RULE_ARMS[breaker]:
         if not arms.get(arm):
             continue
         value = _field(trade, source, measure or field)
-        if isinstance(value, (int, float)) and not isinstance(value, bool):
-            value = round(float(value), granule) if granule else int(value)
-        found.add((arm, value))
+        if value is None:
+            continue
+        found.add((arm, _granulated(value, granule)))
     return frozenset(found)
 
 
@@ -402,11 +426,22 @@ def gate_hard_breakers(trades: list[dict],
     graded_by_class: dict[str, int] = {}
     abstained_by_class: dict[str, int] = {}
     exercises: dict[str, set[tuple[str, object]]] = {}
+    repeats_by_class: dict[str, int] = {}
 
     def credit(cls: str, trade: dict) -> None:
-        """Count one graded record *and* the distinct rule exercise it stands for."""
+        """Count one graded record *and* the distinct rule exercise it stands for.
+
+        A record that adds no exercise the class does not already stand for is
+        counted as a *repeat* — the literal answer to "which records taught the
+        class nothing new", which is not `graded - distinct` once a record can
+        stand for several arms at once.
+        """
         graded_by_class[cls] = graded_by_class.get(cls, 0) + 1
-        exercises.setdefault(cls, set()).update(rule_exercises(cls, trade, unbacked))
+        keys = rule_exercises(cls, trade, unbacked)
+        seen = exercises.setdefault(cls, set())
+        if keys and keys <= seen:
+            repeats_by_class[cls] = repeats_by_class.get(cls, 0) + 1
+        seen.update(keys)
 
     def count(book: dict[str, int], cls: str) -> None:
         book[cls] = book.get(cls, 0) + 1
@@ -456,7 +491,7 @@ def gate_hard_breakers(trades: list[dict],
     g.census = {cls: len(keys) for cls, keys in exercises.items()}
     g.exercises = {cls: frozenset(keys) for cls, keys in exercises.items()}
     g.coverage = class_coverage(present, graded_by_class, abstained_by_class,
-                                class_quota, g.census, g.exercises)
+                                class_quota, g.census, g.exercises, repeats_by_class)
     g.skipped = not graded
     if g.skipped:
         # Name the obstacle even when every record is ungraded: "no encodable
@@ -478,7 +513,8 @@ def class_coverage(present: dict[str, int], graded_by_class: dict[str, int],
                    abstained_by_class: dict[str, int],
                    class_quota: dict[str, int] | None = None,
                    census: dict[str, int] | None = None,
-                   exercises: dict[str, frozenset] | None = None) -> str:
+                   exercises: dict[str, frozenset] | None = None,
+                   repeats_by_class: dict[str, int] | None = None) -> str:
     """Gate 2's roster disclosure: what it graded, per class, record by record.
 
     One clause per class, in the dataset's own roster order (`class_quota`, i.e.
@@ -491,10 +527,10 @@ def class_coverage(present: dict[str, int], graded_by_class: dict[str, int],
     either.
 
     Every graded class also carries its **rule-exercise census**: `K distinct
-    rule exercise(s)`, and which records repeat one when `K` is short of the
-    graded count. A record count says how many rows exist; this says how many
-    distinct rules those rows actually probed, at the granule each rule speaks in
-    (`rule_exercises`).
+    rule exercise(s)`, and how many records repeated an exercise instead of
+    probing a new one. A record count says how many rows exist; this says how
+    many distinct rules those rows actually probed, at the granule each rule
+    speaks in (`rule_exercises`).
     """
     names = list(class_quota or {})
     names += [c for c in ("clean_bullish", *BREAKER_BY_CLASS) if c not in names]
@@ -509,7 +545,7 @@ def class_coverage(present: dict[str, int], graded_by_class: dict[str, int],
             distinct = (census or {}).get(cls)
             if graded:
                 part += f", {distinct} distinct rule exercise(s)"
-                repeats = _repeat_note(cls, graded, exercises)
+                repeats = _repeat_note(cls, graded, repeats_by_class)
                 if repeats:
                     part += f" ({repeats})"
             if quota is not None and total != quota:
@@ -524,15 +560,17 @@ def class_coverage(present: dict[str, int], graded_by_class: dict[str, int],
     return "class coverage: " + "; ".join(parts) if parts else ""
 
 
-def _repeat_note(cls: str, graded: int, exercises: dict[str, frozenset] | None) -> str:
-    """Name the records that repeat an exercise instead of probing a new rule.
+def _repeat_note(cls: str, graded: int,
+                 repeats_by_class: dict[str, int] | None) -> str:
+    """Say how many records added no rule the class did not already stand for.
 
-    `graded` records standing for `K` exercises means `graded - K` rows added no
-    new rule evidence; the ids are printed so the shortfall is attributable to
-    specific rows rather than to a class in the abstract.
+    Counted as the runner walks the class (`credit`), not as `graded - distinct`:
+    a record can stand for several arms at once, so subtracting the census from
+    the record count stops meaning "rows that repeated one" as soon as a class
+    carries more arms than rows. `cls` is unused by the arithmetic and kept for
+    the caller's clarity.
     """
-    keys = (exercises or {}).get(cls) or frozenset()
-    repeats = graded - len(keys)
+    repeats = (repeats_by_class or {}).get(cls, 0)
     if repeats <= 0:
         return ""
     return f"{repeats} of {graded} repeat an exercise"

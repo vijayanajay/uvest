@@ -7,8 +7,8 @@
   "entry_range_min": 873.3,
   "entry_range_max": 875.3,
   "live_price": 874.3,
-  "target": 943.18,
-  "stoploss": 842.99,
+  "target": 921.28,
+  "stoploss": 850.81,
   "lot_size": 1,
   "recommended_date": "2022-09-15",
   "user_capital_inr": 500000.0

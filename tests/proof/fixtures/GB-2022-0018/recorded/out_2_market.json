@@ -1,7 +1,7 @@
 {
   "symbol": "BAJFINANCE",
   "atr_14": 14.762143,
-  "sl_atr_ratio": 0.6001838680021298,
+  "sl_atr_ratio": 0.4999274205254749,
   "is_tight_sl": true,
   "ema_20": 718.41,
   "above_50_ema": true,

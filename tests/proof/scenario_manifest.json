@@ -1,6 +1,6 @@
 {
   "schema": "uvest-scenario-manifest/1",
-  "generated_on": "2026-10-12",
+  "generated_on": "2026-10-13",
   "scenarios": [
     {
       "scenario_id": "GB-2022-0001",
@@ -458,8 +458,8 @@
       "entry_price": 762.25,
       "entry_range_min": 761.25,
       "entry_range_max": 763.25,
-      "target_price": 778.8,
-      "stop_loss": 743.86,
+      "target_price": 779.1,
+      "stop_loss": 731.61,
       "lot_size": 1,
       "user_capital_inr": 500000.0,
       "replay_inputs": {
@@ -516,8 +516,66 @@
             "target_price": 778.8
           }
         },
-        "note": "legacy levels preserved as published (stop 743.86 / entry 762.25 / target 778.8); real point-in-time ICICIBANK tape re-recorded (T_rec close 762.25, ATR14 15.3214, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
-        "superseded": []
+        "note": "legacy levels preserved as published (stop 743.86 / entry 762.25 / target 778.8); real point-in-time ICICIBANK tape re-recorded (T_rec close 762.25, ATR14 15.3214, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources; reshaped by shape-ladder/1 to the class ladder rung (risk_atr 2.0, rr 0.55) from (1.2, 0.9) — 4 rung(s) refused before it, each recorded in authoring.reshape.refused_rungs",
+        "superseded": [],
+        "reshape": {
+          "campaign": "shape-ladder/1",
+          "reason": "the class stood at one frozen shape replicated across rows; this row was re-derived at a declared rung of the class's shape family so the class's rule-exercise census measures coverage, not rows",
+          "rung_index": 4,
+          "shape": {
+            "risk_atr": 2.0,
+            "rr": 0.55
+          },
+          "from_shape": {
+            "risk_atr": 1.2,
+            "rr": 0.9
+          },
+          "from_levels": {
+            "entry_price": 762.25,
+            "stop_loss": 743.86,
+            "target_price": 778.8
+          },
+          "sizing": "re-derived from the row's own pinned ≤T_rec tape: entry = T_rec close, stop = entry − risk_atr×ATR(14), target at the class's target multiple",
+          "outcome": {
+            "was": "LOSS",
+            "now": "LOSS",
+            "basis": "stop_first"
+          },
+          "refused_rungs": [
+            {
+              "rung": [
+                1.2,
+                0.9
+              ],
+              "index": 0,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                0.9,
+                0.75
+              ],
+              "index": 1,
+              "why": "tape resolves WIN (target_first)"
+            },
+            {
+              "rung": [
+                1.6,
+                0.55
+              ],
+              "index": 2,
+              "why": "tape resolves WIN (target_first)"
+            },
+            {
+              "rung": [
+                2.0,
+                0.35
+              ],
+              "index": 3,
+              "why": "tape resolves WIN (target_first)"
+            }
+          ]
+        }
       }
     },
     {
@@ -540,8 +598,8 @@
       "entry_price": 517.7,
       "entry_range_min": 516.7,
       "entry_range_max": 518.7,
-      "target_price": 528.37,
-      "stop_loss": 505.85,
+      "target_price": 524.37,
+      "stop_loss": 508.81,
       "lot_size": 1,
       "user_capital_inr": 500000.0,
       "replay_inputs": {
@@ -598,8 +656,42 @@
             "target_price": 528.37
           }
         },
-        "note": "legacy levels preserved as published (stop 505.85 / entry 517.7 / target 528.37); real point-in-time SBIN tape re-recorded (T_rec close 517.7, ATR14 9.875, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
-        "superseded": []
+        "note": "legacy levels preserved as published (stop 505.85 / entry 517.7 / target 528.37); real point-in-time SBIN tape re-recorded (T_rec close 517.7, ATR14 9.875, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources; reshaped by shape-ladder/1 to the class ladder rung (risk_atr 0.9, rr 0.75) from (1.2, 0.9) — 1 rung(s) refused before it, each recorded in authoring.reshape.refused_rungs",
+        "superseded": [],
+        "reshape": {
+          "campaign": "shape-ladder/1",
+          "reason": "the class stood at one frozen shape replicated across rows; this row was re-derived at a declared rung of the class's shape family so the class's rule-exercise census measures coverage, not rows",
+          "rung_index": 1,
+          "shape": {
+            "risk_atr": 0.9,
+            "rr": 0.75
+          },
+          "from_shape": {
+            "risk_atr": 1.2,
+            "rr": 0.9
+          },
+          "from_levels": {
+            "entry_price": 517.7,
+            "stop_loss": 505.85,
+            "target_price": 528.37
+          },
+          "sizing": "re-derived from the row's own pinned ≤T_rec tape: entry = T_rec close, stop = entry − risk_atr×ATR(14), target at the class's target multiple",
+          "outcome": {
+            "was": "LOSS",
+            "now": "LOSS",
+            "basis": "stop_first"
+          },
+          "refused_rungs": [
+            {
+              "rung": [
+                1.2,
+                0.9
+              ],
+              "index": 0,
+              "why": "adds no rule exercise the class does not already stand for"
+            }
+          ]
+        }
       }
     },
     {
@@ -622,8 +714,8 @@
       "entry_price": 1748.55,
       "entry_range_min": 1746.8,
       "entry_range_max": 1750.3,
-      "target_price": 1782.99,
-      "stop_loss": 1710.28,
+      "target_price": 1770.88,
+      "stop_loss": 1684.76,
       "lot_size": 1,
       "user_capital_inr": 500000.0,
       "replay_inputs": {
@@ -680,8 +772,58 @@
             "target_price": 1782.99
           }
         },
-        "note": "legacy levels preserved as published (stop 1710.28 / entry 1748.55 / target 1782.99); real point-in-time INFY tape re-recorded (T_rec close 1748.55, ATR14 31.8929, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
-        "superseded": []
+        "note": "legacy levels preserved as published (stop 1710.28 / entry 1748.55 / target 1782.99); real point-in-time INFY tape re-recorded (T_rec close 1748.55, ATR14 31.8929, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources; reshaped by shape-ladder/1 to the class ladder rung (risk_atr 2.0, rr 0.35) from (1.2, 0.9) — 3 rung(s) refused before it, each recorded in authoring.reshape.refused_rungs",
+        "superseded": [],
+        "reshape": {
+          "campaign": "shape-ladder/1",
+          "reason": "the class stood at one frozen shape replicated across rows; this row was re-derived at a declared rung of the class's shape family so the class's rule-exercise census measures coverage, not rows",
+          "rung_index": 3,
+          "shape": {
+            "risk_atr": 2.0,
+            "rr": 0.35
+          },
+          "from_shape": {
+            "risk_atr": 1.2,
+            "rr": 0.9
+          },
+          "from_levels": {
+            "entry_price": 1748.55,
+            "stop_loss": 1710.28,
+            "target_price": 1782.99
+          },
+          "sizing": "re-derived from the row's own pinned ≤T_rec tape: entry = T_rec close, stop = entry − risk_atr×ATR(14), target at the class's target multiple",
+          "outcome": {
+            "was": "LOSS",
+            "now": "LOSS",
+            "basis": "stop_first"
+          },
+          "refused_rungs": [
+            {
+              "rung": [
+                1.2,
+                0.9
+              ],
+              "index": 0,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                0.9,
+                0.75
+              ],
+              "index": 1,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                1.6,
+                0.55
+              ],
+              "index": 2,
+              "why": "adds no rule exercise the class does not already stand for"
+            }
+          ]
+        }
       }
     },
     {
@@ -1039,8 +1181,8 @@
       "entry_price": 2461.35,
       "entry_range_min": 2458.89,
       "entry_range_max": 2463.81,
-      "target_price": 2550.25,
-      "stop_loss": 2425.79,
+      "target_price": 2513.2,
+      "stop_loss": 2440.61,
       "lot_size": 1,
       "user_capital_inr": 500000.0,
       "replay_inputs": {
@@ -1097,8 +1239,42 @@
             "target_price": 2550.25
           }
         },
-        "note": "legacy levels preserved as published (stop 2425.79 / entry 2461.35 / target 2550.25); real point-in-time TITAN tape re-recorded (T_rec close 2461.35, ATR14 59.2607, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
-        "superseded": []
+        "note": "legacy levels preserved as published (stop 2425.79 / entry 2461.35 / target 2550.25); real point-in-time TITAN tape re-recorded (T_rec close 2461.35, ATR14 59.2607, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources; reshaped by shape-ladder/1 to the class ladder rung (risk_atr 0.35, rr None) from (0.6, None) — 1 rung(s) refused before it, each recorded in authoring.reshape.refused_rungs",
+        "superseded": [],
+        "reshape": {
+          "campaign": "shape-ladder/1",
+          "reason": "the class stood at one frozen shape replicated across rows; this row was re-derived at a declared rung of the class's shape family so the class's rule-exercise census measures coverage, not rows",
+          "rung_index": 1,
+          "shape": {
+            "risk_atr": 0.35,
+            "rr": null
+          },
+          "from_shape": {
+            "risk_atr": 0.6,
+            "rr": null
+          },
+          "from_levels": {
+            "entry_price": 2461.35,
+            "stop_loss": 2425.79,
+            "target_price": 2550.25
+          },
+          "sizing": "re-derived from the row's own pinned ≤T_rec tape: entry = T_rec close, stop = entry − risk_atr×ATR(14), target at the class's target multiple",
+          "outcome": {
+            "was": "LOSS",
+            "now": "LOSS",
+            "basis": "stop_first"
+          },
+          "refused_rungs": [
+            {
+              "rung": [
+                0.6,
+                null
+              ],
+              "index": 0,
+              "why": "adds no rule exercise the class does not already stand for"
+            }
+          ]
+        }
       }
     },
     {
@@ -1121,8 +1297,8 @@
       "entry_price": 7469.5,
       "entry_range_min": 7462.03,
       "entry_range_max": 7476.97,
-      "target_price": 7731.32,
-      "stop_loss": 7364.77,
+      "target_price": 7644.05,
+      "stop_loss": 7399.68,
       "lot_size": 1,
       "user_capital_inr": 500000.0,
       "replay_inputs": {
@@ -1179,8 +1355,50 @@
             "target_price": 7731.32
           }
         },
-        "note": "legacy levels preserved as published (stop 7364.77 / entry 7469.5 / target 7731.32); real point-in-time MARUTI tape re-recorded (T_rec close 7469.5, ATR14 174.5465, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
-        "superseded": []
+        "note": "legacy levels preserved as published (stop 7364.77 / entry 7469.5 / target 7731.32); real point-in-time MARUTI tape re-recorded (T_rec close 7469.5, ATR14 174.5465, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources; reshaped by shape-ladder/1 to the class ladder rung (risk_atr 0.4, rr None) from (0.6, None) — 2 rung(s) refused before it, each recorded in authoring.reshape.refused_rungs",
+        "superseded": [],
+        "reshape": {
+          "campaign": "shape-ladder/1",
+          "reason": "the class stood at one frozen shape replicated across rows; this row was re-derived at a declared rung of the class's shape family so the class's rule-exercise census measures coverage, not rows",
+          "rung_index": 2,
+          "shape": {
+            "risk_atr": 0.4,
+            "rr": null
+          },
+          "from_shape": {
+            "risk_atr": 0.6,
+            "rr": null
+          },
+          "from_levels": {
+            "entry_price": 7469.5,
+            "stop_loss": 7364.77,
+            "target_price": 7731.32
+          },
+          "sizing": "re-derived from the row's own pinned ≤T_rec tape: entry = T_rec close, stop = entry − risk_atr×ATR(14), target at the class's target multiple",
+          "outcome": {
+            "was": "LOSS",
+            "now": "LOSS",
+            "basis": "stop_first"
+          },
+          "refused_rungs": [
+            {
+              "rung": [
+                0.6,
+                null
+              ],
+              "index": 0,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                0.35,
+                null
+              ],
+              "index": 1,
+              "why": "adds no rule exercise the class does not already stand for"
+            }
+          ]
+        }
       }
     },
     {
@@ -1203,8 +1421,8 @@
       "entry_price": 793.05,
       "entry_range_min": 792.05,
       "entry_range_max": 794.05,
-      "target_price": 819.27,
-      "stop_loss": 782.56,
+      "target_price": 812.72,
+      "stop_loss": 785.18,
       "lot_size": 1,
       "user_capital_inr": 500000.0,
       "replay_inputs": {
@@ -1261,8 +1479,58 @@
             "target_price": 819.27
           }
         },
-        "note": "legacy levels preserved as published (stop 782.56 / entry 793.05 / target 819.27); real point-in-time AXISBANK tape re-recorded (T_rec close 793.05, ATR14 17.4821, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
-        "superseded": []
+        "note": "legacy levels preserved as published (stop 782.56 / entry 793.05 / target 819.27); real point-in-time AXISBANK tape re-recorded (T_rec close 793.05, ATR14 17.4821, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources; reshaped by shape-ladder/1 to the class ladder rung (risk_atr 0.45, rr None) from (0.6, None) — 3 rung(s) refused before it, each recorded in authoring.reshape.refused_rungs",
+        "superseded": [],
+        "reshape": {
+          "campaign": "shape-ladder/1",
+          "reason": "the class stood at one frozen shape replicated across rows; this row was re-derived at a declared rung of the class's shape family so the class's rule-exercise census measures coverage, not rows",
+          "rung_index": 3,
+          "shape": {
+            "risk_atr": 0.45,
+            "rr": null
+          },
+          "from_shape": {
+            "risk_atr": 0.6,
+            "rr": null
+          },
+          "from_levels": {
+            "entry_price": 793.05,
+            "stop_loss": 782.56,
+            "target_price": 819.27
+          },
+          "sizing": "re-derived from the row's own pinned ≤T_rec tape: entry = T_rec close, stop = entry − risk_atr×ATR(14), target at the class's target multiple",
+          "outcome": {
+            "was": "LOSS",
+            "now": "LOSS",
+            "basis": "stop_first"
+          },
+          "refused_rungs": [
+            {
+              "rung": [
+                0.6,
+                null
+              ],
+              "index": 0,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                0.35,
+                null
+              ],
+              "index": 1,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                0.4,
+                null
+              ],
+              "index": 2,
+              "why": "adds no rule exercise the class does not already stand for"
+            }
+          ]
+        }
       }
     },
     {
@@ -1285,8 +1553,8 @@
       "entry_price": 732.85,
       "entry_range_min": 731.85,
       "entry_range_max": 733.85,
-      "target_price": 755.0,
-      "stop_loss": 723.99,
+      "target_price": 751.3,
+      "stop_loss": 725.47,
       "lot_size": 1,
       "user_capital_inr": 500000.0,
       "replay_inputs": {
@@ -1343,8 +1611,66 @@
             "target_price": 755.0
           }
         },
-        "note": "legacy levels preserved as published (stop 723.99 / entry 732.85 / target 755.0); real point-in-time BAJFINANCE tape re-recorded (T_rec close 732.85, ATR14 14.7621, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
-        "superseded": []
+        "note": "legacy levels preserved as published (stop 723.99 / entry 732.85 / target 755.0); real point-in-time BAJFINANCE tape re-recorded (T_rec close 732.85, ATR14 14.7621, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources; reshaped by shape-ladder/1 to the class ladder rung (risk_atr 0.5, rr None) from (0.6, None) — 4 rung(s) refused before it, each recorded in authoring.reshape.refused_rungs",
+        "superseded": [],
+        "reshape": {
+          "campaign": "shape-ladder/1",
+          "reason": "the class stood at one frozen shape replicated across rows; this row was re-derived at a declared rung of the class's shape family so the class's rule-exercise census measures coverage, not rows",
+          "rung_index": 4,
+          "shape": {
+            "risk_atr": 0.5,
+            "rr": null
+          },
+          "from_shape": {
+            "risk_atr": 0.6,
+            "rr": null
+          },
+          "from_levels": {
+            "entry_price": 732.85,
+            "stop_loss": 723.99,
+            "target_price": 755.0
+          },
+          "sizing": "re-derived from the row's own pinned ≤T_rec tape: entry = T_rec close, stop = entry − risk_atr×ATR(14), target at the class's target multiple",
+          "outcome": {
+            "was": "LOSS",
+            "now": "LOSS",
+            "basis": "stop_first"
+          },
+          "refused_rungs": [
+            {
+              "rung": [
+                0.6,
+                null
+              ],
+              "index": 0,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                0.35,
+                null
+              ],
+              "index": 1,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                0.4,
+                null
+              ],
+              "index": 2,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                0.45,
+                null
+              ],
+              "index": 3,
+              "why": "adds no rule exercise the class does not already stand for"
+            }
+          ]
+        }
       }
     },
     {
@@ -1366,8 +1692,8 @@
       "entry_price": 874.3,
       "entry_range_min": 873.3,
       "entry_range_max": 875.3,
-      "target_price": 943.18,
-      "stop_loss": 842.99,
+      "target_price": 921.28,
+      "stop_loss": 850.81,
       "lot_size": 1,
       "user_capital_inr": 500000.0,
       "replay_inputs": {
@@ -1424,8 +1750,50 @@
             "target_price": 943.18
           }
         },
-        "note": "legacy levels preserved as published (stop 842.99 / entry 874.3 / target 943.18); real point-in-time SUNPHARMA tape re-recorded (T_rec close 874.3, ATR14 15.6571, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
-        "superseded": []
+        "note": "legacy levels preserved as published (stop 842.99 / entry 874.3 / target 943.18); real point-in-time SUNPHARMA tape re-recorded (T_rec close 874.3, ATR14 15.6571, 226 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources; reshaped by shape-ladder/1 to the class ladder rung (risk_atr 1.5, rr 2.0) from (2.0, 2.2) — 2 rung(s) refused before it, each recorded in authoring.reshape.refused_rungs",
+        "superseded": [],
+        "reshape": {
+          "campaign": "shape-ladder/1",
+          "reason": "the class stood at one frozen shape replicated across rows; this row was re-derived at a declared rung of the class's shape family so the class's rule-exercise census measures coverage, not rows",
+          "rung_index": 2,
+          "shape": {
+            "risk_atr": 1.5,
+            "rr": 2.0
+          },
+          "from_shape": {
+            "risk_atr": 2.0,
+            "rr": 2.2
+          },
+          "from_levels": {
+            "entry_price": 874.3,
+            "stop_loss": 842.99,
+            "target_price": 943.18
+          },
+          "sizing": "re-derived from the row's own pinned ≤T_rec tape: entry = T_rec close, stop = entry − risk_atr×ATR(14), target at the class's target multiple",
+          "outcome": {
+            "was": "WIN",
+            "now": "WIN",
+            "basis": "target_first"
+          },
+          "refused_rungs": [
+            {
+              "rung": [
+                2.0,
+                2.2
+              ],
+              "index": 0,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                1.0,
+                1.8
+              ],
+              "index": 1,
+              "why": "tape resolves LOSS (stop_first)"
+            }
+          ]
+        }
       }
     },
     {
@@ -1540,8 +1908,8 @@
       "entry_price": 770.95,
       "entry_range_min": 769.95,
       "entry_range_max": 771.95,
-      "target_price": 832.48,
-      "stop_loss": 742.98,
+      "target_price": 796.13,
+      "stop_loss": 756.96,
       "lot_size": 1,
       "user_capital_inr": 500000.0,
       "replay_inputs": {
@@ -1598,8 +1966,42 @@
             "target_price": 832.48
           }
         },
-        "note": "legacy levels preserved as published (stop 742.98 / entry 770.95 / target 832.48); real point-in-time HDFCBANK tape re-recorded (T_rec close 770.95, ATR14 13.9875, 228 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
-        "superseded": []
+        "note": "legacy levels preserved as published (stop 742.98 / entry 770.95 / target 832.48); real point-in-time HDFCBANK tape re-recorded (T_rec close 770.95, ATR14 13.9875, 228 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources; reshaped by shape-ladder/1 to the class ladder rung (risk_atr 1.0, rr 1.8) from (2.0, 2.2) — 1 rung(s) refused before it, each recorded in authoring.reshape.refused_rungs",
+        "superseded": [],
+        "reshape": {
+          "campaign": "shape-ladder/1",
+          "reason": "the class stood at one frozen shape replicated across rows; this row was re-derived at a declared rung of the class's shape family so the class's rule-exercise census measures coverage, not rows",
+          "rung_index": 1,
+          "shape": {
+            "risk_atr": 1.0,
+            "rr": 1.8
+          },
+          "from_shape": {
+            "risk_atr": 2.0,
+            "rr": 2.2
+          },
+          "from_levels": {
+            "entry_price": 770.95,
+            "stop_loss": 742.98,
+            "target_price": 832.48
+          },
+          "sizing": "re-derived from the row's own pinned ≤T_rec tape: entry = T_rec close, stop = entry − risk_atr×ATR(14), target at the class's target multiple",
+          "outcome": {
+            "was": "WIN",
+            "now": "WIN",
+            "basis": "target_first"
+          },
+          "refused_rungs": [
+            {
+              "rung": [
+                2.0,
+                2.2
+              ],
+              "index": 0,
+              "why": "adds no rule exercise the class does not already stand for"
+            }
+          ]
+        }
       }
     },
     {
@@ -1621,8 +2023,8 @@
       "entry_price": 825.9,
       "entry_range_min": 824.9,
       "entry_range_max": 826.9,
-      "target_price": 898.3,
-      "stop_loss": 792.99,
+      "target_price": 867.02,
+      "stop_loss": 809.45,
       "lot_size": 1,
       "user_capital_inr": 500000.0,
       "replay_inputs": {
@@ -1679,8 +2081,74 @@
             "target_price": 898.3
           }
         },
-        "note": "legacy levels preserved as published (stop 792.99 / entry 825.9 / target 898.3); real point-in-time ICICIBANK tape re-recorded (T_rec close 825.9, ATR14 16.4536, 228 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
-        "superseded": []
+        "note": "legacy levels preserved as published (stop 792.99 / entry 825.9 / target 898.3); real point-in-time ICICIBANK tape re-recorded (T_rec close 825.9, ATR14 16.4536, 228 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources; reshaped by shape-ladder/1 to the class ladder rung (risk_atr 1.0, rr 2.5) from (2.0, 2.2) — 5 rung(s) refused before it, each recorded in authoring.reshape.refused_rungs",
+        "superseded": [],
+        "reshape": {
+          "campaign": "shape-ladder/1",
+          "reason": "the class stood at one frozen shape replicated across rows; this row was re-derived at a declared rung of the class's shape family so the class's rule-exercise census measures coverage, not rows",
+          "rung_index": 5,
+          "shape": {
+            "risk_atr": 1.0,
+            "rr": 2.5
+          },
+          "from_shape": {
+            "risk_atr": 2.0,
+            "rr": 2.2
+          },
+          "from_levels": {
+            "entry_price": 825.9,
+            "stop_loss": 792.99,
+            "target_price": 898.3
+          },
+          "sizing": "re-derived from the row's own pinned ≤T_rec tape: entry = T_rec close, stop = entry − risk_atr×ATR(14), target at the class's target multiple",
+          "outcome": {
+            "was": "WIN",
+            "now": "WIN",
+            "basis": "target_first"
+          },
+          "refused_rungs": [
+            {
+              "rung": [
+                2.0,
+                2.2
+              ],
+              "index": 0,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                1.0,
+                1.8
+              ],
+              "index": 1,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                1.5,
+                2.0
+              ],
+              "index": 2,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                2.5,
+                2.5
+              ],
+              "index": 3,
+              "why": "tape resolves TIME (horizon_end)"
+            },
+            {
+              "rung": [
+                3.0,
+                3.0
+              ],
+              "index": 4,
+              "why": "tape resolves TIME (horizon_end)"
+            }
+          ]
+        }
       }
     },
     {
@@ -1702,8 +2170,8 @@
       "entry_price": 2399.1,
       "entry_range_min": 2396.7,
       "entry_range_max": 2401.5,
-      "target_price": 2597.45,
-      "stop_loss": 2308.94,
+      "target_price": 2601.98,
+      "stop_loss": 2286.39,
       "lot_size": 1,
       "user_capital_inr": 500000.0,
       "replay_inputs": {
@@ -1760,8 +2228,98 @@
             "target_price": 2597.45
           }
         },
-        "note": "legacy levels preserved as published (stop 2308.94 / entry 2399.1 / target 2597.45); real point-in-time TITAN tape re-recorded (T_rec close 2399.1, ATR14 45.0821, 228 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
-        "superseded": []
+        "note": "legacy levels preserved as published (stop 2308.94 / entry 2399.1 / target 2597.45); real point-in-time TITAN tape re-recorded (T_rec close 2399.1, ATR14 45.0821, 228 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources; reshaped by shape-ladder/1 to the class ladder rung (risk_atr 2.5, rr 1.8) from (2.0, 2.2) — 8 rung(s) refused before it, each recorded in authoring.reshape.refused_rungs",
+        "superseded": [],
+        "reshape": {
+          "campaign": "shape-ladder/1",
+          "reason": "the class stood at one frozen shape replicated across rows; this row was re-derived at a declared rung of the class's shape family so the class's rule-exercise census measures coverage, not rows",
+          "rung_index": 8,
+          "shape": {
+            "risk_atr": 2.5,
+            "rr": 1.8
+          },
+          "from_shape": {
+            "risk_atr": 2.0,
+            "rr": 2.2
+          },
+          "from_levels": {
+            "entry_price": 2399.1,
+            "stop_loss": 2308.94,
+            "target_price": 2597.45
+          },
+          "sizing": "re-derived from the row's own pinned ≤T_rec tape: entry = T_rec close, stop = entry − risk_atr×ATR(14), target at the class's target multiple",
+          "outcome": {
+            "was": "WIN",
+            "now": "WIN",
+            "basis": "target_first"
+          },
+          "refused_rungs": [
+            {
+              "rung": [
+                2.0,
+                2.2
+              ],
+              "index": 0,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                1.0,
+                1.8
+              ],
+              "index": 1,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                1.5,
+                2.0
+              ],
+              "index": 2,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                2.5,
+                2.5
+              ],
+              "index": 3,
+              "why": "tape resolves TIME (horizon_end)"
+            },
+            {
+              "rung": [
+                3.0,
+                3.0
+              ],
+              "index": 4,
+              "why": "tape resolves TIME (horizon_end)"
+            },
+            {
+              "rung": [
+                1.0,
+                2.5
+              ],
+              "index": 5,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                1.5,
+                1.8
+              ],
+              "index": 6,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                2.0,
+                2.0
+              ],
+              "index": 7,
+              "why": "adds no rule exercise the class does not already stand for"
+            }
+          ]
+        }
       }
     },
     {
@@ -1783,8 +2341,8 @@
       "entry_price": 951.4,
       "entry_range_min": 950.4,
       "entry_range_max": 952.4,
-      "target_price": 1017.05,
-      "stop_loss": 921.56,
+      "target_price": 996.16,
+      "stop_loss": 936.48,
       "lot_size": 1,
       "user_capital_inr": 500000.0,
       "replay_inputs": {
@@ -1841,8 +2399,114 @@
             "target_price": 1017.05
           }
         },
-        "note": "legacy levels preserved as published (stop 921.56 / entry 951.4 / target 1017.05); real point-in-time SUNPHARMA tape re-recorded (T_rec close 951.4, ATR14 14.9179, 228 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
-        "superseded": []
+        "note": "legacy levels preserved as published (stop 921.56 / entry 951.4 / target 1017.05); real point-in-time SUNPHARMA tape re-recorded (T_rec close 951.4, ATR14 14.9179, 228 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources; reshaped by shape-ladder/1 to the class ladder rung (risk_atr 1.0, rr 3.0) from (2.0, 2.2) — 10 rung(s) refused before it, each recorded in authoring.reshape.refused_rungs",
+        "superseded": [],
+        "reshape": {
+          "campaign": "shape-ladder/1",
+          "reason": "the class stood at one frozen shape replicated across rows; this row was re-derived at a declared rung of the class's shape family so the class's rule-exercise census measures coverage, not rows",
+          "rung_index": 10,
+          "shape": {
+            "risk_atr": 1.0,
+            "rr": 3.0
+          },
+          "from_shape": {
+            "risk_atr": 2.0,
+            "rr": 2.2
+          },
+          "from_levels": {
+            "entry_price": 951.4,
+            "stop_loss": 921.56,
+            "target_price": 1017.05
+          },
+          "sizing": "re-derived from the row's own pinned ≤T_rec tape: entry = T_rec close, stop = entry − risk_atr×ATR(14), target at the class's target multiple",
+          "outcome": {
+            "was": "WIN",
+            "now": "WIN",
+            "basis": "target_first"
+          },
+          "refused_rungs": [
+            {
+              "rung": [
+                2.0,
+                2.2
+              ],
+              "index": 0,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                1.0,
+                1.8
+              ],
+              "index": 1,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                1.5,
+                2.0
+              ],
+              "index": 2,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                2.5,
+                2.5
+              ],
+              "index": 3,
+              "why": "tape resolves TIME (horizon_end)"
+            },
+            {
+              "rung": [
+                3.0,
+                3.0
+              ],
+              "index": 4,
+              "why": "tape resolves TIME (horizon_end)"
+            },
+            {
+              "rung": [
+                1.0,
+                2.5
+              ],
+              "index": 5,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                1.5,
+                1.8
+              ],
+              "index": 6,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                2.0,
+                2.0
+              ],
+              "index": 7,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                2.5,
+                1.8
+              ],
+              "index": 8,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                3.0,
+                2.2
+              ],
+              "index": 9,
+              "why": "tape resolves TIME (horizon_end)"
+            }
+          ]
+        }
       }
     },
     {
@@ -2068,8 +2732,8 @@
       "entry_price": 757.5,
       "entry_range_min": 756.5,
       "entry_range_max": 758.5,
-      "target_price": 819.43,
-      "stop_loss": 729.35,
+      "target_price": 833.51,
+      "stop_loss": 715.27,
       "lot_size": 1,
       "user_capital_inr": 500000.0,
       "replay_inputs": {
@@ -2126,8 +2790,146 @@
             "target_price": 819.43
           }
         },
-        "note": "legacy levels preserved as published (stop 729.35 / entry 757.5 / target 819.43); real point-in-time SBIN tape re-recorded (T_rec close 757.5, ATR14 14.075, 222 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
-        "superseded": []
+        "note": "legacy levels preserved as published (stop 729.35 / entry 757.5 / target 819.43); real point-in-time SBIN tape re-recorded (T_rec close 757.5, ATR14 14.075, 222 prefix / 22 forward sessions); migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources; reshaped by shape-ladder/1 to the class ladder rung (risk_atr 3.0, rr 1.8) from (2.0, 2.2) — 14 rung(s) refused before it, each recorded in authoring.reshape.refused_rungs",
+        "superseded": [],
+        "reshape": {
+          "campaign": "shape-ladder/1",
+          "reason": "the class stood at one frozen shape replicated across rows; this row was re-derived at a declared rung of the class's shape family so the class's rule-exercise census measures coverage, not rows",
+          "rung_index": 14,
+          "shape": {
+            "risk_atr": 3.0,
+            "rr": 1.8
+          },
+          "from_shape": {
+            "risk_atr": 2.0,
+            "rr": 2.2
+          },
+          "from_levels": {
+            "entry_price": 757.5,
+            "stop_loss": 729.35,
+            "target_price": 819.43
+          },
+          "sizing": "re-derived from the row's own pinned ≤T_rec tape: entry = T_rec close, stop = entry − risk_atr×ATR(14), target at the class's target multiple",
+          "outcome": {
+            "was": "WIN",
+            "now": "WIN",
+            "basis": "target_first"
+          },
+          "refused_rungs": [
+            {
+              "rung": [
+                2.0,
+                2.2
+              ],
+              "index": 0,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                1.0,
+                1.8
+              ],
+              "index": 1,
+              "why": "tape resolves LOSS (stop_first)"
+            },
+            {
+              "rung": [
+                1.5,
+                2.0
+              ],
+              "index": 2,
+              "why": "tape resolves LOSS (stop_first)"
+            },
+            {
+              "rung": [
+                2.5,
+                2.5
+              ],
+              "index": 3,
+              "why": "tape resolves TIME (horizon_end)"
+            },
+            {
+              "rung": [
+                3.0,
+                3.0
+              ],
+              "index": 4,
+              "why": "tape resolves TIME (horizon_end)"
+            },
+            {
+              "rung": [
+                1.0,
+                2.5
+              ],
+              "index": 5,
+              "why": "tape resolves LOSS (stop_first)"
+            },
+            {
+              "rung": [
+                1.5,
+                1.8
+              ],
+              "index": 6,
+              "why": "tape resolves LOSS (stop_first)"
+            },
+            {
+              "rung": [
+                2.0,
+                2.0
+              ],
+              "index": 7,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                2.5,
+                1.8
+              ],
+              "index": 8,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                3.0,
+                2.2
+              ],
+              "index": 9,
+              "why": "tape resolves TIME (horizon_end)"
+            },
+            {
+              "rung": [
+                1.0,
+                3.0
+              ],
+              "index": 10,
+              "why": "tape resolves LOSS (stop_first)"
+            },
+            {
+              "rung": [
+                1.5,
+                2.2
+              ],
+              "index": 11,
+              "why": "tape resolves LOSS (stop_first)"
+            },
+            {
+              "rung": [
+                2.0,
+                2.5
+              ],
+              "index": 12,
+              "why": "adds no rule exercise the class does not already stand for"
+            },
+            {
+              "rung": [
+                2.5,
+                2.0
+              ],
+              "index": 13,
+              "why": "adds no rule exercise the class does not already stand for"
+            }
+          ]
+        }
       }
     },
     {

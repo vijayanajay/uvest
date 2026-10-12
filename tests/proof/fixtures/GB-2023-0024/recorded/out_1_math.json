@@ -1,12 +1,12 @@
 {
   "symbol": "SUNPHARMA",
   "instrument_type": "CASH",
-  "raw_rr": 2.2000670241286833,
-  "live_rr": 2.2000670241286833,
-  "risk_inr": 29.84,
-  "reward_inr": 65.65,
+  "raw_rr": 3.0000000000000075,
+  "live_rr": 3.0000000000000075,
+  "risk_inr": 14.92,
+  "reward_inr": 44.76,
   "quantity": 1,
   "outside_range_pct": 0.0,
   "inverted_rr_flag": false,
-  "capital_allocation_pct": 0.006
+  "capital_allocation_pct": 0.003
 }

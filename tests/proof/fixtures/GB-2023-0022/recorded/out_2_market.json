@@ -1,7 +1,7 @@
 {
   "symbol": "ICICIBANK",
   "atr_14": 16.453571,
-  "sl_atr_ratio": 2.0001736487953083,
+  "sl_atr_ratio": 0.9997829390058558,
   "is_tight_sl": false,
   "ema_20": 849.41,
   "above_50_ema": false,

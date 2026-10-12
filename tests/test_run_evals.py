@@ -839,7 +839,17 @@ class TestProofRootPayloadEvidence(unittest.TestCase):
                  "script_outputs": {"out_1_math.json": {"raw_rr": 1.8, "live_rr": 1.8},
                                     "out_2_market.json": {"is_tight_sl": False}}}
         trades = [*abstained, clean]
-        unbacked = run_evals.unbacked_payloads(trades, {})
+        # The clean record is *recorded*, as the docstring says: its two payloads
+        # have a target behind them. Its exercises are then the two R:R arms it
+        # carries a measurement for (`:clear`, at 1.8) — the tight arm carries no
+        # multiple here, so it counts for nothing, which is the point of counting
+        # measurements rather than records.
+        recorded = {("GB-TEST-3", "out_1_math.json"): Path("out_1_math.json"),
+                    ("GB-TEST-3", "out_2_market.json"): Path("out_2_market.json")}
+        unbacked = run_evals.unbacked_payloads(trades, recorded)
+        self.assertEqual(unbacked, frozenset(
+            {("GB-TEST-1", "out_6_fundamental.json"),
+             ("GB-TEST-2", "out_6_fundamental.json")}))
         gate = run_evals.gate_hard_breakers(trades, unbacked,
                                            {"clean_bullish": 15, "pledge_hazard": 5})
         self.assertFalse(gate.skipped, gate.detail)
@@ -847,7 +857,7 @@ class TestProofRootPayloadEvidence(unittest.TestCase):
         self.assertIn("pledge_hazard 0/2 graded", gate.coverage)
         self.assertIn("(quota 5), 2 abstained", gate.coverage)
         self.assertIn("clean_bullish 1/1 graded", gate.coverage)
-        self.assertIn("1 distinct rule exercise(s) (quota 15)", gate.coverage)
+        self.assertIn("2 distinct rule exercise(s) (quota 15)", gate.coverage)
         rendered = run_evals.render_scorecard([gate], True)
         self.assertIn("[PASS] Hard Circuit Breaker Accuracy", rendered)
         self.assertIn("pledge_hazard 0/2 graded", rendered,
@@ -857,16 +867,23 @@ class TestProofRootPayloadEvidence(unittest.TestCase):
     def test_gate_2_counts_rule_exercises_not_records(self):
         """The census is per class, and it is the runner's own walk.
 
-        Counting records would say 40 rules were probed; the census says 11 — the
-        curated classes are one frozen shape each, replicated across rows, while
-        the two hazard classes are the ones with genuinely distinct measurements.
+        Counting records would say 40 rules were probed; the census reads the
+        measured coverage instead — the three geometry classes are spread across
+        their shape families by the ladder campaign, the two hazard classes are
+        catalog-fixed, and the line says which rows added nothing new.
         """
         unbacked = run_evals.unbacked_payloads(self.trades, self.targets)
         gate = run_evals.gate_hard_breakers(
             self.trades, unbacked, self.raw["meta"]["class_counts_expected"])
         self.assertEqual(gate.census, run_evals.dataset_rule_census())
-        self.assertLess(sum(gate.census.values()), len(self.trades),
-                        "the census must collapse repeated exercises")
+        # The census is not a record count, in either direction: a record can stand
+        # for several arms, so the invariant is the *collapse* of repeated
+        # measurements (pinned by the sibling seam) and the floor, not an ordering
+        # against `len(trades)`.
+        self.assertNotEqual(sum(gate.census.values()), len(self.trades))
+        baseline = run_evals.load_baseline()
+        ok, reason, shortfalls = run_evals.check_rule_coverage(gate.census, baseline)
+        self.assertTrue(ok, f"{reason} {shortfalls}")
         for cls, keys in run_evals.graded_trade_classes(self.trades, unbacked).items():
             self.assertEqual(gate.census.get(cls), len(keys), cls)
             self.assertIn(f"{cls} ", gate.coverage)

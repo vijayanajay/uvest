@@ -1,7 +1,7 @@
 {
   "symbol": "HDFCBANK",
   "atr_14": 13.9875,
-  "sl_atr_ratio": 1.999642537980341,
+  "sl_atr_ratio": 1.0001787310098307,
   "is_tight_sl": false,
   "ema_20": 801.85,
   "above_50_ema": false,

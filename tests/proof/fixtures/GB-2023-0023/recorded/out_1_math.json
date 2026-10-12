@@ -1,12 +1,12 @@
 {
   "symbol": "TITAN",
   "instrument_type": "CASH",
-  "raw_rr": 2.1999778172138447,
-  "live_rr": 2.1999778172138447,
-  "risk_inr": 90.16,
-  "reward_inr": 198.35,
+  "raw_rr": 1.8000177446544232,
+  "live_rr": 1.8000177446544232,
+  "risk_inr": 112.71,
+  "reward_inr": 202.88,
   "quantity": 1,
   "outside_range_pct": 0.0,
   "inverted_rr_flag": false,
-  "capital_allocation_pct": 0.018
+  "capital_allocation_pct": 0.0225
 }
