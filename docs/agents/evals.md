@@ -35,7 +35,7 @@ The Evals suite evaluates the entire pipeline against a curated benchmark of 50 
 | Dimension | Evaluation Seam | Automated Metric / Assertion | Pass Threshold |
 | :--- | :--- | :--- | :--- |
 | **1. Zero Hallucination Guarantee** | Agent Master Prompt Output vs. Script Output JSONs | Every number, percentage, and ratio cited in the generated Markdown and HTML reports must have an exact match in the corresponding script output JSON. | **100% Exact Match** (0 hallucinations allowed) |
-| **2. Hard Circuit Breaker Enforcement** | Scoring Engine (`scripts/9_decision_engine.py`) | Any trade in the benchmark with Promoter Pledge $>25\%$, Inverted R:R ($<1.0$), Options instrument, or Earnings $<7\text{d}$ on Futures must receive an **🔴 AVOID**. The scorecard also names per-class coverage, so a class with no graded record is disclosed rather than averaged away. | **100.0% Detection Rate** (Zero false negatives) |
+| **2. Hard Circuit Breaker Enforcement** | Scoring Engine (`scripts/9_decision_engine.py`) | Any trade in the benchmark with Promoter Pledge $>25\%$, Inverted R:R ($<1.0$), Options instrument, or Earnings $<7\text{d}$ on Futures must receive an **🔴 AVOID**. The scorecard also names per-class coverage and each class's distinct rule-exercise census, so a class with no graded record — or with records that all repeat one exercise — is disclosed rather than averaged away. | **100.0% Detection Rate** (Zero false negatives) |
 | **3. Option Rejection Invariance** | Ingestion Parser (`scripts/0_ingest_reco.py`) | Any recommendation containing Call (CE), Put (PE), or Option contracts must be immediately rejected with exit code 2. | **100.0% Rejection Rate** |
 | **4. Directional Calibration** | LightGBM & DTW Engine (`3_dtw_pattern.py`, `4_ml_direction.py`) | Calibrated Brier score on 1-month forward direction prediction across the benchmark. | **Brier Score $\le 0.18$** |
 | **5. Range Coverage Integrity** | Volatility Cone Engine (`4_ml_direction.py`) | Percentage of actual forward 22-day maximum and minimum price bars that remained within the calculated $[P_{10}, P_{90}]$ price envelope. | **Coverage $\ge 80.0\%$** |
@@ -67,10 +67,13 @@ Output scorecard template:
 ======================================================================
   [PASS] Option Rejection Guardrail:       100.0% (5/5 rejected)
   [PASS] Hard Circuit Breaker Accuracy:   100.0% (25/25 correctly blocked)
-         ↳ class coverage: clean_bullish 15/15 graded; inverted_rr 10/10 graded;
-           pledge_hazard 5/5 graded; earnings_hazard 5/5 graded; tight_stop 5/5
-           graded; institutional_distribution no registered breaker (0 record(s),
-           quota 10)
+         ↳ class coverage: clean_bullish 15/15 graded, 1 distinct rule exercise(s)
+           (14 of 15 repeat an exercise); inverted_rr 10/10 graded, 2 distinct rule
+           exercise(s) (8 of 10 repeat an exercise); institutional_distribution no
+           registered breaker (0 record(s), quota 10); pledge_hazard 5/5 graded,
+           5 distinct rule exercise(s); earnings_hazard 5/5 graded, 2 distinct rule
+           exercise(s) (3 of 5 repeat an exercise); tight_stop 5/5 graded,
+           1 distinct rule exercise(s) (4 of 5 repeat an exercise)
   [PASS] Zero Hallucination Audit:        100.0% (50 graded, 0 with discrepancies)
   [PASS] Directional Brier Score:          0.142  (Threshold <= 0.180)
   [PASS] Price Cone Range Coverage:        86.4%  (Threshold >= 80.0%)
@@ -88,9 +91,15 @@ Output scorecard template:
   Gate payloads proven: 50/50
   Evidence completeness: OK (50/50 record(s) carry proven stage-12 evidence;
     50/50 record(s) carry proven gate payloads)
+  Rule coverage: OK (11 distinct rule exercise(s) across the graded classes;
+    frozen floor 11)
 ```
 
 **Gate 2 discloses its class coverage.** Breaker accuracy is an average over the records the gate could grade, so a class whose records all abstained contributes nothing to it and a percentage over a smaller graded set reads exactly like one over the whole benchmark. The coverage line — printed whatever the verdict, including a `[PASS]` — therefore names every class with `graded/total`, the records it had to abstain on (`0/N graded, N abstained`, which is the case a bare 100.0% would hide), a `(quota N)` marker when the dataset is short of that class's frozen quota, and the classes with no breaker in the frozen registry at all (`run_evals.class_coverage`). It discloses, it does not re-weight: an abstention with a recorded reason is registered debt by design (§4.1), and the ones nobody declared already fail the run as unregistered gaps.
+
+**A record is not a rule exercise.** Forty graded records do not mean forty rules probed, so the same line carries the **rule-exercise census**: for each class, how many distinct rules its graded records actually exercised, and how many of them merely repeat one (`8 of 10 repeat an exercise`). An exercise is `(arm, measured value)` — the arm being one comparison of the breaker (the R:R breaker has two: the recommended-band midpoint and the executable price) and the value rounded to the granularity that rule speaks in (percent to 0.1, R:R to 2 decimals, ATR multiple to 2 decimals, sessions whole), so 0.9000644 and 0.9001122 are one exercise of "R:R ≈ 0.90, below 1.0", not two (`run_evals.rule_exercises`).
+
+The census may not shrink. `baseline_scorecard.json` freezes it (`rule_exercises`, banked by every deliberate re-freeze), the runner recomputes it each run, and a class falling below its frozen count fails the run naming the class and the delta — a class can lose the row that carried its only exercise at 54.2% and still look graded, which is exactly the silent regression this floor exists to catch. Growth is free: adding distinct evidence never needs a re-freeze, only lowering the floor does.
 
 ### 4.1 Evidence Provenance (Run Records)
 

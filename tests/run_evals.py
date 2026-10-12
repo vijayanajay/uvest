@@ -134,6 +134,20 @@ MAE_REDUCTION_MIN = 75.0
 HTML_VALIDITY_MIN = 100.0
 
 
+BASELINE_FILE = REPO_ROOT / "tests" / "proof" / "baseline_scorecard.json"
+
+
+def load_baseline(path: Path | None = None) -> dict:
+    """The frozen regression reference: dataset digests, the E5 meter, and the
+    rule-coverage census (`check_rule_coverage`'s floor). Absent or unreadable is
+    an empty reference rather than a crash — the validator is what requires it.
+    """
+    try:
+        return json.loads((path or BASELINE_FILE).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
 def load_benchmark(path: Path):
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -163,6 +177,11 @@ class Gate:
         # classes were graded (and which it had to abstain on) is stated *next to*
         # the number, not left to be inferred from it. Printed for every status.
         self.coverage = ""
+        # Gate 2's rule-exercise census: per class, how many distinct rule
+        # exercises the graded records stood for, and which exercises those were
+        # (`check_rule_coverage` compares the counts with the frozen floor).
+        self.census: dict[str, int] = {}
+        self.exercises: dict[str, frozenset] = {}
 
     def evaluate(self) -> tuple[str, str]:
         """Returns ([PASS]|[SKIP]|[FAIL], display_value)."""
@@ -178,53 +197,177 @@ class Gate:
 
 
 # --------------------------------------------------------------------------
-# Gate 2: hard circuit breakers
+# Rule arms — what a breaker *checks*, one arm per comparison
 # --------------------------------------------------------------------------
+# A breaker is not one comparison but the set of comparisons BRD §10.3 makes it:
+# the R:R breaker trips on the recommended-band midpoint (`raw_rr`) *or* at the
+# executable price (`live_rr`), the earnings hazard is a Futures rule, and so on.
+# Each arm names one comparison, the artifact it reads, the field whose value
+# decides it, the granularity that comparison speaks in, and (when it differs)
+# the field carrying the *measurement* the rule was exercised at — `is_tight_sl`
+# is a boolean, but the stop multiple behind it is `sl_atr_ratio`.
+#
+# The granule is the grain the business rule is stated in (percent to 0.1, R:R
+# to 2 decimals, ATR multiple to 2 decimals, sessions whole), and it is what makes
+# a *rule exercise* comparable: two records at 0.90006 and 0.90011 exercise the
+# same "R:R ≈ 0.90, below 1.0" rule, and counting them as two would be counting
+# records again.
+TIGHT_STOP_ARM = ("is_tight_sl_true", "out_2_market.json", "is_tight_sl", 2,
+                  "sl_atr_ratio")
+RULE_ARMS: dict[str, tuple[tuple[str, str, object, int, str | None], ...]] = {
+    "inverted_risk_reward": (
+        ("raw_rr_below_1", "out_1_math.json", "raw_rr", 2, None),
+        # live_rr carries the trap-encoding in the golden dataset (the
+        # executable reality); older records predate the pair-splitting.
+        ("live_rr_below_1", "out_1_math.json", ("live_rr", "raw_rr"), 2, None),
+    ),
+    "promoter_pledging_gt_25pct": (
+        ("promoter_pledge_pct_above_25", "out_6_fundamental.json",
+         "promoter_pledge_pct", 1, None),
+    ),
+    "earnings_within_7d": (
+        ("days_to_earnings_below_7_futures", "out_6_fundamental.json",
+         "days_to_earnings", 0, None),
+    ),
+    "tighter_than_0_75x_atr": (TIGHT_STOP_ARM,),
+}
+# The negative class's exercise: "no breaker leaked", which is one rule exercised
+# however many clean records prove it.
+LEAK_CHECK_ARM = "no_breaker_leaked"
+
+
+def _field(trade: dict, artifact: str, field: object):
+    """The value an arm reads, tolerating a fallback key (`live_rr` → `raw_rr`)."""
+    outputs = (trade.get("script_outputs") or {}).get(artifact) or {}
+    keys = field if isinstance(field, tuple) else (field,)
+    for key in keys:
+        if key in outputs:
+            return outputs[key]
+    return None
+
+
+def _trips(breaker: str, field: str, value) -> bool:
+    """The arm's own comparison — the single source of the breaker thresholds."""
+    if breaker == "inverted_risk_reward":
+        return isinstance(value, (int, float)) and not isinstance(value, bool) \
+            and value < 1.0
+    if breaker == "promoter_pledging_gt_25pct":
+        return isinstance(value, (int, float)) and not isinstance(value, bool) \
+            and value > 25.0
+    if breaker == "earnings_within_7d":
+        return isinstance(value, (int, float)) and not isinstance(value, bool) \
+            and 0 <= value < 7
+    if breaker == "tighter_than_0_75x_atr":
+        return value is True
+    return False
+
+
+def breaker_arms(trade: dict, breaker: str,
+                 unbacked: frozenset[tuple[str, str]] = frozenset(),
+                 ) -> dict[str, bool] | None:
+    """Every arm of `breaker`, verdict by verdict — or `None` when ungradeable.
+
+    `None` means *ungradeable*, never *clean*: the artifact is registered
+    quarantined, or the record carries the payload inline with no recording
+    behind it (`unbacked_payloads` — E1). Either way the breaker has no evidence
+    to read, so it contributes nothing to a gate.
+    """
+    artifact = BREAKER_ARTIFACT[breaker]
+    if artifact in dataset_refs.quarantined_in(trade):
+        return None
+    if (str(trade.get("trade_id")), artifact) in unbacked:
+        return None
+    return {arm: _trips(breaker, field, _field(trade, source, field))
+            for arm, source, field, _granule, _measure in RULE_ARMS[breaker]}
+
+
 def class_breaker_observed(trade: dict, breaker: str | None = None,
                            unbacked: frozenset[tuple[str, str]] = frozenset(),
                            ) -> bool | None:
     """True iff the breaker corresponding to the trade's *class* is present
     with the threshold-level value — i.e., encoding projected the right value.
 
-    `None` means *ungradeable*, never *clean*, for either of the two ways a
-    payload stops being evidence: its artifact is registered quarantined (legacy
-    debt kept on disk for migration continuity), or the record carries it inline
-    with no recorded artifact behind it (`unbacked_payloads` — E1: a payload a
-    gate reads must be a recording, not an extracted subset typed into the
-    dataset). Both contribute nothing to a gate.
+    The class verdict is its arms OR-ed (BRD §10.2 #1 "R:R" trips on either
+    price), and `None` (ungradeable) propagates unchanged.
     """
     cls = trade.get("trade_class")
-    breaker = breaker or BREAKER_BY_CLASS[cls]
-    artifact = BREAKER_ARTIFACT[breaker]
-    if artifact in dataset_refs.quarantined_in(trade):
-        return None
-    if (str(trade.get("trade_id")), artifact) in unbacked:
-        return None
-    outputs = trade.get("script_outputs", {})
-    if breaker == "inverted_risk_reward":
-        # Stage 1 (TICK-002) emits BOTH frozen fields: `raw_rr` at the
-        # recommended band midpoint, `live_rr` at the executable price. The
-        # breaker is a property of each, not just one — a raw_rr < 1.0 record
-        # can never recover at any execution price, while live_rr < 1.0 means
-        # the slippage has already eaten the edge. Either trips (OR per the
-        # BRD §10.2 #1 "R:R" breaker, both are 'R:R').
-        stage1 = outputs.get("out_1_math.json", {})
-        raw_rr = stage1.get("raw_rr")
-        # live_rr carries the trap-encoding in the golden dataset (the
-        # executable reality); older records may predate the pair-splitting.
-        live_rr = stage1.get("live_rr", raw_rr)
-        return (raw_rr is not None and raw_rr < 1.0) or (
-            live_rr is not None and live_rr < 1.0
-        )
-    if breaker == "promoter_pledging_gt_25pct":
-        pledge = outputs.get("out_6_fundamental.json", {}).get("promoter_pledge_pct")
-        return pledge is not None and pledge > 25.0
-    if breaker == "earnings_within_7d":
-        days = outputs.get("out_6_fundamental.json", {}).get("days_to_earnings")
-        return days is not None and 0 <= days < 7
-    if breaker == "tighter_than_0_75x_atr":
-        return outputs.get("out_2_market.json", {}).get("is_tight_sl") is True
-    return False
+    arms = breaker_arms(trade, breaker or BREAKER_BY_CLASS[cls], unbacked)
+    return None if arms is None else any(arms.values())
+
+
+def rule_exercises(trade_class: str, trade: dict,
+                   unbacked: frozenset[tuple[str, str]] = frozenset(),
+                   ) -> frozenset[tuple[str, object]]:
+    """The *rule exercises* a graded record stands for.
+
+    One exercise per arm that actually tripped, identified as `(arm, value)` with
+    the value rounded to the granule that comparison speaks in. Records are not
+    exercises: ten rows admitting themselves to the same "R:R ≈ 0.90 below 1.0"
+    rule are one exercise of it, ten times over — and the census below is what
+    says so out loud instead of letting the record count imply ten rules were
+    probed. A clean record's exercise is the negative check itself (`no breaker
+    leaked`), which is likewise one rule however many records prove it.
+    """
+    if trade_class == "clean_bullish":
+        arms = [breaker_arms(trade, BREAKER_BY_CLASS[c], unbacked)
+                for c in BREAKER_BY_CLASS]
+        if all(a is None for a in arms):
+            return frozenset()
+        return frozenset({(LEAK_CHECK_ARM, None)})
+    breaker = BREAKER_BY_CLASS[trade_class]
+    arms = breaker_arms(trade, breaker, unbacked)
+    if arms is None:
+        return frozenset()
+    found: set[tuple[str, object]] = set()
+    for arm, source, field, granule, measure in RULE_ARMS[breaker]:
+        if not arms.get(arm):
+            continue
+        value = _field(trade, source, measure or field)
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            value = round(float(value), granule) if granule else int(value)
+        found.add((arm, value))
+    return frozenset(found)
+
+
+def dataset_rule_census(path: Path | None = None) -> dict[str, int]:
+    """The rule-exercise census of a committed dataset, as the gate computes it.
+
+    The baseline's floor is banked from this (`scaffold_catalog.re_freeze_baseline`),
+    so the number a run is measured against and the number a run computes come
+    from one walk with one set of grading rules.
+    """
+    raw = load_benchmark(path or DEFAULT_BENCHMARK)
+    data, _refs, _derives = dataset_refs.materialize(raw)
+    trades = data.get("trades", [])
+    unbacked = unbacked_payloads(trades, dataset_payload_targets(raw))
+    census = graded_trade_classes(trades, unbacked)
+    return {cls: len(keys) for cls, keys in sorted(census.items())}
+
+
+def graded_trade_classes(trades: list[dict],
+                         unbacked: frozenset[tuple[str, str]] = frozenset(),
+                         ) -> dict[str, frozenset[tuple[str, object]]]:
+    """Per class, the distinct rule exercises its gradeable records stand for.
+
+    The same walk the gate grades with, so the census and the scorecard cannot
+    disagree about which records contributed: a record whose breaker is
+    ungradeable is not counted here either.
+    """
+    census: dict[str, frozenset[tuple[str, object]]] = {}
+    for trade in trades:
+        cls = str(trade.get("trade_class"))
+        if cls == "clean_bullish":
+            observed = [class_breaker_observed({**trade, "trade_class": c},
+                                              BREAKER_BY_CLASS[c], unbacked)
+                        for c in BREAKER_BY_CLASS]
+            if all(v is None for v in observed):
+                continue
+        elif cls not in BREAKER_BY_CLASS:
+            continue
+        elif class_breaker_observed(trade, unbacked=unbacked) is None:
+            continue
+        census[cls] = census.get(cls, frozenset()) | rule_exercises(cls, trade, unbacked)
+    return census
 
 
 def gate_hard_breakers(trades: list[dict],
@@ -253,10 +396,17 @@ def gate_hard_breakers(trades: list[dict],
     per_trade: list[str] = []
     ungraded: list[str] = []
     violations = 0
-    # Per-class bookkeeping: records seen, records graded, records abstained on.
+    # Per-class bookkeeping: records seen, records graded, records abstained on,
+    # and — the unit that is *not* a record — the rule exercises they stand for.
     present: dict[str, int] = {}
     graded_by_class: dict[str, int] = {}
     abstained_by_class: dict[str, int] = {}
+    exercises: dict[str, set[tuple[str, object]]] = {}
+
+    def credit(cls: str, trade: dict) -> None:
+        """Count one graded record *and* the distinct rule exercise it stands for."""
+        graded_by_class[cls] = graded_by_class.get(cls, 0) + 1
+        exercises.setdefault(cls, set()).update(rule_exercises(cls, trade, unbacked))
 
     def count(book: dict[str, int], cls: str) -> None:
         book[cls] = book.get(cls, 0) + 1
@@ -278,7 +428,7 @@ def gate_hard_breakers(trades: list[dict],
                 continue
             leaked = any(observed)
             graded.append(0.0 if leaked else 1.0)
-            count(graded_by_class, cls)
+            credit(cls, t)
             per_trade.append(f"{t['trade_id']}: {'LEAK' if leaked else 'ok'}")
             violations += 1 if leaked else 0
             continue
@@ -298,12 +448,15 @@ def gate_hard_breakers(trades: list[dict],
             per_trade.append(f"{t['trade_id']}: breaker value not encoded")
             violations += 1
             graded.append(0.0)
-            count(graded_by_class, cls)
+            credit(cls, t)
             continue
         graded.append(1.0)
-        count(graded_by_class, cls)
+        credit(cls, t)
 
-    g.coverage = class_coverage(present, graded_by_class, abstained_by_class, class_quota)
+    g.census = {cls: len(keys) for cls, keys in exercises.items()}
+    g.exercises = {cls: frozenset(keys) for cls, keys in exercises.items()}
+    g.coverage = class_coverage(present, graded_by_class, abstained_by_class,
+                                class_quota, g.census, g.exercises)
     g.skipped = not graded
     if g.skipped:
         # Name the obstacle even when every record is ungraded: "no encodable
@@ -323,7 +476,9 @@ def gate_hard_breakers(trades: list[dict],
 
 def class_coverage(present: dict[str, int], graded_by_class: dict[str, int],
                    abstained_by_class: dict[str, int],
-                   class_quota: dict[str, int] | None = None) -> str:
+                   class_quota: dict[str, int] | None = None,
+                   census: dict[str, int] | None = None,
+                   exercises: dict[str, frozenset] | None = None) -> str:
     """Gate 2's roster disclosure: what it graded, per class, record by record.
 
     One clause per class, in the dataset's own roster order (`class_quota`, i.e.
@@ -334,6 +489,12 @@ def class_coverage(present: dict[str, int], graded_by_class: dict[str, int],
     average over the other classes cannot show. Classes with no breaker in the
     frozen registry are named too, so a class nobody grades is not invisible
     either.
+
+    Every graded class also carries its **rule-exercise census**: `K distinct
+    rule exercise(s)`, and which records repeat one when `K` is short of the
+    graded count. A record count says how many rows exist; this says how many
+    distinct rules those rows actually probed, at the granule each rule speaks in
+    (`rule_exercises`).
     """
     names = list(class_quota or {})
     names += [c for c in ("clean_bullish", *BREAKER_BY_CLASS) if c not in names]
@@ -343,7 +504,14 @@ def class_coverage(present: dict[str, int], graded_by_class: dict[str, int],
         total = present.get(cls, 0)
         quota = (class_quota or {}).get(cls)
         if cls in BREAKER_BY_CLASS or cls == "clean_bullish":
-            part = f"{cls} {graded_by_class.get(cls, 0)}/{total} graded"
+            graded = graded_by_class.get(cls, 0)
+            part = f"{cls} {graded}/{total} graded"
+            distinct = (census or {}).get(cls)
+            if graded:
+                part += f", {distinct} distinct rule exercise(s)"
+                repeats = _repeat_note(cls, graded, exercises)
+                if repeats:
+                    part += f" ({repeats})"
             if quota is not None and total != quota:
                 part += f" (quota {quota})"
             abstained = abstained_by_class.get(cls, 0)
@@ -354,6 +522,55 @@ def class_coverage(present: dict[str, int], graded_by_class: dict[str, int],
                     + (f", quota {quota})" if quota is not None else ")"))
         parts.append(part)
     return "class coverage: " + "; ".join(parts) if parts else ""
+
+
+def _repeat_note(cls: str, graded: int, exercises: dict[str, frozenset] | None) -> str:
+    """Name the records that repeat an exercise instead of probing a new rule.
+
+    `graded` records standing for `K` exercises means `graded - K` rows added no
+    new rule evidence; the ids are printed so the shortfall is attributable to
+    specific rows rather than to a class in the abstract.
+    """
+    keys = (exercises or {}).get(cls) or frozenset()
+    repeats = graded - len(keys)
+    if repeats <= 0:
+        return ""
+    return f"{repeats} of {graded} repeat an exercise"
+
+
+def check_rule_coverage(census: dict[str, int],
+                        baseline: dict | None,
+                        ) -> tuple[bool, str, list[str]]:
+    """Rule coverage may not shrink: the baseline freezes the measured census.
+
+    `baseline_scorecard.json` is the repo's frozen regression reference, and this
+    is the coverage half of it: per class, how many distinct rule exercises the
+    graded records stood for when it was last deliberately re-frozen. Falling
+    below the floor is a hard failure — a class can lose the record that carried
+    its only exercise at, say, 54.2% and still look graded — and it is named by
+    class and by delta, so the fix is either more distinct evidence or an
+    explicit re-freeze (`scaffold_catalog.re_freeze_baseline`, which banks the
+    census itself). Growing past the floor is free: that is the point.
+
+    A class absent from the floor (added since the last re-freeze) adds a key;
+    a class absent from the dataset while the floor holds one is a shrink to 0,
+    which fails. Returns `(ok, reason, shortfalls)`.
+    """
+    frozen = (baseline or {}).get("rule_exercises")
+    if not isinstance(frozen, dict):
+        return True, "no frozen rule-coverage census yet; run skipped", []
+    shortfalls = [
+        f"{cls}: {census.get(cls, 0)} distinct rule exercise(s) < frozen {floor}"
+        for cls, floor in sorted(frozen.items())
+        if isinstance(floor, int) and census.get(cls, 0) < floor
+    ]
+    total = sum(census.values())
+    floor_total = sum(f for f in frozen.values() if isinstance(f, int))
+    reason = (f"{total} distinct rule exercise(s) across the graded classes; "
+              f"frozen floor {floor_total}")
+    if shortfalls:
+        return False, reason + f"; {len(shortfalls)} class(es) below the floor", shortfalls
+    return True, reason, []
 
 
 # --------------------------------------------------------------------------
@@ -1144,6 +1361,13 @@ def main(argv: list[str] | None = None) -> int:
         gate_html_validity(trades, proof=proof),
     ]
     dist_ok, dist_reason = check_class_distribution(data)
+    # Rule coverage is the other half of the frozen regression reference: the
+    # class roster says *which* classes were graded, the census says how many
+    # distinct rules they probed, and the baseline says how few is too few.
+    class_gate = next(g for g in gates if g.name == "Hard Circuit Breaker Accuracy")
+    coverage_floor = load_baseline()
+    rules_ok, rules_reason, rule_shortfalls = check_rule_coverage(
+        class_gate.census, coverage_floor)
 
     failed = [g.name for g in gates if not g.skipped and g.value is not None
               and ((g.value >= g.threshold) if g.higher_is_pass
@@ -1157,7 +1381,7 @@ def main(argv: list[str] | None = None) -> int:
         trades, reports_dir, proof, payload_coverage=payload_coverage,
         targets=payload_targets)
     verdict_ok = ((not failed) and dist_ok and not regen_failures and not integrity
-                  and coverage_ok)
+                  and coverage_ok and rules_ok)
 
     print(render_scorecard(gates, verdict_ok))
     for line in render_provenance(proof, report_coverage[0], len(trades),
@@ -1176,6 +1400,10 @@ def main(argv: list[str] | None = None) -> int:
         if len(unproven) > 5:
             print(f"    ✗ (+{len(unproven) - 5} more)")
     print(f"  Dataset integrity: {'OK' if dist_ok else 'MISMATCH'} ({dist_reason})")
+    print(f"  Rule coverage: {'OK' if rules_ok else 'REGRESSION'} ({rules_reason})")
+    for shortfall in rule_shortfalls:
+        print(f"    ✗ {shortfall} — more distinct evidence or a deliberate re-freeze "
+              "(scaffold_catalog.re_freeze_baseline)")
     if ref_notes or derive_notes:
         quarantined = sum(1 for note in ref_notes if note.endswith("(quarantined)"))
         suffix = (f" ({quarantined} quarantined — excluded from grading)"

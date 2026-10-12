@@ -179,6 +179,28 @@ class TestEvalRunnerContract(unittest.TestCase):
         self.assertIn("Evidence completeness: INCOMPLETE", out)
         self.assertEqual(proc.returncode, 1, out)
 
+    def test_dropping_a_distinct_rule_exercise_fails_the_run(self):
+        """End to end: the census is a floor, so rule coverage cannot shrink.
+
+        `SCEN-011` is the 32.0% pledge row — the only record carrying that
+        exercise. Remove it and the class still grades 4/4, still reports 100.0%,
+        and the run still fails: the census drops to 4 against a frozen floor of
+        5 and the failure names the class and the delta. This is the mutation
+        proof that a record count is not the rule coverage.
+        """
+        dataset = json.loads(DATASET_FILE.read_text(encoding="utf-8"))
+        baseline = run_evals.load_baseline()
+        self.assertGreaterEqual(baseline.get("rule_exercises", {}).get("pledge_hazard", 0), 1,
+                                "the baseline must freeze a pledge census to regress against")
+        dataset["trades"] = [t for t in dataset["trades"]
+                             if t["trade_id"] != "SCEN-011"]
+        proc = self.run_with_dataset(dataset)
+        out = (proc.stdout + proc.stderr).decode("utf-8", "replace")
+        self.assertIn("[PASS] Hard Circuit Breaker Accuracy", out)
+        self.assertIn("Rule coverage: REGRESSION", out)
+        self.assertIn("pledge_hazard: 4 distinct rule exercise(s) < frozen 5", out)
+        self.assertEqual(proc.returncode, 1, out)
+
     def test_regeneration_failure_fails_the_run(self):
         """A record whose proof row cannot replay must fail the run loudly
         (exit 1) instead of quietly shrinking the graded set."""
@@ -824,11 +846,120 @@ class TestProofRootPayloadEvidence(unittest.TestCase):
         self.assertEqual(gate.value, 100.0, gate.detail)
         self.assertIn("pledge_hazard 0/2 graded", gate.coverage)
         self.assertIn("(quota 5), 2 abstained", gate.coverage)
-        self.assertIn("clean_bullish 1/1 graded (quota 15)", gate.coverage)
+        self.assertIn("clean_bullish 1/1 graded", gate.coverage)
+        self.assertIn("1 distinct rule exercise(s) (quota 15)", gate.coverage)
         rendered = run_evals.render_scorecard([gate], True)
         self.assertIn("[PASS] Hard Circuit Breaker Accuracy", rendered)
         self.assertIn("pledge_hazard 0/2 graded", rendered,
                       "a PASS must carry its coverage line onto the scorecard")
+
+    # ------------------------------------------- rule exercises, not records
+    def test_gate_2_counts_rule_exercises_not_records(self):
+        """The census is per class, and it is the runner's own walk.
+
+        Counting records would say 40 rules were probed; the census says 11 — the
+        curated classes are one frozen shape each, replicated across rows, while
+        the two hazard classes are the ones with genuinely distinct measurements.
+        """
+        unbacked = run_evals.unbacked_payloads(self.trades, self.targets)
+        gate = run_evals.gate_hard_breakers(
+            self.trades, unbacked, self.raw["meta"]["class_counts_expected"])
+        self.assertEqual(gate.census, run_evals.dataset_rule_census())
+        self.assertLess(sum(gate.census.values()), len(self.trades),
+                        "the census must collapse repeated exercises")
+        for cls, keys in run_evals.graded_trade_classes(self.trades, unbacked).items():
+            self.assertEqual(gate.census.get(cls), len(keys), cls)
+            self.assertIn(f"{cls} ", gate.coverage)
+            self.assertIn(f", {len(keys)} distinct rule exercise(s)", gate.coverage)
+        self.assertIn("pledge_hazard 5/5 graded, 5 distinct rule exercise(s)",
+                      gate.coverage)
+        # The curated shape rows repeat an exercise, and the line says by how much.
+        self.assertIn("repeat an exercise", gate.coverage)
+
+    def test_a_repeated_measurement_is_one_exercise_not_two_records(self):
+        """Same arm, same measurement at the rule's granule ⇒ the same exercise."""
+        unbacked: frozenset = frozenset()
+        first = {"trade_id": "GB-TEST-1", "trade_class": "pledge_hazard",
+                 "script_outputs": {"out_6_fundamental.json":
+                                    {"promoter_pledge_pct": 34.7}}}
+        rounded = {"trade_id": "GB-TEST-2", "trade_class": "pledge_hazard",
+                   "script_outputs": {"out_6_fundamental.json":
+                                      {"promoter_pledge_pct": 34.7000000001}}}
+        other = {"trade_id": "GB-TEST-3", "trade_class": "pledge_hazard",
+                 "script_outputs": {"out_6_fundamental.json":
+                                    {"promoter_pledge_pct": 62.5}}}
+        self.assertEqual(run_evals.rule_exercises("pledge_hazard", first, unbacked),
+                         run_evals.rule_exercises("pledge_hazard", rounded, unbacked),
+                         "the granule is what makes two measurements one exercise")
+        census = run_evals.graded_trade_classes([first, rounded, other], unbacked)
+        self.assertEqual(len(census["pledge_hazard"]), 2)
+        gate = run_evals.gate_hard_breakers([first, rounded, other], unbacked,
+                                           {"pledge_hazard": 5})
+        self.assertEqual(gate.census["pledge_hazard"], 2)
+        self.assertIn("pledge_hazard 3/3 graded, 2 distinct rule exercise(s)",
+                      gate.coverage)
+        self.assertIn("(1 of 3 repeat an exercise)", gate.coverage)
+
+    def test_a_breaker_arm_is_a_comparison_and_the_class_is_their_or(self):
+        """`breaker_arms` is the single source of the arm semantics.
+
+        The R:R breaker is two arms (recommended-band midpoint, executable
+        price); the class verdict ORs them, and only the arm that actually
+        tripped counts as an exercise.
+        """
+        trade = {"trade_id": "GB-TEST-1", "trade_class": "inverted_rr",
+                 "script_outputs": {"out_1_math.json":
+                                    {"raw_rr": 0.9, "live_rr": 1.5}}}
+        arms = run_evals.breaker_arms(trade, "inverted_risk_reward")
+        self.assertEqual(arms, {"raw_rr_below_1": True, "live_rr_below_1": False})
+        self.assertIs(run_evals.class_breaker_observed(trade), True)
+        self.assertEqual(run_evals.rule_exercises("inverted_rr", trade),
+                         frozenset({("raw_rr_below_1", 0.9)}),
+                         "an arm that did not trip is not an exercise")
+        # A record without live_rr falls back to raw_rr, exactly as before the
+        # arms were split out.
+        legacy = {"trade_id": "GB-TEST-2", "trade_class": "inverted_rr",
+                  "script_outputs": {"out_1_math.json": {"raw_rr": 0.8}}}
+        self.assertEqual(run_evals.breaker_arms(legacy, "inverted_risk_reward"),
+                         {"raw_rr_below_1": True, "live_rr_below_1": True})
+
+    def test_rule_coverage_cannot_shrink_below_the_frozen_floor(self):
+        """The floor is the baseline's, and losing a distinct rule is a failure.
+
+        Growth is free; a class that drops below its frozen census fails with the
+        class and the delta named, and a class the floor does not know yet (added
+        since the last re-freeze) is not a regression.
+        """
+        baseline = {"rule_exercises": {"pledge_hazard": 5, "earnings_hazard": 2}}
+        ok, reason, shortfalls = run_evals.check_rule_coverage(
+            {"pledge_hazard": 5, "earnings_hazard": 3}, baseline)
+        self.assertTrue(ok, reason)
+        self.assertEqual(shortfalls, [])
+        self.assertIn("8 distinct rule exercise(s)", reason)
+        ok, reason, shortfalls = run_evals.check_rule_coverage(
+            {"pledge_hazard": 4, "earnings_hazard": 2, "tight_stop": 1}, baseline)
+        self.assertFalse(ok)
+        self.assertEqual(len(shortfalls), 1, shortfalls)
+        self.assertIn("pledge_hazard: 4 distinct rule exercise(s) < frozen 5",
+                      shortfalls[0])
+        # A class the floor has never seen is an addition, not a regression.
+        ok, _reason, _shortfalls = run_evals.check_rule_coverage(
+            {"pledge_hazard": 5, "earnings_hazard": 2, "tight_stop": 1}, baseline)
+        self.assertTrue(ok)
+        # No floor yet: the check discloses rather than inventing one.
+        ok, reason, _shortfalls = run_evals.check_rule_coverage(
+            {"pledge_hazard": 5}, {})
+        self.assertTrue(ok)
+        self.assertIn("no frozen rule-coverage census", reason)
+
+    def test_the_live_census_meets_the_committed_floor(self):
+        """End to end: today's dataset is at or above the frozen census."""
+        baseline = run_evals.load_baseline()
+        self.assertIn("rule_exercises", baseline,
+                      "the baseline must freeze the rule-coverage census")
+        census = run_evals.dataset_rule_census()
+        ok, reason, shortfalls = run_evals.check_rule_coverage(census, baseline)
+        self.assertTrue(ok, f"{reason} {shortfalls}")
 
     def test_coverage_is_a_read_of_the_gate_not_a_second_opinion(self):
         """A fully graded benchmark has no abstention clause to show."""

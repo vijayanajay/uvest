@@ -3,5 +3,12 @@
   "scenario_manifest_sha256": "a019d696e5881f59e56fbd51d4202c72c2782bd031244896dd2dc8c4fb5a1178",
   "manifest_sha256": "0d6f74a25b4160f464b0f905b0b05fd7190483dae36c2cd926421c72a5c27b98",
   "quarantined_count": 0,
-  "quarantine_register_sha256": "440b46cb3f9865af6a2a672c2f3e62a0d25744a5bfef1d4b44a6bd910e0c4929"
+  "quarantine_register_sha256": "440b46cb3f9865af6a2a672c2f3e62a0d25744a5bfef1d4b44a6bd910e0c4929",
+  "rule_exercises": {
+    "clean_bullish": 1,
+    "earnings_hazard": 2,
+    "inverted_rr": 2,
+    "pledge_hazard": 5,
+    "tight_stop": 1
+  }
 }

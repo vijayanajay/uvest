@@ -502,12 +502,21 @@ def regenerate_hashes() -> int:
 
 
 def re_freeze_baseline() -> None:
-    """V12: a deliberate re-freeze, in the same change as the new rows."""
+    """V12: a deliberate re-freeze, in the same change as the new rows.
+
+    Banks the rule-coverage census as well (`run_evals.check_rule_coverage`'s
+    floor): re-freezing is the moment the current distinct-rule count is
+    accepted, so it is recorded here rather than left to drift stale against a
+    runner that measures it every run. The import is deferred because the runner
+    is a sibling that imports the modules this tool shares.
+    """
     baseline = read_json(PROOF_ROOT / BASELINE_FILE)
     baseline["scenario_manifest_sha256"] = hashlib.sha256(
         (PROOF_ROOT / MANIFEST_FILE).read_bytes()).hexdigest()
     baseline["manifest_sha256"] = hashlib.sha256(
         (PROOF_ROOT / HASH_FILE).read_bytes()).hexdigest()
+    import run_evals  # noqa: PLC0415 (deferred: sibling runner, see docstring)
+    baseline["rule_exercises"] = run_evals.dataset_rule_census()
     write_json(PROOF_ROOT / BASELINE_FILE, baseline)
 
 
