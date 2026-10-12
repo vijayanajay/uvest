@@ -52,6 +52,14 @@ The evaluation runner runs headlessly and outputs an evaluation scorecard:
 python tests/run_evals.py --benchmark tests/evals/golden_dataset.json
 ```
 
+It grades nothing it cannot prove: see §4.1 for the run-record provenance every artifact-graded gate is tied to.
+
+The path a *fresh clone* has to survive — no ledger, no generated report, everything reproduced from the proof root — is proved on every push by `tests/evals/cold_start.py`.
+
+A fresh clone also has to pass the **invariant suite itself**: `tests/evals/pristine_suite.py` runs `tests/run_all_tests.py` on a checkout holding no generated artifact, then requires that run to have produced the stage-12 reports *and* the ledger its own artifact gates grade — a suite that went green while producing nothing is not that proof (it refuses a warm tree too).
+
+CI (`.github/workflows/uvest.yml`) chains the two, and the order is load-bearing, because `reports/` is gitignored state that starts empty and only ever warms: **pristine suite proof → `git clean -Xdf reports` → cold provenance proof**. The clean step — `-X`, so the tracked `reports/sample_report.html` survives — hands the pristine state the first proof requires to the second. Both proofs refuse a tree that is already warm, so a mis-ordered workflow fails loudly instead of proving nothing; `tests/test_pristine_suite.py` freezes that order.
+
 Output scorecard template:
 ```text
 ======================================================================
@@ -67,4 +75,36 @@ Output scorecard template:
 ======================================================================
   FINAL EVALUATION VERDICT: SUITE PASSED (Ready for Live Operation)
 ======================================================================
+
+  ── Evidence provenance (run records) ──
+  Records read: 2
+    ↳ reports/run_record.json (complete, exit 0) — stages ran: [12] · skipped: none · failed: none
+    ↳ tests/proof/scenario_manifest.json (complete, exit 0) — stages ran: [1, 2, 6] · skipped: none · failed: none
+  Stage-12 reports proven: 50/50
+  Gate payloads proven: 50/50
+  Evidence completeness: OK (50/50 record(s) carry proven stage-12 evidence;
+    50/50 record(s) carry proven gate payloads)
 ```
+
+### 4.1 Evidence Provenance (Run Records)
+
+A scorecard may only claim what it can point at. Graded bytes are not evidence by themselves — a report left behind by an earlier session, or edited by hand, reads exactly like one a stage produced — so every artifact a gate grades must be traced to a **run record** (`uvest-run-record/1`), the ledger written beside the artifacts by the run that produced them:
+
+| Field | Meaning |
+| :--- | :--- |
+| `stages[].order` | the row's position in that run's walk |
+| `stages[].stage` | the pipeline stage the row is about |
+| `stages[].status` | `ran` (executed, artifact verified), `failed` (executed, did not land), `skipped` (disclosed, deliberately not executed) or `not_reached` (the run stopped first) |
+| `stages[].artifact`, `stages[].artifact_path` | the artifact the row is about, and where it landed |
+| `stages[].artifact_sha256` | the SHA-256 of the bytes that run produced |
+| `stages[].exit_code`, `skip_reason`, `seconds` | what the stage returned, why it was skipped, how long it took |
+
+**The grading rule.** A gate reads an artifact only when a record shows the producing stage `ran` *and* the file's SHA-256 still equals the recorded one. Only a `ran` row may claim bytes; every other row names at most the artifact a stage was about — an un-executed stage never gets to assert what it produced. Anything unproven is reproduced first (`tests/evals/report_regen.py` replays it into a sidecar and compares; the graded file is never overwritten), and if it still cannot be proven the record is **excluded and the run fails**. A record that contradicts the disk — a `ran` row whose bytes are gone or changed — fails the run too: a witness that misstates its own output is worse than no witness.
+
+**Payload coverage.** Gate inputs are not only stage-12 reports. **Every payload a graded gate reads** is evidence: the Zero-Hallucination differ backs a report's numbers from the record's whole JSON, so any payload the record carries can back a graded claim, and gate 2 reads named artifacts — a record's class breaker out of the payload the dataset carries, even when the record does not carry that artifact at all (`run_evals.gate_payloads`). Coverage splits the gaps it finds into the unregistered ones that fail the run and the registered debt it discloses and excludes (`run_evals.check_payload_coverage`). The proof root's per-artifact declarations are therefore folded into the same vocabulary (`tests/evals/proof_root.py`) — one row per declared artifact, `recorded` becoming `ran` with the frozen sha256, and `waived`/`quarantined` becoming disclosed `skipped` rows whose reason names the waiver or the quarantine register. The fold is a *read* of the frozen proof root (the hash file is the claim, the disk is the check), validated by the same rules `provenance.load` applies to a ledger, so a folded record is never a weaker witness than a stored one — and a payload edited after the freeze stops being proven.
+
+**Unregistered vs registered gaps.** A payload with no record behind it stops being evidence two ways, and the harness treats them differently (`run_evals.payload_gap_kind`). An **unregistered** gap is one nobody declared: bytes the dataset carries inline rather than by `$ref` (`scenario-manifest-schema.md` §3 E1 — a payload a graded gate reads must be a recorded artifact, never an extracted subset typed into the dataset), an artifact no declaration covers at all, or a declared recording whose bytes are gone or changed. Those are holes in the graded set that no note discloses, so they fail the run. **Registered debt** is declared: the proof root marks the artifact `waived` (E4 — its engine does not exist yet) or `quarantined` (E5 — legacy bytes kept on disk for migration continuity), which folds to a disclosed `skipped` row. The gates abstain on both kinds (`run_evals.unbacked_payloads` for inline bytes) — unproven bytes are never evidence — but registered debt is disclosed and excluded rather than fatal, exactly as the dataset's own mid-curation note requires; making it fatal would keep the suite red until every engine exists. Derived outcome claims (`$derive`) are not payloads: they are recomputed at load from a hash-frozen tape, so typed bytes cannot back them either.
+
+**No silent shrink.** The gates are defined over the whole benchmark, so an excluded record is a hole in the graded set: a scorecard that quietly graded 29 of 31 records would claim more than it checked. `Evidence completeness` is therefore part of the verdict, over **both halves** — stage-12 evidence and gate payloads — and the run exits non-zero naming each record with an *unregistered* gap and its obstacle, while printing the registered exclusions it excludes from grading. A payload the proof root declares `waived` or `quarantined`, or that the dataset carries inline, backs nothing: the gate abstains on it rather than counting it clean. Disclosure alone never turns a smaller graded set into a pass; a typed payload never rides along as one either.
+
+**Where records come from.** The record beside the graded artifacts is always read; `--run-record PATH` (repeatable) folds in others, e.g. a real chain run, whose rows prove which stages of the 0 → 12 walk ran and which were disclosed as skipped; and the proof root is folded in as the record of its own payload declarations (`tests/evals/proof_root.py`), so a payload's provenance is proved the same way a report's is. The scorecard prints the evidence ledger per record, so a reader sees exactly how much of the graded set traces to a recorded execution and which stages were skipped instead of silently missing — followed by the `Evidence completeness` line that carries that coverage into the verdict.

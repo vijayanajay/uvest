@@ -26,7 +26,8 @@
       "GB-2025-0005 geometry: preserved_as_published — published levels kept (the tape corroborates them); tape-derived outcome TIME (horizon_end)",
       "26 record(s) migrated onto proof-root rows (GB-2022-0006, GB-2022-0007, GB-2022-0008, GB-2022-0009, GB-2022-0010, GB-2022-0011, GB-2022-0012, GB-2022-0013, GB-2022-0014, GB-2022-0015, GB-2022-0016, GB-2022-0017, GB-2022-0018, GB-2022-0020, GB-2023-0021, GB-2023-0022, GB-2023-0023, GB-2023-0024, GB-2024-0025, GB-2024-0026, GB-2024-0027, GB-2024-0028, GB-2025-0029, GB-2025-0030, GB-2025-0031, GB-2025-0032, authoring source `dataset-migration/1`): stage 1–2 payloads are recorded evidence (`$ref`), forward outcome claims are `$derive` references to each row's pinned tape, the engine-less claims (cone envelope, limit-entry MAE, predicted direction, plus the legacy stage-6 pledge/days-to-earnings payloads on the records that carried them) are retired to absence and declared `waived`, and no artifact was added to the quarantine register — the E5 migration meter is unchanged by design. The tape superseded 2 legacy claim value(s) and confirmed 76 identical; every supersession is frozen in its row's `authoring.superseded`.",
       "reported_numbers_match_json retired (2026-10-11): Zero-Hallucination is graded by the runner-side report-vs-JSON differ (tests/evals/report_diff.py diffing reports/report_{SYMBOL}_{DATE}.html against the record's own JSON) instead of a dataset boolean; a record without a generated stage-12 report stays ungraded.",
-      "html_report_valid retired (2026-10-11): HTML Visualizer validity is graded by the runner reading the stage-12 artifact itself (gate_html_validity in tests/run_evals.py validating reports/report_{SYMBOL}_{DATE}.html for HTML5 doctype, zero external resources, self-contained styling and inline SVG) instead of a dataset boolean; a record without a generated stage-12 report stays ungraded."
+      "html_report_valid retired (2026-10-11): HTML Visualizer validity is graded by the runner reading the stage-12 artifact itself (gate_html_validity in tests/run_evals.py validating reports/report_{SYMBOL}_{DATE}.html for HTML5 doctype, zero external resources, self-contained styling and inline SVG) instead of a dataset boolean; a record without a generated stage-12 report stays ungraded.",
+      "input echo retired (2026-10-12): the hand-typed script_outputs['current_trade.json'] = {'type': 'FUT', 'instrument_type': 'FUT'} stub every one of the 31 seeded records carried is removed. It was redundant and contradictory, not evidence: the only reader was gate 1's option-instrument probe, which falls back to the record's own `instrument` field, while the stage-12 replay is fed the proof row's recorded_artifacts and its pinned replay_inputs.canonical_trade — and 36 of the proof root's 46 canonical fixtures state instrument_type CASH, so the stub asserted a value the recorded input contradicts. Retiring it restores the E1 rule it violated (a payload a gate reads must be a recording, never an extracted subset typed into the dataset), and tests/run_evals.py check_payload_coverage fails the run on any payload a record carries with no recorded artifact behind it. Curators must not write it back (tests/evals/curate.py, tests/evals/pin_legacy_records.py)."
     ]
   },
   "trades": [
@@ -54,10 +55,6 @@
       "script_outputs": {
         "out_2_market.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0001/recorded/out_2_market.json"
-        },
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
         },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0001/recorded/out_1_math.json"
@@ -111,10 +108,6 @@
         "out_2_market.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0002/recorded/out_2_market.json"
         },
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0002/recorded/out_1_math.json"
         }
@@ -164,10 +157,6 @@
       "stop_loss": 1150.86,
       "target_price": 1201.65,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0006/recorded/out_1_math.json"
         },
@@ -220,10 +209,6 @@
       "stop_loss": 703.16,
       "target_price": 758.87,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0007/recorded/out_1_math.json"
         },
@@ -276,10 +261,6 @@
       "stop_loss": 743.86,
       "target_price": 778.8,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0008/recorded/out_1_math.json"
         },
@@ -332,10 +313,6 @@
       "stop_loss": 505.85,
       "target_price": 528.37,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0009/recorded/out_1_math.json"
         },
@@ -388,10 +365,6 @@
       "stop_loss": 1710.28,
       "target_price": 1782.99,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0010/recorded/out_1_math.json"
         },
@@ -444,10 +417,6 @@
       "stop_loss": 3591.3,
       "target_price": 3725.53,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0011/recorded/out_1_math.json"
         },
@@ -500,10 +469,6 @@
       "stop_loss": 1720.27,
       "target_price": 1797.28,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0012/recorded/out_1_math.json"
         },
@@ -556,10 +521,6 @@
       "stop_loss": 127.86,
       "target_price": 135.63,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0013/recorded/out_1_math.json"
         },
@@ -612,10 +573,6 @@
       "stop_loss": 251.82,
       "target_price": 266.51,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0014/recorded/out_1_math.json"
         },
@@ -668,10 +625,6 @@
       "stop_loss": 2425.79,
       "target_price": 2550.25,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0015/recorded/out_1_math.json"
         },
@@ -724,10 +677,6 @@
       "stop_loss": 7364.77,
       "target_price": 7731.32,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0016/recorded/out_1_math.json"
         },
@@ -780,10 +729,6 @@
       "stop_loss": 782.56,
       "target_price": 819.27,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0017/recorded/out_1_math.json"
         },
@@ -836,10 +781,6 @@
       "stop_loss": 723.99,
       "target_price": 755.0,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0018/recorded/out_1_math.json"
         },
@@ -892,10 +833,6 @@
       "stop_loss": 842.99,
       "target_price": 943.18,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0020/recorded/out_1_math.json"
         },
@@ -954,10 +891,6 @@
         "out_6_fundamental.json": {
           "$ref": "tests/proof/fixtures/GB-2023-0003/quarantined/out_6_fundamental.json"
         },
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2023-0003/recorded/out_1_math.json"
         }
@@ -1007,10 +940,6 @@
       "stop_loss": 742.98,
       "target_price": 832.48,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2023-0021/recorded/out_1_math.json"
         },
@@ -1063,10 +992,6 @@
       "stop_loss": 792.99,
       "target_price": 898.3,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2023-0022/recorded/out_1_math.json"
         },
@@ -1119,10 +1044,6 @@
       "stop_loss": 2308.94,
       "target_price": 2597.45,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2023-0023/recorded/out_1_math.json"
         },
@@ -1175,10 +1096,6 @@
       "stop_loss": 921.56,
       "target_price": 1017.05,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2023-0024/recorded/out_1_math.json"
         },
@@ -1234,10 +1151,6 @@
         "out_2_market.json": {
           "$ref": "tests/proof/fixtures/GB-2024-0004/recorded/out_2_market.json"
         },
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2024-0004/recorded/out_1_math.json"
         }
@@ -1287,10 +1200,6 @@
       "stop_loss": 1043.28,
       "target_price": 1155.5,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2024-0025/recorded/out_1_math.json"
         },
@@ -1343,10 +1252,6 @@
       "stop_loss": 729.35,
       "target_price": 819.43,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2024-0026/recorded/out_1_math.json"
         },
@@ -1399,10 +1304,6 @@
       "stop_loss": 1209.83,
       "target_price": 1339.49,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2024-0027/recorded/out_1_math.json"
         },
@@ -1455,10 +1356,6 @@
       "stop_loss": 11938.33,
       "target_price": 13147.03,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2024-0028/recorded/out_1_math.json"
         },
@@ -1511,10 +1408,6 @@
       "stop_loss": 812.24,
       "target_price": 1700.0,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2025-0005/recorded/out_1_math.json"
         },
@@ -1567,10 +1460,6 @@
       "stop_loss": 11397.05,
       "target_price": 13158.17,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2025-0029/recorded/out_1_math.json"
         },
@@ -1623,10 +1512,6 @@
       "stop_loss": 680.57,
       "target_price": 799.51,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2025-0030/recorded/out_1_math.json"
         },
@@ -1679,10 +1564,6 @@
       "stop_loss": 1341.37,
       "target_price": 1446.75,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2025-0031/recorded/out_1_math.json"
         },
@@ -1735,10 +1616,6 @@
       "stop_loss": 861.27,
       "target_price": 940.73,
       "script_outputs": {
-        "current_trade.json": {
-          "type": "FUT",
-          "instrument_type": "FUT"
-        },
         "out_1_math.json": {
           "$ref": "tests/proof/fixtures/GB-2025-0032/recorded/out_1_math.json"
         },

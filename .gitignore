@@ -227,6 +227,7 @@ __marimo__/
 current_trade.json
 out_*.json
 thresholds.json
+run_record.json
 uvest_history.db
 dhan_cache.db
 data_cache/

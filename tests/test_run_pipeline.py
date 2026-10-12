@@ -16,11 +16,17 @@ Frozen here:
 4. **Frozen names.** The runner's artifact table agrees with
    `scripts/_recorder.py`'s `FROZEN_ARTIFACTS` for every shared stage, and
    importing the runner never writes to stdout (main-guard discipline).
+5. **The run record.** `run_record.json` in the workdir accounts for every
+   stage in ORDER — order, status, artifact path, skip reason, exit code — so
+   provenance survives the console log. An aborted run is recorded too (that is
+   when provenance is questioned), and a row names an artifact only when the
+   file was really produced and verified: never a path that was merely tried.
 """
 
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import importlib.util
 import io
 import json
@@ -142,6 +148,119 @@ class TestOneInvocationChain(unittest.TestCase):
                              "no report may be rendered from a rejected trade")
 
 
+class TestRunRecord(unittest.TestCase):
+    """Provenance: the record must say what happened, not what was attempted."""
+
+    ROW_KEYS = {
+        "order", "stage", "status", "artifact", "artifact_path",
+        "artifact_sha256", "exit_code", "skip_reason", "seconds",
+    }
+
+    def read_record(self, workdir: Path) -> dict:
+        path = workdir / "run_record.json"
+        self.assertTrue(path.exists(), "the run left no run_record.json in its workdir")
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    def test_success_record_accounts_for_every_stage(self):
+        """One row per stage 0 → 12, agreeing with the console log it replaces."""
+        with tempfile.TemporaryDirectory() as tmp:
+            wd = Path(tmp)
+            proc = run_runner(wd, INPUT_FIXTURE)
+            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+            record = self.read_record(wd)
+
+            self.assertEqual(record["schema"], "uvest-run-record/1")
+            self.assertEqual(record["outcome"], "complete")
+            self.assertEqual(record["exit_code"], 0)
+            self.assertIsNone(record["failed_stage"])
+            self.assertEqual(record["input"], str(INPUT_FIXTURE.resolve()))
+            self.assertEqual(record["workdir"], str(wd.resolve()))
+            self.assertTrue(record["started_at"] and record["finished_at"])
+
+            rows = record["stages"]
+            self.assertEqual([row["stage"] for row in rows], list(range(13)),
+                             "every stage 0 → 12 must be accounted for")
+            self.assertEqual([row["order"] for row in rows], list(range(13)),
+                             "rows are numbered in the order they were visited")
+            for row in rows:
+                self.assertEqual(set(row), self.ROW_KEYS,
+                                 f"stage {row['stage']} row shape drifted")
+
+            # The record and the log must agree — the log is what it replaces.
+            ran = [int(s) for s in re.findall(r"\[RUN\] stage (\d+)", proc.stdout)]
+            skipped = [int(s) for s in re.findall(r"\[SKIP\] stage (\d+)", proc.stdout)]
+            self.assertEqual([r["stage"] for r in rows if r["status"] == "ran"], ran)
+            self.assertEqual([r["stage"] for r in rows if r["status"] == "skipped"], skipped)
+            self.assertFalse([r for r in rows if r["status"] == "not_reached"],
+                             "a complete run reaches every stage")
+
+            # Skipped stages name their reason and claim no execution. They may
+            # name the artifact the contract says they would have produced (an
+            # audit label) but never its path or its bytes.
+            for row in rows:
+                if row["status"] != "skipped":
+                    continue
+                self.assertTrue(row["skip_reason"], f"stage {row['stage']} was skipped silently")
+                self.assertIsNone(row["exit_code"])
+                self.assertIsNone(row["artifact_path"])
+                self.assertIsNone(row["artifact_sha256"])
+            stage11 = [r for r in rows if r["stage"] == 11][0]
+            self.assertIn("conditional", stage11["skip_reason"])
+
+            # Only a `ran` row claims bytes, and the claim is checkable: the
+            # recorded SHA-256 must equal the artifact's own bytes (that is what
+            # the eval harness re-computes before it grades a report).
+            for row in rows:
+                if row["status"] != "ran":
+                    self.assertIsNone(row["artifact_path"],
+                                      f"stage {row['stage']} claims a path it did not verify")
+                    self.assertIsNone(row["artifact_sha256"],
+                                      f"stage {row['stage']} claims bytes it did not produce")
+                    continue
+                self.assertIsNotNone(row["artifact"],
+                                     f"stage {row['stage']} ran but names no artifact")
+                self.assertIsInstance(row["seconds"], float)
+                path = Path(row["artifact_path"])
+                self.assertEqual(path.name, Path(row["artifact"]).name,
+                                 "artifact and artifact_path disagree")
+                self.assertTrue(path.exists(), f"record claims a missing artifact: {path}")
+                self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(),
+                                 row["artifact_sha256"],
+                                 f"stage {row['stage']}: recorded hash is not the artifact's")
+                if path.suffix == ".json":
+                    json.loads(path.read_text(encoding="utf-8"))
+
+            self.assertTrue(record["report"].startswith("reports/report_RELIANCE_"))
+            self.assertTrue((wd / record["report"]).exists())
+
+    def test_aborted_record_names_the_failure_and_what_it_never_reached(self):
+        """An aborted chain is exactly the run whose provenance gets questioned."""
+        with tempfile.TemporaryDirectory() as tmp:
+            wd = Path(tmp)
+            bad = wd / "option_reco.txt"
+            bad.write_text(OPTION_INPUT, encoding="utf-8")
+            proc = run_runner(wd, bad)
+            self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+            record = self.read_record(wd)
+
+            self.assertEqual(record["outcome"], "aborted")
+            self.assertEqual(record["exit_code"], 2)
+            self.assertEqual(record["failed_stage"], 0)
+            self.assertIsNone(record["report"])
+
+            rows = record["stages"]
+            self.assertEqual(
+                [(row["stage"], row["status"]) for row in rows],
+                [(0, "failed")] + [(stage, "not_reached") for stage in range(1, 13)],
+                "an aborted chain must still account for the stages it never ran",
+            )
+            self.assertEqual(rows[0]["exit_code"], 2,
+                             "the ingestion gate's own exit code must reach the record")
+            self.assertIn("aborted at stage 0", rows[1]["skip_reason"])
+            self.assertFalse([r for r in rows if r["artifact_path"]],
+                             "a rejected trade produces no artifact to claim")
+
+
 class TestRunnerArgvAndFrozenNames(unittest.TestCase):
     """Pure-function contracts of the runner, without spawning the chain."""
 
@@ -189,6 +308,28 @@ class TestRunnerArgvAndFrozenNames(unittest.TestCase):
             9, SCRIPTS_DIR / "9_decision_engine.py", input_path="input.txt",
             fixtures={}, record=None, payloads=[], workdir=wd)
         self.assertIn("--thresholds", argv)
+
+    def test_close_run_record_fills_the_stages_a_walk_never_reached(self):
+        """Pure contract: uniform row keys, and no silent holes in the walk."""
+        row = self.module.stage_row(0, 0, "ran", artifact="current_trade.json", exit_code=0)
+        self.assertEqual(set(row), TestRunRecord.ROW_KEYS)
+        record = {"failed_stage": None, "stages": [row]}
+        self.module.close_run_record(record, 0)
+        self.assertEqual(record["outcome"], "complete")
+        self.assertEqual(record["exit_code"], 0)
+        self.assertEqual([r["stage"] for r in record["stages"]], list(range(13)))
+        self.assertEqual([r["order"] for r in record["stages"]], list(range(13)))
+        self.assertTrue(all(r["status"] == "not_reached" for r in record["stages"][1:]))
+
+    def test_losing_the_run_record_never_masks_the_run(self):
+        """A record that cannot be written warns; it does not change the exit code."""
+        wd = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: __import__("shutil").rmtree(wd, ignore_errors=True))
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            self.assertIsNone(
+                self.module.write_run_record(wd / "missing" / "dir", {"schema": "x"}))
+        self.assertIn("[WARN] run record not written", err.getvalue())
 
     def test_stage_12_invocation_is_the_canonical_shape(self):
         script = SCRIPTS_DIR / "12_generate_html_report.py"

@@ -7,7 +7,8 @@ a report. This seam freezes the check that replaces it:
    are not claims), exact-match backing, `/100` scale collapsing, quarantined
    payloads (E5) backing nothing.
 2. The runner's gate wiring — graded 100.0 on a faithful stage-12 report,
-   0.0 the moment one number is invented, honest [SKIP] when no report exists.
+   0.0 the moment one number is invented, honest [SKIP] when no report exists,
+   and honest exclusion when a report exists but no run record proves it.
 3. The committed sample report (`reports/sample_report.html`) as a real-HTML
    extraction fixture: its cards are scanned, its stylesheet is not.
 """
@@ -28,8 +29,28 @@ sys.path.insert(0, str(TESTS_DIR / "evals"))
 sys.path.insert(0, str(TESTS_DIR))
 
 import dataset_refs  # noqa: E402  (sibling eval modules, spliced above)
+import provenance  # noqa: E402
 import report_diff  # noqa: E402
 import run_evals  # noqa: E402
+
+
+def prove(*artifacts: Path) -> None:
+    """Write the run record a stage-12 replay would leave beside `artifacts`.
+
+    The artifact-graded gates read bytes a run record proves, so a synthetic
+    report needs the ledger a real replay writes (`provenance.row`, the runner's
+    row shape) before it can be graded at all — that is the point of the
+    provenance contract, not a test inconvenience.
+    """
+    reports = artifacts[0].parent
+    rows = [provenance.row(12, "ran", artifact=path.name, artifact_path=path,
+                           artifact_sha256=provenance.sha256_of(path), exit_code=0)
+            for path in artifacts]
+    record = provenance.build_record(
+        rows, runner="tests/test_report_diff.py", workdir=reports,
+        started_at=provenance.utc_now(), finished_at=provenance.utc_now())
+    (reports / provenance.RECORD_NAME).write_text(
+        json.dumps(record, indent=2) + "\n", encoding="utf-8")
 
 
 def wrap(body: str) -> str:
@@ -142,13 +163,17 @@ class TestHallucinationGate(unittest.TestCase):
             self.assertEqual(report.name, "report_RELIANCE_20260623.html")
             report.write_text(wrap("Entry ₹2,974.00 · R:R 1:1.68 · "
                                    "Score 84/100"), encoding="utf-8")
+            prove(report)
             clean = run_evals.gate_hallucination([dict(self.TRADE)],
                                                  reports_dir=reports)
             self.assertEqual(clean.value, 100.0)
             self.assertIn("1 graded, 0 with discrepancies", clean.detail)
 
+            # Re-prove the edited bytes: the differ is what is under test here,
+            # and the gate only reads bytes a record stands behind.
             report.write_text(wrap("Entry ₹2,974.00 · target ₹9,999.99"),
                               encoding="utf-8")
+            prove(report)
             dirty = run_evals.gate_hallucination([dict(self.TRADE)],
                                                  reports_dir=reports)
             self.assertEqual(dirty.value, 0.0)
@@ -156,6 +181,23 @@ class TestHallucinationGate(unittest.TestCase):
             self.assertIn("9,999.99", dirty.detail)
             status, _ = dirty.evaluate()
             self.assertEqual(status, "[FAIL]")
+
+    def test_an_unproven_report_is_excluded_not_graded(self):
+        """Bytes no run record proves are disclosed and excluded.
+
+        A leftover or hand-written report reads exactly like a produced one, so
+        grading it would be a claim about a run that cannot be pointed at. It is
+        ungraded (never a fake green) and the reason names the missing proof.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            reports = Path(tmp)
+            (reports / run_evals.report_path_for(self.TRADE).name).write_text(
+                wrap("Entry ₹2,974.00 · R:R 1:1.68"), encoding="utf-8")
+            gate = run_evals.gate_hallucination([dict(self.TRADE)],
+                                                reports_dir=reports)
+            self.assertTrue(gate.skipped, "unproven bytes must not be graded")
+            self.assertIn("proven by a run record", gate.detail)
+            self.assertIn("no run record shows stage 12", gate.detail)
 
     def test_records_without_reports_are_disclosed_not_graded(self):
         """A record with no stage-12 artifact is ungraded; the detail says so."""

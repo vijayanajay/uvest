@@ -33,7 +33,7 @@ The runtime tree in `business_test_cases.md` §2 (`scenarios/{id}/content|outcom
 
 ## 3. The Evidence Rule (E1–E8)
 
-**E1 — Recorded payloads.** Every `current_trade.json` / `out_*.json` artifact a graded gate reads must be a byte-exact recording of a real stage run, produced by the existing recorder mechanism (`--record <dir>`), with the artifact file written once and identical to that stage's stdout. Rows reference the artifact file; they never inline an extracted subset of its values.
+**E1 — Recorded payloads.** Every `current_trade.json` / `out_*.json` artifact a graded gate reads must be a byte-exact recording of a real stage run, produced by the existing recorder mechanism (`--record <dir>`), with the artifact file written once and identical to that stage's stdout. Rows reference the artifact file; they never inline an extracted subset of its values. Enforced at eval time, not only at authoring: the harness covers *every* payload a record carries (plus its class breaker's artifact), and one carried inline is an **unregistered gap** — it leaves its record uncovered and fails the run (`run_evals.check_payload_coverage`), unlike the declared `waived`/`quarantined` exclusions of E4/E5, which are disclosed and excluded from grading rather than fatal.
 
 **E2 — Authoring is input-only.** Curation may author the *inputs*: the canonical trade geometry (entry band, stop, target, lot size) and the scenario selection (anchor, symbol, scan rule). Every authored number must derive from ≤T_rec tape (real close, band convention, ATR distance), and the derivation parameters live in `authoring` so they are auditable. Authored values are never engine outputs, ratios, probabilities, or verdicts presented as engine evidence.
 
@@ -174,11 +174,11 @@ Top-level envelope: `{"schema": "uvest-scenario-manifest/1", "generated_on": "YY
 
 | Status | On disk | Graded? | Effect on scorecard |
 | :--- | :--- | :--- | :--- |
-| `recorded` | Byte-exact artifact | Yes | Normal gate contribution. |
-| `waived` | Absent | No | `[SKIP]` for that gate; `max_possible_score` and `confidence_deficit` adjust per the frozen waiver rule. |
-| `quarantined` | Present, hash-pinned | **Never** | `[SKIP]` with reason; counted in the quarantine register; register digest frozen and non-increasing. |
+| `recorded` | Byte-exact artifact | Yes | Normal gate contribution; folds into the run record as a `ran` row carrying the frozen sha256 (`tests/evals/proof_root.py`). |
+| `waived` | Absent | No | `[SKIP]` for that gate; `max_possible_score` and `confidence_deficit` adjust per the frozen waiver rule. Folds into the run record as a disclosed `skipped` row, so **any graded gate input it would back leaves that record uncovered and the eval run fails** (evals.md §4.1). |
+| `quarantined` | Present, hash-pinned | **Never** | `[SKIP]` with reason; counted in the quarantine register; register digest frozen and non-increasing. Folds into the run record as a disclosed `skipped` row — the debt is a named exclusions list on the ledger, never a graded input and never silently grown. |
 
-Fast profile (`tests/run_evals.py`): grades only rows whose `gate_focus` evidence is fully `recorded`; it prints every resolved reference and excludes quarantined ones from grading (a breaker that reads a quarantined artifact abstains rather than counting as clean). Full profile (`tests/run_business_proof.py`): replays all rows via `replay_inputs`; aggregates gates; skips quarantined contributions identically. Neither profile may read a `quarantined` artifact as evidence.
+Fast profile (`tests/run_evals.py`): grades only rows whose `gate_focus` evidence is fully `recorded`; it prints every resolved reference and excludes quarantined ones from grading (a breaker that reads a quarantined artifact abstains rather than counting as clean). Coverage spans **every payload a graded gate reads** — every artifact the record carries (the hallucination differ backs report numbers from the whole record) plus the artifact its class breaker needs (`run_evals.gate_payloads`). A payload with **no record behind it** is split into the two kinds the repo distinguishes. An **unregistered** gap — a *typed* payload carried inline in the dataset, an artifact no declaration covers, or declared bytes that no longer match — leaves its record **uncovered** and fails the run. The **registered** debt the proof root declares (`waived` per E4, `quarantined` per E5) is disclosed on the ledger and excluded from grading instead. The gate abstains on both, because unproven bytes are never evidence. Full profile (`tests/run_business_proof.py`): replays all rows via `replay_inputs`; aggregates gates; skips quarantined contributions identically. Neither profile may read a `quarantined` artifact as evidence.
 
 ---
 

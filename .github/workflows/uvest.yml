@@ -21,5 +21,28 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
-      - name: Run invariant & decision-gate suite
-        run: python tests/run_all_tests.py
+      # Step order below is load-bearing, because reports/ is gitignored
+      # generated state: it starts empty on a fresh checkout and stays warm once
+      # anything writes into it. Both proofs below refuse to run on a tree that
+      # is already warm, so a mis-ordered pipeline fails loudly instead of
+      # quietly proving nothing.
+      #
+      # 1. The suite must pass on the tree as checked out — it has to produce the
+      #    stage-12 evidence its own gates grade, rather than expecting a warm
+      #    reports/ that only ever exists locally. This step IS the suite run
+      #    (it asserts the count line, not just the exit code), so it also
+      #    replaces a plain `run_all_tests.py` step.
+      - name: Prove the invariant suite on a pristine checkout
+        run: python tests/evals/pristine_suite.py
+
+      # 2. Hand the pristine state on to the cold provenance proof: -X removes
+      #    only ignored files, so the tracked reports/sample_report.html stays
+      #    and the tree is observably a fresh checkout again.
+      - name: Restore the pristine checkout state
+        run: git clean -Xdf reports
+
+      # 3. The cold provenance path — no ledger, no generated report, everything
+      #    reproduced from the proof root — proven end to end: written reports,
+      #    hashed ledger, and a warm re-run that reuses it without replaying.
+      - name: Prove the cold-checkout provenance path
+        run: python tests/evals/cold_start.py

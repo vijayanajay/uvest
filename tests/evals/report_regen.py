@@ -15,6 +15,15 @@ the exit code is non-zero, and nothing is left to be silently graded later.
 The row's canonical trade must state the same symbol and recommendation date
 as the record it belongs to (they are one identity); a mismatch fails the job
 rather than writing a report under the wrong name.
+
+Every replay leaves a run record beside the artifacts (`run_record.json`,
+`uvest-run-record/1`, see `tests/evals/provenance.py`): one row per report,
+naming the exact bytes that run produced (`artifact_sha256`). That is what lets
+the eval harness *prove* a report it grades came out of a real stage-12
+execution, and what makes a hand-edited or stale report ungradeable instead of
+indistinguishable from a produced one. An artifact already on disk is replayed
+into a sidecar and byte-compared rather than overwritten — identical bytes are
+recorded as this run's output, different bytes are recorded as a `failed` row.
 """
 
 from __future__ import annotations
@@ -25,6 +34,8 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
+import time
 from pathlib import Path
 
 for _stream in (sys.stdout, sys.stderr):
@@ -37,6 +48,7 @@ sys.path.insert(0, str(TESTS_DIR))  # sibling dataset_refs / report_diff
 sys.path.insert(0, str(TESTS_DIR.parent))  # run_evals lives one level up
 
 import dataset_refs  # noqa: E402
+import provenance  # noqa: E402
 import report_diff  # noqa: E402
 import run_evals  # noqa: E402
 
@@ -67,49 +79,138 @@ def report_jobs(data: dict, manifest: dict) -> list[dict]:
 
 def regenerate(jobs: list[dict], out_dir: Path,
                python: str = sys.executable) -> tuple[list[Path], list[str]]:
-    """Run the stage CLI per job in parallel; return `(artifacts, failures)`.
+    """Reproduce stage 12 per job; return `(artifacts written, failures)`.
 
     Identity is checked before the run: the canonical trade's symbol/date must
     equal the record's, or the report would be written under the wrong name.
+
+    A job whose artifact is missing is replayed *into* `out_dir`. A job whose
+    artifact is already there is replayed into a sidecar directory and the bytes
+    compared: the file on disk is never overwritten, and an identical
+    reproduction is what lets this run's record claim those exact bytes as its
+    own output (so a gate can prove what it grades). A reproduction that differs
+    records a `failed` row — the file on disk is not this run's output — and is
+    left exactly as it is.
+
+    The record (`out_dir/run_record.json`, `uvest-run-record/1`) is written as a
+    side effect: this run's rows first, then the rows an earlier record still
+    stands behind (`provenance.verified_rows`), so a warm artifacts directory
+    keeps its proof without replaying anything. `outcome` describes whether the
+    *replay* ran to completion; a `failed` row means that artifact's provenance
+    could not be established.
+
+    A job that never reaches stage 12 — its canonical trade unreadable, or
+    stating a different identity than the record — contributes no row at all:
+    the record is a ledger of *executions*, and that failure belongs to the
+    caller, which reports it (in `failures`) and fails the run on it.
     """
     artifacts: list[Path] = []
     failures: list[str] = []
+    rows: list[dict] = []
+    stage_failures = 0
     out_dir.mkdir(parents=True, exist_ok=True)
+    record_path = out_dir / provenance.RECORD_NAME
+    started_at = provenance.utc_now()
 
-    def _run_job(job: dict) -> tuple[Path | None, str | None]:
+    def _run_job(job: dict, target: Path) -> tuple[Path | None, str | None, float | None, bool]:
+        """(artifact, failure, seconds, attempted) — `attempted` gates the ledger row."""
         trade = job["trade"]
         tid = str(trade.get("trade_id"))
         try:
             canonical = json.loads(job["canonical"].read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
-            return None, f"{tid}: canonical trade unreadable: {exc}"
+            return None, f"{tid}: canonical trade unreadable: {exc}", None, False
         expected = run_evals.report_path_for(trade).name
         day = str(trade.get("recommendation_date") or "").replace("-", "")
         if (str(canonical.get("symbol", "")).upper() != str(trade.get("symbol", "")).upper()
                 or str(canonical.get("recommended_date", "")).replace("-", "") != day):
             return None, (f"{tid}: canonical trade states a different symbol/date "
                           f"than the record ({canonical.get('symbol')} / "
-                          f"{canonical.get('recommended_date')})")
+                          f"{canonical.get('recommended_date')})"), None, False
         cmd = [python, str(STAGE12), "--input", str(job["canonical"]),
-               "--out-dir", str(out_dir)]
+               "--out-dir", str(target)]
         for payload in job["payloads"]:
             cmd += ["--payload", str(payload)]
+        started = time.monotonic()
         proc = subprocess.run(cmd, capture_output=True, check=False, cwd=REPO_ROOT)
+        seconds = round(time.monotonic() - started, 3)
         if proc.returncode != 0:
             return None, (f"{tid}: stage 12 exited {proc.returncode}: "
-                          f"{proc.stderr.decode('utf-8', 'replace').strip()}")
-        produced = out_dir / expected
+                          f"{proc.stderr.decode('utf-8', 'replace').strip()}"), seconds, True
+        produced = target / expected
         if not produced.exists():
-            return None, f"{tid}: stage 12 wrote no {expected}"
-        return produced, None
+            return None, f"{tid}: stage 12 wrote no {expected}", seconds, True
+        return produced, None, seconds, True
 
-    workers = min(8, max(2, (os.cpu_count() or 4)))
-    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
-        for produced, failure in executor.map(_run_job, jobs):
-            if failure:
-                failures.append(failure)
-            if produced:
-                artifacts.append(produced)
+    # An earlier record may outlive this replay: its rows are carried forward
+    # only where the bytes they claim are still on disk (`verified_rows`).
+    carried_record: dict | None = None
+    if record_path.exists():
+        try:
+            carried_record = provenance.load(record_path)
+        except provenance.ProvenanceError as exc:
+            print(f"  ! {exc} — rebuilding the run record from this replay",
+                  file=sys.stderr)
+
+    # A job whose artifact is present is verified in a sidecar, never re-written.
+    with tempfile.TemporaryDirectory() as sidecar_dir:
+        sidecar = Path(sidecar_dir)
+        with concurrent.futures.ThreadPoolExecutor(
+                max_workers=min(8, max(2, (os.cpu_count() or 4)))) as executor:
+            futures = {
+                executor.submit(
+                    _run_job, job,
+                    sidecar if (out_dir / run_evals.report_path_for(job["trade"]).name).exists()
+                    else out_dir): job
+                for job in jobs
+            }
+            for future, job in futures.items():
+                trade = job["trade"]
+                name = run_evals.report_path_for(trade).name
+                tid = str(trade.get("trade_id"))
+                produced, failure, seconds, attempted = future.result()
+                on_disk = out_dir / name
+                if failure:
+                    failures.append(failure)
+                    if attempted:  # a stage that ran and failed is ledger row material
+                        stage_failures += 1
+                        rows.append(provenance.row(12, "failed", artifact=name,
+                                                   seconds=seconds, skip_reason=failure))
+                    continue
+                if produced.parent == out_dir:
+                    artifacts.append(produced)
+                    rows.append(provenance.row(
+                        12, "ran", artifact=name, artifact_path=on_disk,
+                        artifact_sha256=provenance.sha256_of(on_disk), exit_code=0,
+                        seconds=seconds))
+                    continue
+                reproduced = provenance.sha256_of(produced)
+                found_on_disk = provenance.sha256_of(on_disk)
+                if reproduced == found_on_disk:
+                    rows.append(provenance.row(
+                        12, "ran", artifact=name, artifact_path=on_disk,
+                        artifact_sha256=reproduced, exit_code=0, seconds=seconds))
+                else:
+                    rows.append(provenance.row(
+                        12, "failed", artifact=name, exit_code=0, seconds=seconds,
+                        skip_reason=(f"{tid}: reproduced bytes differ from the artifact "
+                                     f"on disk ({reproduced[:12]}… != "
+                                     f"{found_on_disk[:12]}…) — "
+                                     "that file is not this run's output")))
+
+    # This run's rows first, then the rows the earlier record still stands behind.
+    # A carried row never outranks this run's finding about the same artifact.
+    batch = {row_["artifact"] for row_ in rows if row_.get("artifact")}
+    carried = [r for r in provenance.verified_rows(carried_record)
+               if Path(r["artifact_path"]).name not in batch]
+
+    record = provenance.build_record(
+        rows + carried, runner="tests/evals/report_regen.py", workdir=out_dir,
+        outcome="aborted" if stage_failures else "complete",
+        exit_code=1 if stage_failures else 0,
+        failed_stage=12 if stage_failures else None,
+        started_at=started_at, finished_at=provenance.utc_now())
+    record_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     return artifacts, failures
 
 
@@ -151,6 +252,11 @@ def main(argv: list[str] | None = None) -> int:
     for artifact in artifacts:
         print(f"  ↳ {artifact.relative_to(REPO_ROOT).as_posix()}"
               if artifact.is_relative_to(REPO_ROOT) else f"  ↳ {artifact}")
+    record_path = out_dir / provenance.RECORD_NAME
+    if record_path.exists():
+        record = provenance.load(record_path)
+        proven = sum(1 for r in record["stages"] if r["status"] == "ran")
+        print(f"  ↳ {record_path.name}: {proven} artifact(s) proven by this run")
     if failures:
         print(f"\nREGENERATION FAILED: {len(failures)} problem(s)", file=sys.stderr)
         for failure in failures:

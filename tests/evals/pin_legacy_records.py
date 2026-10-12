@@ -421,8 +421,9 @@ def payload_mismatches(bundle: dict, recorded: dict) -> list[dict]:
     evidence supersedes: reported and frozen in `authoring.superseded`, never
     silently accepted — while the class invariant check still has to hold.
 
-    `current_trade.json` is deliberately excluded: it echoes the *input*, and the
-    CASH migration legitimately re-states the instrument.
+    `current_trade.json` is deliberately excluded: it echoes the *input* (and the
+    CASH migration legitimately re-states the instrument), so it is retired from
+    the migrated records rather than re-recorded.
     """
     mismatches: list[dict] = []
     fresh = {"out_1_math.json": recorded["stage1"],
@@ -516,8 +517,10 @@ def migrated_record(bundle: dict) -> dict:
             outputs[artifact] = ref(artifact, "recorded")
         elif artifact == "out_6_fundamental.json":
             continue           # retired: waived-absent per E4 (stage 6 unimplemented)
+        elif artifact == "current_trade.json":
+            continue           # retired: the input echo is not a stage output (E1)
         else:
-            outputs[artifact] = payload   # current_trade.json: the legacy input echo
+            outputs[artifact] = payload
     record = {
         "trade_id": trade["trade_id"],
         "trade_class": trade["trade_class"],

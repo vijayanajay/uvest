@@ -33,6 +33,7 @@ IGNORED_PATHS = [
     "out_2_market.json",
     "out_11_postmortem.json",
     "thresholds.json",
+    "run_record.json",
     "uvest_history.db",
     "dhan_cache.db",
     "data_cache/nse_bhavcopy.csv",

@@ -27,6 +27,15 @@ Discipline (BRD §10.4, §9.1):
   fails — a green summary never claims artifacts that are not on disk.
 * The terminal summary reads the artifacts it just produced (Zero Hallucination
   discipline): the verdict line is a transcription of `out_9_decision.json`.
+* The run leaves `run_record.json` in the workdir: one row per stage in ORDER —
+  order, artifact path, skip reason, exit code, duration and the SHA-256 of the
+  bytes the stage produced — so a run's provenance is auditable from the record
+  alone, without parsing this log, and can be *checked* rather than believed: a
+  `ran` row's hash is what a grader compares against the artifact on disk. Rows
+  are written on the failure paths too (aborted stage, invalid artifact, missing
+  report, interrupt), because a run under question is exactly where the console
+  log has already scrolled away. Only a `ran` row claims bytes; every other row
+  carries at most the artifact *name* its stage was about.
 
 Usage:
     python scripts/run_pipeline.py --input input.txt [--workdir DIR]
@@ -37,9 +46,12 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 # Windows consoles default to a legacy codepage; the summary carries Unicode
@@ -94,6 +106,12 @@ RECORD_STAGES = {0, 1, 2, 3, 5, 9}
 # BRD §9.1 pipeline block: stage 10 logs the new trade before the report.
 STAGE10_ARGS = ["--action", "track"]
 
+# The run record is a workdir audit artifact of the RUNNER, not a BRD §9.1
+# stage artifact: it never enters ARTIFACTS and is never fed to a stage.
+RUN_RECORD_NAME = "run_record.json"
+RUN_RECORD_SCHEMA = "uvest-run-record/1"
+RUNNER_PATH = "scripts/run_pipeline.py"
+
 
 def script_for(stage: int) -> Path | None:
     """The stage script per the frozen naming rule `scripts/{stage}_*.py`."""
@@ -144,14 +162,206 @@ def _payloads_for(ran: list[int], workdir: Path) -> list[str]:
     return names
 
 
+def _utc_now() -> str:
+    """UTC ISO-8601 stamp at seconds precision (the `_recorder` row convention)."""
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _sha256_of(path: Path) -> str:
+    """The hash a grader re-computes: does the artifact still hold these bytes?"""
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def stage_row(order: int, stage: int, status: str, *, artifact: str | None = None,
+              artifact_path: str | None = None, artifact_sha256: str | None = None,
+              exit_code: int | None = None, skip_reason: str | None = None,
+              seconds: float | None = None) -> dict:
+    """One audit row of the run record.
+
+    Every row carries the same keys whatever the status, so a reader can diff
+    rows without guarding for absent fields: `order` is the row's position in
+    the walk, `stage` the BRD §9.1 stage number, and `status` one of `ran`
+    (executed and its artifact verified), `failed` (executed, did not land),
+    `skipped` (disclosed, deliberately not executed) or `not_reached` (the chain
+    stopped before it).
+
+    Only `ran` sets `artifact_path` + `artifact_sha256`: those are a *claim about
+    bytes*, and a claim is exactly what no un-executed stage may make. `artifact`
+    is the artifact name the row is about, present wherever the contract names
+    one — a fine-grained audit trail needs to know what `failed` was attempting.
+    """
+    return {
+        "order": order,
+        "stage": stage,
+        "status": status,
+        "artifact": artifact,
+        "artifact_path": artifact_path,
+        "artifact_sha256": artifact_sha256,
+        "exit_code": exit_code,
+        "skip_reason": skip_reason,
+        "seconds": seconds,
+    }
+
+
+def close_run_record(record: dict, exit_code: int | None) -> None:
+    """Finish the record: outcome, timestamp, and every stage the chain missed.
+
+    Called from a `finally`, so an aborted or interrupted run still leaves a
+    complete account — the stages that never ran are named as `not_reached`
+    rather than silently absent from the file.
+    """
+    record["finished_at"] = _utc_now()
+    record["exit_code"] = exit_code
+    if exit_code is None:
+        record["outcome"] = "incomplete"
+    else:
+        record["outcome"] = "complete" if exit_code == 0 else "aborted"
+
+    reason = (f"chain aborted at stage {record['failed_stage']}"
+              if record["failed_stage"] is not None
+              else "chain did not reach this stage")
+    walked = {row["stage"] for row in record["stages"]}
+    for stage in ORDER:
+        if stage not in walked:
+            record["stages"].append(stage_row(
+                len(record["stages"]), stage, "not_reached",
+                artifact=ARTIFACTS.get(stage), skip_reason=reason))
+
+
+def write_run_record(workdir: Path, record: dict) -> Path | None:
+    """Persist the run record; a write failure warns but never masks the exit code."""
+    path = workdir / RUN_RECORD_NAME
+    try:
+        path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    except OSError as exc:
+        print(f"[WARN] run record not written ({exc})", file=sys.stderr)
+        return None
+    return path
+
+
+def run_chain(run_record: dict, *, input_path: str, workdir: Path,
+              fixtures: dict[int, str | None], record_dir: str | None) -> int:
+    """Walk ORDER, forwarding each stage's stdout into its artifact.
+
+    Returns the chain's exit code (0 on success, the first failing stage's own
+    code otherwise) and appends one audit row per stage visited.
+    """
+    def note(stage: int, status: str, **fields) -> None:
+        """Append a row, numbering it in walk order."""
+        run_record["stages"].append(
+            stage_row(len(run_record["stages"]), stage, status, **fields))
+
+    ran: list[int] = []
+    for stage in ORDER:
+        if stage in EXCLUDED:
+            reason = EXCLUDED[stage]
+            print(f"[SKIP] stage {stage}: {reason}")
+            note(stage, "skipped", artifact=ARTIFACTS.get(stage), skip_reason=reason)
+            continue
+        script = script_for(stage)
+        if script is None:
+            reason = (f"scripts/{stage}_*.py not implemented — its evidence stays "
+                      "waived downstream (BRD §10.4)")
+            print(f"[SKIP] stage {stage}: {reason}")
+            note(stage, "skipped", artifact=ARTIFACTS.get(stage), skip_reason=reason)
+            continue
+
+        artifact = ARTIFACTS[stage]
+        target = f" → {artifact}" if artifact else " → reports/report_{SYMBOL}_{DATE}.html"
+        print(f"[RUN] stage {stage}: {script.name}{target}")
+
+        invoke = stage_argv(stage, script, input_path=input_path,
+                            fixtures=fixtures, record=record_dir,
+                            payloads=_payloads_for(ran, workdir),
+                            workdir=workdir)
+        started = time.monotonic()
+        try:
+            # Always go through the interpreter: `.py` files are not directly
+            # executable on Windows, and sys.executable pins the runtime.
+            command = [sys.executable, *invoke]
+            if artifact:
+                with open(workdir / artifact, "wb") as handle:
+                    proc = subprocess.run(command, cwd=str(workdir), stdout=handle)
+            else:
+                proc = subprocess.run(command, cwd=str(workdir))
+        except OSError as exc:
+            print(f"[FAIL] stage {stage}: {exc}", file=sys.stderr)
+            run_record["failed_stage"] = stage
+            note(stage, "failed", artifact=artifact, exit_code=None,
+                 seconds=round(time.monotonic() - started, 3),
+                 skip_reason=f"stage did not run: {type(exc).__name__}: {exc}")
+            return 1
+        elapsed = round(time.monotonic() - started, 3)
+        if proc.returncode != 0:
+            # The stage already wrote its diagnosis to inherited stderr; the
+            # runner only names the abort and hands back the stage's own code
+            # (stage 0's options gate exits 2 — that must survive the chain).
+            print(f"[FAIL] stage {stage} exited {proc.returncode} — "
+                  "pipeline aborted, later stages did not run", file=sys.stderr)
+            run_record["failed_stage"] = stage
+            note(stage, "failed", artifact=artifact, exit_code=proc.returncode,
+                 seconds=elapsed, skip_reason=f"stage exited {proc.returncode}")
+            return proc.returncode or 1
+
+        if artifact:
+            try:
+                json.loads((workdir / artifact).read_text(encoding="utf-8"))
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+                print(f"[FAIL] stage {stage}: {artifact} is not valid JSON "
+                      f"({exc}) — stdout is the stage contract", file=sys.stderr)
+                run_record["failed_stage"] = stage
+                note(stage, "failed", exit_code=proc.returncode, seconds=elapsed,
+                     skip_reason=f"{artifact} is not valid JSON ({exc})")
+                return 1
+        ran.append(stage)
+
+        produced = artifact
+        produced_path = (workdir / artifact) if artifact else None
+        if stage == 12:
+            trade = json.loads(
+                (workdir / "current_trade.json").read_text(encoding="utf-8"))
+            day = str(trade.get("recommended_date") or "")
+            expected = workdir / "reports" / (
+                f"report_{str(trade.get('symbol') or '').upper()}"
+                f"_{day.replace('-', '')}.html")
+            if not expected.exists():
+                print(f"[FAIL] stage 12: expected report missing: "
+                      f"{expected.name}", file=sys.stderr)
+                run_record["failed_stage"] = stage
+                note(stage, "failed", artifact=expected.name, exit_code=proc.returncode,
+                     seconds=elapsed, skip_reason=f"report not written: {expected.name}")
+                return 1
+            produced = f"reports/{expected.name}"
+            produced_path = expected
+            run_record["report"] = produced
+
+        note(stage, "ran", artifact=produced, exit_code=proc.returncode,
+             seconds=elapsed, artifact_path=str(produced_path) if produced_path else None,
+             artifact_sha256=_sha256_of(produced_path) if produced_path else None)
+
+    # Summary: transcribed from the artifacts, never invented (evals.md §3.1).
+    verdict_path = workdir / "out_9_decision.json"
+    if verdict_path.exists():
+        verdict = json.loads(verdict_path.read_text(encoding="utf-8"))
+        print(f"✅ VERDICT: {verdict['decision']} · "
+              f"score {verdict['final_score']}/{verdict['max_possible_score']} · "
+              f"P(win) {verdict['p_win']} · "
+              f"expectancy {float(verdict['expectancy']):+.2f}R")
+    if run_record["report"] is not None:
+        print(f"✅ report: {run_record['report']}")
+    print(f"✅ pipeline complete — {len(ran)} stage(s) ran in {workdir}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="UVEST end-to-end pipeline runner (BRD §9.1 chain 0 → 12).")
     parser.add_argument("--input", required=True,
                         help="raw recommendation text file for stage 0.")
     parser.add_argument("--workdir", default=".",
-                        help="directory receiving current_trade.json, out_*.json "
-                             "and reports/ (default: current directory).")
+                        help="directory receiving current_trade.json, out_*.json, "
+                             "run_record.json and reports/ (default: current "
+                             "directory).")
     parser.add_argument("--ohlcv-fixture", default=None,
                         help="recorded daily-OHLCV file for stage 2.")
     parser.add_argument("--history-fixture", default=None,
@@ -176,83 +386,35 @@ def main(argv: list[str] | None = None) -> int:
         3: resolve(args.history_fixture),
         5: resolve(args.bhavcopy_fixture),
     }
-    record = resolve(args.record)
+    record_dir = resolve(args.record)
 
-    ran: list[int] = []
-    report: Path | None = None
+    # The run record is seeded before the first stage so an interrupted run
+    # still writes it: `close_run_record` fills the outcome, and stages append
+    # their own rows as the walk proceeds.
+    run_record: dict = {
+        "schema": RUN_RECORD_SCHEMA,
+        "runner": RUNNER_PATH,
+        "input": input_path,
+        "workdir": str(workdir),
+        "started_at": _utc_now(),
+        "finished_at": None,
+        "outcome": "incomplete",
+        "exit_code": None,
+        "failed_stage": None,
+        "report": None,
+        "stages": [],
+    }
 
-    for stage in ORDER:
-        if stage in EXCLUDED:
-            print(f"[SKIP] stage {stage}: {EXCLUDED[stage]}")
-            continue
-        script = script_for(stage)
-        if script is None:
-            print(f"[SKIP] stage {stage}: scripts/{stage}_*.py not implemented — "
-                  "its evidence stays waived downstream (BRD §10.4)")
-            continue
-
-        artifact = ARTIFACTS[stage]
-        target = f" → {artifact}" if artifact else " → reports/report_{SYMBOL}_{DATE}.html"
-        print(f"[RUN] stage {stage}: {script.name}{target}")
-
-        invoke = stage_argv(stage, script, input_path=input_path,
-                            fixtures=fixtures, record=record,
-                            payloads=_payloads_for(ran, workdir),
-                            workdir=workdir)
-        try:
-            # Always go through the interpreter: `.py` files are not directly
-            # executable on Windows, and sys.executable pins the runtime.
-            command = [sys.executable, *invoke]
-            if artifact:
-                with open(workdir / artifact, "wb") as handle:
-                    proc = subprocess.run(command, cwd=str(workdir), stdout=handle)
-            else:
-                proc = subprocess.run(command, cwd=str(workdir))
-        except OSError as exc:
-            print(f"[FAIL] stage {stage}: {exc}", file=sys.stderr)
-            return 1
-        if proc.returncode != 0:
-            # The stage already wrote its diagnosis to inherited stderr; the
-            # runner only names the abort and hands back the stage's own code
-            # (stage 0's options gate exits 2 — that must survive the chain).
-            print(f"[FAIL] stage {stage} exited {proc.returncode} — "
-                  "pipeline aborted, later stages did not run", file=sys.stderr)
-            return proc.returncode or 1
-
-        if artifact:
-            try:
-                json.loads((workdir / artifact).read_text(encoding="utf-8"))
-            except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-                print(f"[FAIL] stage {stage}: {artifact} is not valid JSON "
-                      f"({exc}) — stdout is the stage contract", file=sys.stderr)
-                return 1
-        ran.append(stage)
-
-        if stage == 12:
-            trade = json.loads(
-                (workdir / "current_trade.json").read_text(encoding="utf-8"))
-            day = str(trade.get("recommended_date") or "")
-            expected = workdir / "reports" / (
-                f"report_{str(trade.get('symbol') or '').upper()}"
-                f"_{day.replace('-', '')}.html")
-            if not expected.exists():
-                print(f"[FAIL] stage 12: expected report missing: "
-                      f"{expected.name}", file=sys.stderr)
-                return 1
-            report = expected
-
-    # Summary: transcribed from the artifacts, never invented (evals.md §3.1).
-    verdict_path = workdir / "out_9_decision.json"
-    if verdict_path.exists():
-        verdict = json.loads(verdict_path.read_text(encoding="utf-8"))
-        print(f"✅ VERDICT: {verdict['decision']} · "
-              f"score {verdict['final_score']}/{verdict['max_possible_score']} · "
-              f"P(win) {verdict['p_win']} · "
-              f"expectancy {float(verdict['expectancy']):+.2f}R")
-    if report is not None:
-        print(f"✅ report: reports/{report.name}")
-    print(f"✅ pipeline complete — {len(ran)} stage(s) ran in {workdir}")
-    return 0
+    exit_code: int | None = None
+    try:
+        exit_code = run_chain(run_record, input_path=input_path, workdir=workdir,
+                              fixtures=fixtures, record_dir=record_dir)
+    finally:
+        # Every exit path leaves the record behind — including a Ctrl-C, which is
+        # exactly when the console log is least likely to have been kept.
+        close_run_record(run_record, exit_code)
+        write_run_record(workdir, run_record)
+    return exit_code or 0
 
 
 if __name__ == "__main__":
