@@ -41,7 +41,11 @@ frozen worked example (P=55%, R:R 1:2) yields exactly +0.65R.
 3. Negative expectancy (E ≤ 0) → AVOID.
 4. P(win) < 55% floor with positive expectancy → GO_WEAK (confidence deficit).
 5. Positive expectancy + ≥1 waived source → GO_WEAK.
-6. Positive expectancy, P(win) ≥ 55%, full evidence → GO.
+6. Positive expectancy, P(win) ≥ 55%, but stage 6 reports a size-capping
+   corporate-calendar hazard (§6.4: earnings inside 10 sessions on a Cash
+   Equity) → GO_WEAK at half size (confidence deficit). Only a verdict that
+   would otherwise be GO is capped: the hazard never rescues AVOID/WAIT.
+7. Positive expectancy, P(win) ≥ 55%, full evidence → GO.
 
 Every non-GO verdict carries `what_would_flip_me` (the Flip Condition
 Invariant, §10.4); GO carries none. The composite score is a calibration
@@ -315,6 +319,10 @@ def flip_condition(trade: dict, payloads: dict[str, dict],
         conditions.append("a stop placed at or beyond 0.75x daily ATR is available")
     if "earnings_within_7d" in tripped:
         conditions.append("quarterly results are published (binary risk cleared)")
+    cap = (payloads.get("out_6_fundamental.json") or {}).get("earnings_size_cap_pct")
+    if isinstance(cap, (int, float)) and not isinstance(cap, bool) and cap > 0:
+        conditions.append("quarterly results are published (the size-capping "
+                          "earnings window clears)")
     if "panic_regime" in tripped:
         conditions.append("India VIX cools below 24 with breadth recovery")
     if not conditions:
@@ -358,6 +366,16 @@ def synthesize(trade: dict, payloads: dict[str, dict],
     limit_view = limit_rr(trade, payloads)
     recoverable = (limit_view is not None and limit_view >= GO_RR_FLOOR)
 
+    # Stage 6's corporate-calendar size cap (BRD §6.4 / §10.4): a hazard the
+    # trade survives at half size rather than not at all. Only bytes stage 6
+    # actually stands behind count — a waived payload caps nothing.
+    fund_evidence = payloads.get("out_6_fundamental.json") or {}
+    size_cap: float | None = None
+    if fund_evidence and fund_evidence.get("waived") is not True:
+        cap = fund_evidence.get("earnings_size_cap_pct")
+        if isinstance(cap, (int, float)) and not isinstance(cap, bool) and cap > 0:
+            size_cap = float(cap)
+
     decision: str
     avoid_reason: str | None = None
     confidence_deficit: str | None = None
@@ -387,6 +405,12 @@ def synthesize(trade: dict, payloads: dict[str, dict],
                               + ", ".join(sorted(waived)))
     elif live_rr < GO_RR_FLOOR and recoverable:
         decision = "WAIT"
+    elif size_cap is not None:
+        decision = "GO_WEAK"
+        days = fund_evidence.get("days_to_earnings")
+        window = f"{days} session(s)" if isinstance(days, int) else "the holding window"
+        confidence_deficit = (f"quarterly earnings in {window} cap size at "
+                              f"{size_cap:g}% (BRD §6.4 corporate-calendar hazard)")
     else:
         decision = "GO"
 

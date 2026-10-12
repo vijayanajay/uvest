@@ -211,6 +211,39 @@ class TestHardBreakerOverride(unittest.TestCase):
         self.assertEqual(out["decision"], "AVOID", out)
         self.assertIn("earnings_within_7d", out["circuit_breakers_tripped"])
 
+    def test_cash_equity_size_cap_enters_at_half_size(self):
+        """BRD §6.4 / §10.4: an earnings window inside 10 sessions on a Cash
+        Equity caps a viable trade at GO_WEAK rather than vetoing it."""
+        payloads = strong_payloads()
+        payloads["out_6_fundamental.json"]["days_to_earnings"] = 6
+        payloads["out_6_fundamental.json"]["earnings_size_cap_pct"] = 50
+        out = verdict_of(run_stage9(trade(instrument_type="CASH"), payloads))
+        self.assertEqual(out["decision"], "GO_WEAK", out)
+        self.assertEqual(out["circuit_breakers_tripped"], [])
+        self.assertIn("50%", out["confidence_deficit"])
+        self.assertIn("6 session", out["confidence_deficit"])
+        self.assertTrue(out["what_would_flip_me"],
+                        "a half-size verdict still states its flip condition")
+
+    def test_futures_hazard_is_not_softened_by_the_size_cap_rule(self):
+        """The cap branch only softens a GO: a fatal Futures hazard stays AVOID."""
+        payloads = strong_payloads()
+        payloads["out_6_fundamental.json"]["days_to_earnings"] = 4
+        payloads["out_6_fundamental.json"]["earnings_hazard_flag"] = True
+        payloads["out_6_fundamental.json"]["earnings_size_cap_pct"] = 50
+        out = verdict_of(run_stage9(trade(instrument_type="FUT"), payloads))
+        self.assertEqual(out["decision"], "AVOID", out)
+
+    def test_a_waived_fundamental_payload_caps_nothing(self):
+        payloads = strong_payloads()
+        payloads["out_6_fundamental.json"] = {
+            "waived": True, "earnings_size_cap_pct": None}
+        out = verdict_of(run_stage9(trade(instrument_type="CASH"), payloads))
+        self.assertNotEqual(out["decision"], "AVOID",
+                            "absence must never fabricate a rejection")
+        self.assertNotIn("size at", out["confidence_deficit"] or "")
+        self.assertIn("out_6_fundamental.json", out["confidence_deficit"])
+
 
 class TestWaiverRule(unittest.TestCase):
     def test_absent_sources_deduct_from_max_and_cap_at_go_weak(self):
