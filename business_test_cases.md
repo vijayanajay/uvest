@@ -66,7 +66,7 @@ The suite spans 60 real historical situations across 9 distinct Indian market st
 | **SCEN-013** | 2023-04-17 | INFY | FUT | Q4 Guidance Shock Gap-Down | Results in 2 days; guidance cut caused immediate -10% gap-down | **`🔴 AVOID`** | **`LOSS`** | **TN** |
 | **SCEN-014** | 2022-07-11 | TCS | FUT | Margin Compression Pre-Earnings | IT rally into earnings; margin compression triggered instant drop | **`🔴 AVOID`** | **`LOSS`** | **TN** |
 | **SCEN-015** | 2024-01-17 | HDFCBANK | FUT | Merger Margin Squeeze Results | Q3 results in 2 days; NIM compression caused -8.5% single-day fall | **`🔴 AVOID`** | **`LOSS`** | **TN** |
-| **SCEN-016** | 2023-07-28 | TECHM | FUT | Q1 Operating Margin Collapse | Earnings shock inside 3 days; dividend payout couldn't stem drop | **`🔴 AVOID`** | **`LOSS`** | **TN** |
+| **SCEN-016** | 2023-07-28 | TECHM | FUT | Q1 Operating Margin Collapse | Earnings shock inside 3 days; dividend payout couldn't stem drop | **`🔴 AVOID`** | **`WIN`** | **FN** |
 | **SCEN-017** | 2024-05-02 | COFORGE | FUT | Large Acquisition Dilution Shock | Unscheduled board meeting for acquisition funding; -10% selloff | **`🔴 AVOID`** | **`LOSS`** | **TN** |
 | **SCEN-018** | 2021-10-18 | IRCTC | CASH | Retail Euphoria Blow-off Top | Stock split frenzy; delivery collapsed to 14%; institutional exit | **`🔴 AVOID`** | **`LOSS`** | **TN** |
 | **SCEN-019** | 2021-10-19 | IEX | CASH | Retail Trap on Thin Delivery | Rising price on negative delivery Z-score (-1.8σ); retail bull trap | **`🔴 AVOID`** | **`LOSS`** | **TN** |
@@ -113,6 +113,8 @@ The suite spans 60 real historical situations across 9 distinct Indian market st
 | **SCEN-060** | 2024-03-20 | LT | CASH | Overfitted Analog Trap (Too-Good-To-Be-True) | DTW analog matched 98% with 2017 rally, but macro regime inverted | **`🔴 AVOID`** | **`LOSS`** | **TN** |> **Re-freeze R1 (owner-commanded, 2026-10-10):** SCEN-001 and SCEN-005 move `LOSS`/`TN` → `WIN`/`FN`. Their recorded point-in-time tape (frozen resolution: outcome bars strictly after `T_rec`) reaches the `2R` target without ever touching even the tightest documented advisory stop (`0.32×ATR`): both advisories rejected realized winners — the honest false-negative accounting of §4.1, never a geometry tuned to preserve the prior claim. Evidence and row provenance: `docs/agents/scenario-manifest-schema.md` §10.
 
 > **Re-freeze R2 (reconciliation, 2026-10-11):** SCEN-011 moves `LOSS`/`TN` → `WIN`/`FN`, and `SCEN-009`'s basis label is corrected to `stop_first` (its `LOSS` never moved). The pinned forward tape prints the target `259.14` on 2019-10-03 — the first bar after `T_rec` — and the stop `208.71` only on 2019-10-07, so the frozen order-aware resolution (`dataset_refs.resolution_of`, first touch wins) is `WIN`/`target_first`; the seeded `LOSS` came from the retired window-level scan (any stop touch inside the window ⇒ `LOSS`). One rule now decides everywhere: the curator's seed scan, the catalog scaffolder, the migration tool and the `$derive` rule all delegate to `resolution_of`, so this row is the honest false negative of §4.1 — an AVOID that rejected a realized winner, never a tuned loss. Evidence and row provenance: `docs/agents/scenario-manifest-schema.md` §10.
+
+> **Re-freeze R3 (owner-commanded, 2026-10-12):** SCEN-016 moves `LOSS`/`TN` → `WIN`/`FN`. Its recorded point-in-time tape reaches the `2R` target `1136.4` on 2023-08-01 (high `1154.5`), the first session after `T_rec` that clears it, and never touches the advisory stop: the window's lowest low is `1087.15` (2023-07-31), which sits above even the tightest documented advisory stop (`0.32×ATR` = `1088.35`). The row was authored by the catalog scaffolder only after this command — it had stayed unauthored because the pre-command `LOSS` was unreachable under the frozen crisis geometry (`entry` = `T_rec` open `1100.0`, stop `1081.8` = `0.5×ATR`), and a geometry tuned to manufacture the loss is exactly what E8 forbids. The honest reading is the §4.1 false negative: an earnings-window AVOID that rejected a realized winner. Evidence and row provenance: `docs/agents/scenario-manifest-schema.md` §10.
 
 ---
 
@@ -188,8 +190,8 @@ Every suite execution calculates this definitive business scorecard:
   CONFUSION MATRIX:
   ├── True Positives  (TP) : 21  (Realized Winners stamped GO / GO_WEAK)
   ├── False Positives (FP) :  4  (Realized Losers stamped GO — Critical Error)
-  ├── True Negatives  (TN) : 25  (Realized Hazards/Traps blocked by AVOID)
-  └── False Negatives (FN) : 10  (Realized Winners rejected — Cost of Strictness)
+  ├── True Negatives  (TN) : 24  (Realized Hazards/Traps blocked by AVOID)
+  └── False Negatives (FN) : 11  (Realized Winners rejected — Cost of Strictness)
 
   THE THREE BUSINESS METRICS:
   1. Directional Calibration (Brier Score) :  0.138  (Threshold <= 0.180)  [PASS]

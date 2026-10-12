@@ -1,0 +1,18 @@
+{
+  "symbol": "COFORGE",
+  "exchange": "NSE",
+  "instrument_type": "FUT",
+  "expiry": "2024-05-30",
+  "action": "BUY",
+  "entry_price": 1023.98,
+  "entry_range_min": 1022.96,
+  "entry_range_max": 1025.0,
+  "live_price": 1023.98,
+  "target": 1051.7,
+  "stoploss": 1010.12,
+  "lot_size": 500,
+  "margin": 511990.0,
+  "recommended_date": "2024-05-02",
+  "app_warning": "catalog scaffold",
+  "user_capital_inr": 500000.0
+}

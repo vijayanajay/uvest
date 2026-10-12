@@ -17,10 +17,14 @@ eval gate proves this byte for byte (`tests/evals/report_diff.py` grades
 every produced report against its record). SVG geometry lives in tag
 attributes, which are not visible text, so charts add no claims.
 
-Stages whose payloads do not exist yet (3–11) render as explicit
-"awaiting stage N" placeholders — absence is the only honest value (E4,
-scenario-manifest-schema.md). Nothing here is networked, timed, or random:
-same inputs, same bytes.
+Every supplied payload renders: stages 1, 2 and 9 get their own sections, and
+stages 3–11 get a card of the scalar fields the payload states, rendered
+verbatim (never recomputed, never summarised). A payload that was NOT supplied
+renders an explicit "awaiting stage N" placeholder — absence is the only honest
+value (E4, scenario-manifest-schema.md) — and a supplied payload is never
+silently dropped, because a stage's evidence a report cannot show is evidence
+the reader cannot check. Nothing here is networked, timed, or random: same
+inputs, same bytes.
 
 Usage:
     python scripts/12_generate_html_report.py \
@@ -196,6 +200,26 @@ def verdict_block(payloads: dict[str, dict]) -> str:
             '<div class="sub">decision engine has not run for this record</div>')
 
 
+def payload_rows(payload: dict) -> str:
+    """A supplied payload's own scalar fields, rendered verbatim.
+
+    The generic card for the stages without a bespoke visual yet: labels are
+    prose, values are the payload's exact JSON numbers (`fmt`), so the card adds
+    no claim the record's JSON does not already carry — which is what keeps it
+    differ-clean (`tests/evals/report_diff.py`) while the specialized gauges of
+    TICK-010 §13.2 are still being built.
+    """
+    pairs: list[tuple[str, object]] = []
+    for key, value in payload.items():
+        label = key.replace("_", " ").strip().capitalize()
+        if isinstance(value, bool) or isinstance(value, (int, float)) or isinstance(value, str):
+            pairs.append((label, value))
+        elif isinstance(value, list):
+            rendered = ", ".join(str(item) for item in value)
+            pairs.append((label, rendered or None))
+    return rows_of(pairs) or '<div class="pending">payload carries no scalar fields</div>'
+
+
 def render(trade: dict, payloads: dict[str, dict]) -> str:
     symbol = esc(trade.get("symbol", "?"))
     exchange = esc(trade.get("exchange", ""))
@@ -255,6 +279,11 @@ def render(trade: dict, payloads: dict[str, dict]) -> str:
     else:
         market = '<div class="pending">awaiting stage-2 evidence</div>'
 
+    supplied_cards = "".join(
+        f'<div class="card"><h2>{esc(title)} (stage {stage})</h2>'
+        f'{payload_rows(payloads[name])}</div>'
+        for name, stage, title in PAYLOAD_STAGES
+        if name in payloads and stage != 9)
     pending_cards = "".join(
         f'<div class="card"><h2>{esc(title)}</h2>'
         f'<div class="pending">awaiting stage-{stage} evidence</div></div>'
@@ -279,6 +308,7 @@ def render(trade: dict, payloads: dict[str, dict]) -> str:
 </header>
 <section class="card"><h2>Execution Ticket</h2>{zone_svg(trade)}{execution}{breaker_rows}</section>
 <section class="card"><h2>Market Context (stage 2)</h2>{market}</section>
+<div class="grid">{supplied_cards}</div>
 <div class="grid">{pending_cards}</div>
 </main></body></html>
 """

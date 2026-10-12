@@ -1,0 +1,29 @@
+{
+  "schema": "uvest-fundamentals/1",
+  "symbol": "IBULHSGFIN",
+  "exchange": "NSE",
+  "source": "catalog-hazard-seed/1",
+  "as_of": "2019-10-01",
+  "units": "INR_CRORE",
+  "statement_fy_prior": {},
+  "statement_fy_current": {},
+  "governance": {
+    "promoter_pledged_pct": 32.0
+  },
+  "earnings": {},
+  "authoring": {
+    "source": "catalog-hazard-seed/1",
+    "catalog": "business_test_cases.md §3",
+    "scenario_id": "SCEN-011",
+    "trade_class": "pledge_hazard",
+    "catalog_name": "NBFC Liquidity Contagion",
+    "trap": "Rating downgrades, promoter pledging 32%, cash flow deficit",
+    "breaker": "promoter_pledging_gt_25pct",
+    "breaker_stage": 6,
+    "hazard_field": "promoter_pledged_pct",
+    "hazard_value": 32.0,
+    "documented": "catalog trap: \"Rating downgrades, promoter pledging 32%, cash flow deficit\"",
+    "rule": "the catalog states the pledged share (32%), so the fixture uses it verbatim",
+    "disclosure": "Authored hazard input (promoter_pledged_pct=32.0): the catalog states the pledged share (32%), so the fixture uses it verbatim. catalog trap: \"Rating downgrades, promoter pledging 32%, cash flow deficit\". The statement blocks are deliberately empty — no offline source exists for the issuer's FY statements, so stage 6 emits null ratio metrics with `missing_inputs` naming every gap (E4: absence, never an invented filing)."
+  }
+}

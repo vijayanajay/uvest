@@ -1,0 +1,29 @@
+{
+  "schema": "uvest-fundamentals/1",
+  "symbol": "TECHM",
+  "exchange": "NSE",
+  "source": "catalog-hazard-seed/1",
+  "as_of": "2023-07-28",
+  "units": "INR_CRORE",
+  "statement_fy_prior": {},
+  "statement_fy_current": {},
+  "governance": {},
+  "earnings": {
+    "sessions_to_earnings": 3
+  },
+  "authoring": {
+    "source": "catalog-hazard-seed/1",
+    "catalog": "business_test_cases.md §3",
+    "scenario_id": "SCEN-016",
+    "trade_class": "earnings_hazard",
+    "catalog_name": "Q1 Operating Margin Collapse",
+    "trap": "Earnings shock inside 3 days; dividend payout couldn't stem drop",
+    "breaker": "earnings_within_7d",
+    "breaker_stage": 6,
+    "hazard_field": "sessions_to_earnings",
+    "hazard_value": 3,
+    "documented": "catalog trap: \"Earnings shock inside 3 days; dividend payout couldn't stem drop\"",
+    "rule": "the catalog states the window (3 sessions), so the fixture uses it verbatim",
+    "disclosure": "Authored hazard input (sessions_to_earnings=3): the catalog states the window (3 sessions), so the fixture uses it verbatim. catalog trap: \"Earnings shock inside 3 days; dividend payout couldn't stem drop\". The statement blocks are deliberately empty — no offline source exists for the issuer's FY statements, so stage 6 emits null ratio metrics with `missing_inputs` naming every gap (E4: absence, never an invented filing)."
+  }
+}

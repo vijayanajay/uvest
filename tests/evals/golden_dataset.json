@@ -14,9 +14,7 @@
       "tight_stop": 5
     },
     "notes": [
-      "20 of 50 records seeded. Remaining 30 pending manual curation; budget blocks filling all 50 now.",
       "distribution_verified=false until all 50 records are present and class counts match class_counts_expected.",
-      "31 of 50 records: the three stage-0..2-supportable classes are FULLY seeded (clean_bullish 15/15, inverted_rr 10/10, tight_stop 5/5) and the tight-stop breaker grades from recorded stage-2 bundles (tests/fixtures/history/). pledge_hazard 1/5, earnings_hazard 0/5, institutional_distribution 0/10 await stages 5/6 engines; every pre-proof record's stage-6 payload is now retired to absence (`waived`, the proof rows' declarations) and GB-2023-0003's is referenced from there as quarantined debt — disclosed, excluded from grading, and never grown (tests/evals/pin_legacy_records.py).",
       "GB-2022-0019 dropped: 6th evidence-tight row exceeded the frozen tight_stop quota (5); the five remaining rows all carry recorded is_tight_sl=true from stage-2 bundles.",
       "GB-2023-0003 references its stage 1/2/6 payloads from the proof root (tests/proof/fixtures/GB-2023-0003/) instead of embedding copies: stages 1-2 are recorded evidence, stage 6 is quarantined legacy debt (excluded from grading, retired only when stage 6 records real evidence).",
       "GB-2023-0003's forward outcome claims (forward min/max, resolution date/outcome, market MAE, actual direction) are now `$derive` references to its pinned proof-root forward tape; the legacy hand-typed block (268/325, 2023-03-09, 6.5% MAE) is retired. The cone envelopes and limit-entry MAE that the cone/MAE gates used to grade were hand-typed on four records with no engine behind them — they are retired to null, so those gates SKIP until stages 4/8 exist rather than grading unverifiable claims.",
@@ -27,7 +25,8 @@
       "26 record(s) migrated onto proof-root rows (GB-2022-0006, GB-2022-0007, GB-2022-0008, GB-2022-0009, GB-2022-0010, GB-2022-0011, GB-2022-0012, GB-2022-0013, GB-2022-0014, GB-2022-0015, GB-2022-0016, GB-2022-0017, GB-2022-0018, GB-2022-0020, GB-2023-0021, GB-2023-0022, GB-2023-0023, GB-2023-0024, GB-2024-0025, GB-2024-0026, GB-2024-0027, GB-2024-0028, GB-2025-0029, GB-2025-0030, GB-2025-0031, GB-2025-0032, authoring source `dataset-migration/1`): stage 1–2 payloads are recorded evidence (`$ref`), forward outcome claims are `$derive` references to each row's pinned tape, the engine-less claims (cone envelope, limit-entry MAE, predicted direction, plus the legacy stage-6 pledge/days-to-earnings payloads on the records that carried them) are retired to absence and declared `waived`, and no artifact was added to the quarantine register — the E5 migration meter is unchanged by design. The tape superseded 2 legacy claim value(s) and confirmed 76 identical; every supersession is frozen in its row's `authoring.superseded`.",
       "reported_numbers_match_json retired (2026-10-11): Zero-Hallucination is graded by the runner-side report-vs-JSON differ (tests/evals/report_diff.py diffing reports/report_{SYMBOL}_{DATE}.html against the record's own JSON) instead of a dataset boolean; a record without a generated stage-12 report stays ungraded.",
       "html_report_valid retired (2026-10-11): HTML Visualizer validity is graded by the runner reading the stage-12 artifact itself (gate_html_validity in tests/run_evals.py validating reports/report_{SYMBOL}_{DATE}.html for HTML5 doctype, zero external resources, self-contained styling and inline SVG) instead of a dataset boolean; a record without a generated stage-12 report stays ungraded.",
-      "input echo retired (2026-10-12): the hand-typed script_outputs['current_trade.json'] = {'type': 'FUT', 'instrument_type': 'FUT'} stub every one of the 31 seeded records carried is removed. It was redundant and contradictory, not evidence: the only reader was gate 1's option-instrument probe, which falls back to the record's own `instrument` field, while the stage-12 replay is fed the proof row's recorded_artifacts and its pinned replay_inputs.canonical_trade — and 36 of the proof root's 46 canonical fixtures state instrument_type CASH, so the stub asserted a value the recorded input contradicts. Retiring it restores the E1 rule it violated (a payload a gate reads must be a recording, never an extracted subset typed into the dataset), and tests/run_evals.py check_payload_coverage fails the run on any payload a record carries with no recorded artifact behind it. Curators must not write it back (tests/evals/curate.py, tests/evals/pin_legacy_records.py)."
+      "input echo retired (2026-10-12): the hand-typed script_outputs['current_trade.json'] = {'type': 'FUT', 'instrument_type': 'FUT'} stub every one of the 31 seeded records carried is removed. It was redundant and contradictory, not evidence: the only reader was gate 1's option-instrument probe, which falls back to the record's own `instrument` field, while the stage-12 replay is fed the proof row's recorded_artifacts and its pinned replay_inputs.canonical_trade — and 36 of the proof root's 46 canonical fixtures state instrument_type CASH, so the stub asserted a value the recorded input contradicts. Retiring it restores the E1 rule it violated (a payload a gate reads must be a recording, never an extracted subset typed into the dataset), and tests/run_evals.py check_payload_coverage fails the run on any payload a record carries with no recorded artifact behind it. Curators must not write it back (tests/evals/curate.py, tests/evals/pin_legacy_records.py).",
+      "40 of 50 records. The pledge (SCEN-007, SCEN-009, SCEN-011, SCEN-012) and earnings (SCEN-013, SCEN-014, SCEN-015, SCEN-016, SCEN-017) golden records are views of the frozen catalog's own hazard rows (business_test_cases.md §3) and carry recorded stage-6 evidence: real `6_fundamental_audit.py --record` stdout over an authored hazard bundle (tests/proof/fixtures/<id>/financials.json), so gate 2 grades both breakers (`promoter_pledging_gt_25pct`, `earnings_within_7d`) from proven bytes instead of abstaining. The hazard inputs are authored and disclosed per row (`authoring.hazard_evidence`, copied from the bundle, and `authoring.hazard_inputs` in the fixture): the catalog's documented level is used verbatim where it states one, and a disclosed value above the documented floor where it states only the inequality. The statement blocks are deliberately empty, so stage 6 emits null Piotroski/Altman/CFO-PAT metrics with `missing_inputs` naming every gap — absence, never an invented filing (E4). GB-2023-0003's legacy pledge payload stays registered quarantined debt and still abstains; institutional_distribution 0/10 remains unauthored. Authored by tests/evals/seed_hazard_records.py."
     ]
   },
   "trades": [
@@ -1642,6 +1641,501 @@
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2025-0032/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      }
+    },
+    {
+      "trade_id": "SCEN-007",
+      "trade_class": "pledge_hazard",
+      "symbol": "ADANIENT",
+      "instrument": "FUT",
+      "recommendation_date": "2023-01-25",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-007/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-007/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
+      "entry_price": 3422.0,
+      "stop_loss": 3367.67,
+      "target_price": 3530.66,
+      "script_outputs": {
+        "out_1_math.json": {
+          "$ref": "tests/proof/fixtures/SCEN-007/recorded/out_1_math.json"
+        },
+        "out_2_market.json": {
+          "$ref": "tests/proof/fixtures/SCEN-007/recorded/out_2_market.json"
+        },
+        "out_6_fundamental.json": {
+          "$ref": "tests/proof/fixtures/SCEN-007/recorded/out_6_fundamental.json"
+        }
+      },
+      "forward_prices_22d": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-007/forward_tape.json",
+          "rule": "forward_min_max"
+        }
+      },
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-007/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-007/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      }
+    },
+    {
+      "trade_id": "SCEN-009",
+      "trade_class": "pledge_hazard",
+      "symbol": "ZEEL",
+      "instrument": "CASH",
+      "recommendation_date": "2019-01-25",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-009/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-009/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
+      "entry_price": 437.75,
+      "stop_loss": 425.77,
+      "target_price": 461.71,
+      "script_outputs": {
+        "out_1_math.json": {
+          "$ref": "tests/proof/fixtures/SCEN-009/recorded/out_1_math.json"
+        },
+        "out_2_market.json": {
+          "$ref": "tests/proof/fixtures/SCEN-009/recorded/out_2_market.json"
+        },
+        "out_6_fundamental.json": {
+          "$ref": "tests/proof/fixtures/SCEN-009/recorded/out_6_fundamental.json"
+        }
+      },
+      "forward_prices_22d": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-009/forward_tape.json",
+          "rule": "forward_min_max"
+        }
+      },
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-009/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-009/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      }
+    },
+    {
+      "trade_id": "SCEN-011",
+      "trade_class": "pledge_hazard",
+      "symbol": "IBULHSGFIN",
+      "instrument": "FUT",
+      "recommendation_date": "2019-10-01",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-011/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-011/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
+      "entry_price": 225.52,
+      "stop_loss": 208.71,
+      "target_price": 259.14,
+      "script_outputs": {
+        "out_1_math.json": {
+          "$ref": "tests/proof/fixtures/SCEN-011/recorded/out_1_math.json"
+        },
+        "out_2_market.json": {
+          "$ref": "tests/proof/fixtures/SCEN-011/recorded/out_2_market.json"
+        },
+        "out_6_fundamental.json": {
+          "$ref": "tests/proof/fixtures/SCEN-011/recorded/out_6_fundamental.json"
+        }
+      },
+      "forward_prices_22d": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-011/forward_tape.json",
+          "rule": "forward_min_max"
+        }
+      },
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-011/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-011/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      }
+    },
+    {
+      "trade_id": "SCEN-012",
+      "trade_class": "pledge_hazard",
+      "symbol": "VEDL",
+      "instrument": "FUT",
+      "recommendation_date": "2023-03-15",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-012/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-012/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
+      "entry_price": 283.05,
+      "stop_loss": 277.49,
+      "target_price": 294.17,
+      "script_outputs": {
+        "out_1_math.json": {
+          "$ref": "tests/proof/fixtures/SCEN-012/recorded/out_1_math.json"
+        },
+        "out_2_market.json": {
+          "$ref": "tests/proof/fixtures/SCEN-012/recorded/out_2_market.json"
+        },
+        "out_6_fundamental.json": {
+          "$ref": "tests/proof/fixtures/SCEN-012/recorded/out_6_fundamental.json"
+        }
+      },
+      "forward_prices_22d": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-012/forward_tape.json",
+          "rule": "forward_min_max"
+        }
+      },
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-012/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-012/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      }
+    },
+    {
+      "trade_id": "SCEN-013",
+      "trade_class": "earnings_hazard",
+      "symbol": "INFY",
+      "instrument": "FUT",
+      "recommendation_date": "2023-04-17",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-013/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-013/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
+      "entry_price": 1250.3,
+      "stop_loss": 1229.63,
+      "target_price": 1291.64,
+      "script_outputs": {
+        "out_1_math.json": {
+          "$ref": "tests/proof/fixtures/SCEN-013/recorded/out_1_math.json"
+        },
+        "out_2_market.json": {
+          "$ref": "tests/proof/fixtures/SCEN-013/recorded/out_2_market.json"
+        },
+        "out_6_fundamental.json": {
+          "$ref": "tests/proof/fixtures/SCEN-013/recorded/out_6_fundamental.json"
+        }
+      },
+      "forward_prices_22d": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-013/forward_tape.json",
+          "rule": "forward_min_max"
+        }
+      },
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-013/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-013/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      }
+    },
+    {
+      "trade_id": "SCEN-014",
+      "trade_class": "earnings_hazard",
+      "symbol": "TCS",
+      "instrument": "FUT",
+      "recommendation_date": "2022-07-11",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-014/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-014/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
+      "entry_price": 3206.15,
+      "stop_loss": 3168.53,
+      "target_price": 3281.39,
+      "script_outputs": {
+        "out_1_math.json": {
+          "$ref": "tests/proof/fixtures/SCEN-014/recorded/out_1_math.json"
+        },
+        "out_2_market.json": {
+          "$ref": "tests/proof/fixtures/SCEN-014/recorded/out_2_market.json"
+        },
+        "out_6_fundamental.json": {
+          "$ref": "tests/proof/fixtures/SCEN-014/recorded/out_6_fundamental.json"
+        }
+      },
+      "forward_prices_22d": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-014/forward_tape.json",
+          "rule": "forward_min_max"
+        }
+      },
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-014/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-014/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      }
+    },
+    {
+      "trade_id": "SCEN-015",
+      "trade_class": "earnings_hazard",
+      "symbol": "HDFCBANK",
+      "instrument": "FUT",
+      "recommendation_date": "2024-01-17",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-015/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-015/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
+      "entry_price": 785.0,
+      "stop_loss": 776.48,
+      "target_price": 802.04,
+      "script_outputs": {
+        "out_1_math.json": {
+          "$ref": "tests/proof/fixtures/SCEN-015/recorded/out_1_math.json"
+        },
+        "out_2_market.json": {
+          "$ref": "tests/proof/fixtures/SCEN-015/recorded/out_2_market.json"
+        },
+        "out_6_fundamental.json": {
+          "$ref": "tests/proof/fixtures/SCEN-015/recorded/out_6_fundamental.json"
+        }
+      },
+      "forward_prices_22d": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-015/forward_tape.json",
+          "rule": "forward_min_max"
+        }
+      },
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-015/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-015/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      }
+    },
+    {
+      "trade_id": "SCEN-016",
+      "trade_class": "earnings_hazard",
+      "symbol": "TECHM",
+      "instrument": "FUT",
+      "recommendation_date": "2023-07-28",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-016/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-016/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
+      "entry_price": 1100.0,
+      "stop_loss": 1081.8,
+      "target_price": 1136.4,
+      "script_outputs": {
+        "out_1_math.json": {
+          "$ref": "tests/proof/fixtures/SCEN-016/recorded/out_1_math.json"
+        },
+        "out_2_market.json": {
+          "$ref": "tests/proof/fixtures/SCEN-016/recorded/out_2_market.json"
+        },
+        "out_6_fundamental.json": {
+          "$ref": "tests/proof/fixtures/SCEN-016/recorded/out_6_fundamental.json"
+        }
+      },
+      "forward_prices_22d": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-016/forward_tape.json",
+          "rule": "forward_min_max"
+        }
+      },
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-016/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-016/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      }
+    },
+    {
+      "trade_id": "SCEN-017",
+      "trade_class": "earnings_hazard",
+      "symbol": "COFORGE",
+      "instrument": "FUT",
+      "recommendation_date": "2024-05-02",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-017/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-017/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
+      "entry_price": 1023.98,
+      "stop_loss": 1010.12,
+      "target_price": 1051.7,
+      "script_outputs": {
+        "out_1_math.json": {
+          "$ref": "tests/proof/fixtures/SCEN-017/recorded/out_1_math.json"
+        },
+        "out_2_market.json": {
+          "$ref": "tests/proof/fixtures/SCEN-017/recorded/out_2_market.json"
+        },
+        "out_6_fundamental.json": {
+          "$ref": "tests/proof/fixtures/SCEN-017/recorded/out_6_fundamental.json"
+        }
+      },
+      "forward_prices_22d": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-017/forward_tape.json",
+          "rule": "forward_min_max"
+        }
+      },
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-017/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/SCEN-017/forward_tape.json",
           "rule": "realized_direction"
         }
       }

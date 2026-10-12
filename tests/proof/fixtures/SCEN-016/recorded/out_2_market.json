@@ -1,0 +1,15 @@
+{
+  "symbol": "TECHM",
+  "atr_14": 36.396429,
+  "sl_atr_ratio": 0.5000490628986367,
+  "is_tight_sl": true,
+  "ema_20": 1159.25,
+  "above_50_ema": false,
+  "above_200_sma": true,
+  "trend_state": "MIXED",
+  "bollinger_upper": 1267.51,
+  "bollinger_lower": 1081.17,
+  "bollinger_bandwidth": 15.8682,
+  "waived": false,
+  "as_of": "2023-07-28"
+}

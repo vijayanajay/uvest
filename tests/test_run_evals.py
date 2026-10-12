@@ -134,7 +134,10 @@ class TestEvalRunnerContract(unittest.TestCase):
                         "runner must regenerate the report it cannot grade")
         self.assertIn("[PASS] Zero Hallucination Audit", scorecard)
         self.assertIn("[PASS] HTML Visualizer Validation", scorecard)
-        self.assertIn("Stage-12 reports proven: 31/31", scorecard)
+        # The roster's size is the dataset's, never a frozen 31: it grows as
+        # classes are seeded, and the count this seam reads is the harness's own.
+        total = len(json.loads(DATASET_FILE.read_text(encoding="utf-8"))["trades"])
+        self.assertIn(f"Stage-12 reports proven: {total}/{total}", scorecard)
         # The exit code is the *evidence* verdict, not a proxy for "the replay
         # worked": the replayed report is graded above, and the run is red only
         # if some gate input no record proves remains (evals.md §4.1). Computed
@@ -217,7 +220,7 @@ class TestGoldenDatasetContract(unittest.TestCase):
                 self.assertLess(rr, 1.0, f"{trade['trade_id']}: R:R not < 1.0")
             elif cls_name == "earnings_hazard":
                 days = out.get("out_6_fundamental.json", {}).get("days_to_earnings")
-                self.assertIsNotNone(days, f"{trade[' trade_id']}: days_to_earnings missing")
+                self.assertIsNotNone(days, f"{trade['trade_id']}: days_to_earnings missing")
                 self.assertLess(days, 7.0, f"{trade['trade_id']}: days_to_earnings not < 7")
             elif cls_name == "tight_stop":
                 tight = out.get("out_2_market.json", {}).get("is_tight_sl")

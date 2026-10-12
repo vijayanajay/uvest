@@ -1,0 +1,29 @@
+{
+  "schema": "uvest-fundamentals/1",
+  "symbol": "INFY",
+  "exchange": "NSE",
+  "source": "catalog-hazard-seed/1",
+  "as_of": "2023-04-17",
+  "units": "INR_CRORE",
+  "statement_fy_prior": {},
+  "statement_fy_current": {},
+  "governance": {},
+  "earnings": {
+    "sessions_to_earnings": 2
+  },
+  "authoring": {
+    "source": "catalog-hazard-seed/1",
+    "catalog": "business_test_cases.md §3",
+    "scenario_id": "SCEN-013",
+    "trade_class": "earnings_hazard",
+    "catalog_name": "Q4 Guidance Shock Gap-Down",
+    "trap": "Results in 2 days; guidance cut caused immediate -10% gap-down",
+    "breaker": "earnings_within_7d",
+    "breaker_stage": 6,
+    "hazard_field": "sessions_to_earnings",
+    "hazard_value": 2,
+    "documented": "catalog trap: \"Results in 2 days; guidance cut caused immediate -10% gap-down\"",
+    "rule": "the catalog states the window (2 sessions), so the fixture uses it verbatim",
+    "disclosure": "Authored hazard input (sessions_to_earnings=2): the catalog states the window (2 sessions), so the fixture uses it verbatim. catalog trap: \"Results in 2 days; guidance cut caused immediate -10% gap-down\". The statement blocks are deliberately empty — no offline source exists for the issuer's FY statements, so stage 6 emits null ratio metrics with `missing_inputs` naming every gap (E4: absence, never an invented filing)."
+  }
+}

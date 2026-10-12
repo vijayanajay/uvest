@@ -33,10 +33,21 @@ What this tool knowingly does NOT author, and why it is disclosed instead:
   convention (last Thursday, rolled when the anchor is within 7 calendar days);
   `lot_size` cannot be sourced offline, so it is derived from a frozen ₹5L
   notional band and the derivation is recorded in `authoring.lot_size_rule`.
-* **Breakers whose engines do not exist.** A pledge/earnings row records the
-  intended breaker under `authoring.breaker_pending_stage_6` rather than
-  claiming gate evidence it cannot have (a `gate_focus` breaker id whose stage
-  artifact is undeclared is a V11 error, and stage 6 has no artifact to declare).
+* **Fundamental inputs.** Stage 6's statement/governance/earnings bundle is not
+  in the catalog: a row that has a committed `fixtures/<id>/financials.json`
+  (authored by `seed_hazard_records.py` from the catalog's documented trap) gets
+  its breaker **graded**, and a row without one keeps the intended breaker under
+  `authoring.breaker_pending_stage_6` rather than claiming gate evidence it
+  cannot have — a `gate_focus` breaker id whose stage artifact is undeclared is
+  a V11 error.
+
+**Stage-6 evidence is a row property, not a curator's afterthought.** When a
+scenario has a financials bundle, this tool (a) declares
+`out_6_fundamental.json` as recorded evidence, (b) moves the pending stage-6
+breaker into `gate_focus`, and (c) re-runs `6_fundamental_audit.py --record` so
+the declared bytes are a real stage stdout. So re-authoring a promoted row
+reproduces its hazard evidence instead of silently dropping it, and the
+breaker's gate evidence can never be a hand-typed payload (E1).
 """
 
 from __future__ import annotations
@@ -72,6 +83,7 @@ ALLOWED_PREFIXES = ("_replay/",)
 
 FORWARD = curate.FORWARD              # 22 sessions (BRD §5.1)
 MIN_SESSIONS = curate.MIN_SESSIONS    # 200 (TICK-013 floor)
+FINANCIALS_FILE = "financials.json"   # authored stage-6 input bundle (per scenario)
 USER_CAPITAL_INR = 500000.0
 LOT_NOTIONAL_INR = 500000.0           # frozen lot-size derivation band
 CRLF = "\r\n"
@@ -140,6 +152,57 @@ def load_tape(symbol: str, anchor: str):
     override = TAPE_SOURCE_TICKER.get(symbol)
     return curate.load_history(symbol, anchor,
                                fetch_symbol=override[0] if override else None)
+
+
+def financials_fixture(scenario_id: str) -> Path | None:
+    """The scenario's committed stage-6 input bundle, or None when it has none."""
+    path = PROOF_ROOT / "fixtures" / scenario_id / FINANCIALS_FILE
+    return path if path.exists() else None
+
+
+def declare_hazard_evidence(row: dict, spec: dict) -> None:
+    """Turn a committed financials bundle into declared, graded stage-6 evidence.
+
+    Two things move together, or neither: the artifact declaration (so the
+    payload is proven, never typed) and the `gate_focus` breaker id the bundle
+    says it was authored to exercise (so the row states *what it exists to
+    grade*). V11 pairs them — a breaker id with no declared stage-6 artifact is
+    an error — which is exactly why the pending form existed while stage 6 was
+    unimplemented, and why a bundle that names no breaker leaves that pending
+    intent alone instead of promoting a guessed id. The bundle's own disclosure
+    is copied onto the row, so a manifest reader sees the authored inputs
+    without opening the fixture.
+    """
+    sid = row["scenario_id"]
+    fixture = financials_fixture(sid)
+    if fixture is None:
+        return
+    try:
+        bundle = read_json(fixture)
+    except (OSError, json.JSONDecodeError):
+        print(f"  {sid}: {FINANCIALS_FILE} is unreadable; hazard evidence not declared")
+        return
+    row["recorded_artifacts"].append(
+        {"stage": 6, "artifact": "out_6_fundamental.json",
+         "path": f"fixtures/{sid}/recorded/out_6_fundamental.json",
+         "evidence": "recorded"})
+    row["replay_inputs"]["financials_fixture"] = f"fixtures/{sid}/{FINANCIALS_FILE}"
+    # The bundle names the breaker it was authored to exercise; without that
+    # declaration the row keeps its pending intent rather than guessing one.
+    authored = (bundle.get("authoring") or {})
+    breaker = authored.get("breaker")
+    if breaker:
+        row["gate_focus"].append(breaker)
+        row["authoring"].pop("breaker_pending_stage_6", None)
+    row["authoring"]["hazard_evidence"] = {
+        "fixture": f"fixtures/{sid}/{FINANCIALS_FILE}",
+        "breaker": breaker,
+        "hazard_field": authored.get("hazard_field"),
+        "hazard_value": authored.get("hazard_value"),
+        "documented": authored.get("documented"),
+        "disclosure": authored.get("disclosure"),
+    }
+
 
 CATALOG_ROW_RE = re.compile(r"^\|\s*\*\*(SCEN-\d{3})\*\*\s*\|")
 
@@ -354,6 +417,9 @@ def build_row(spec: dict, *, today: str) -> dict | None:
         stage, breaker = PENDING_BREAKERS[sid]
         row["authoring"][f"breaker_pending_{stage}"] = [breaker]
     row["authoring"]["catalog_trap"] = spec["trap"]
+    # A committed financials bundle promotes the pending stage-6 breaker into
+    # graded evidence (declaration + gate_focus + the stage-6 recording below).
+    declare_hazard_evidence(row, spec)
     if symbol in TAPE_SOURCE_TICKER:
         fetched, reason = TAPE_SOURCE_TICKER[symbol]
         row["authoring"]["tape_source"] = {
@@ -386,7 +452,11 @@ def canonical_trade(row: dict) -> dict:
 
 
 def record_stages(row: dict) -> bool:
-    """Run stages 1–2 through --record: the row's evidence is real stdout."""
+    """Run stages 1–2 (and 6, when the scenario has a bundle) through --record.
+
+    The row's evidence is real stdout: every declared artifact is a stage's own
+    output over the row's point-in-time fixtures, recorded in one bundle.
+    """
     sid = row["scenario_id"]
     fixture_dir = PROOF_ROOT / "fixtures" / sid
     bundle = fixture_dir / "recorded"
@@ -394,11 +464,18 @@ def record_stages(row: dict) -> bool:
         shutil.rmtree(bundle)
     canonical = fixture_dir / "current_trade.json"
     prefix = fixture_dir / "ohlcv_prefix.json"
-    for script, argv in (
+    stages = [
         ("1_math_and_rr.py", ["--input", str(canonical), "--record", str(bundle)]),
         ("2_market_data.py", ["--input", str(canonical), "--ohlcv-fixture", str(prefix),
                               "--record", str(bundle)]),
-    ):
+    ]
+    fundamentals = financials_fixture(sid)
+    if fundamentals is not None:
+        stages.append(
+            ("6_fundamental_audit.py", ["--input", str(canonical),
+                                        "--financials-fixture", str(fundamentals),
+                                        "--record", str(bundle)]))
+    for script, argv in stages:
         proc = subprocess.run([sys.executable, str(SCRIPTS / script), *argv],
                               capture_output=True, text=True, encoding="utf-8",
                               check=False, cwd=REPO_ROOT)

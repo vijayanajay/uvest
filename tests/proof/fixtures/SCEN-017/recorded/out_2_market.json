@@ -1,0 +1,15 @@
+{
+  "symbol": "COFORGE",
+  "atr_14": 27.725707,
+  "sl_atr_ratio": 0.4998970784978049,
+  "is_tight_sl": true,
+  "ema_20": 1069.29,
+  "above_50_ema": false,
+  "above_200_sma": false,
+  "trend_state": "BEARISH",
+  "bollinger_upper": 1183.32,
+  "bollinger_lower": 970.87,
+  "bollinger_bandwidth": 19.7237,
+  "waived": false,
+  "as_of": "2024-05-02"
+}

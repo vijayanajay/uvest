@@ -37,7 +37,9 @@ import dataset_refs as dr  # noqa: E402  (sibling eval modules)
 import scaffold_catalog as sc  # noqa: E402
 import validate_manifest as vm  # noqa: E402
 
-# The offline-runnable stages, and how to re-run one against a row's fixtures.
+# The offline-runnable stages, and how to re-run one against a row's fixtures
+# (stage 6 reads the row's authored financials bundle, so its recorded breaker
+# evidence is byte-compared too — a hazard row cannot pass on a stale artifact).
 FORWARD_CLAIM_FIELDS = (
     "forward_prices_22d",
     "resolution_date",
@@ -63,6 +65,11 @@ ENGINE_CLAIM_STAGES = {
 RERUNNABLE = {
     1: "1_math_and_rr.py",
     2: "2_market_data.py",
+    # Stage 6 is offline-runnable through the row's authored financials bundle
+    # (`replay_inputs.financials_fixture`), so a recorded `out_6_fundamental.json`
+    # is byte-compared to a fresh run exactly like stages 1–2 — the hazard rows'
+    # breaker evidence is verified, not taken on trust.
+    6: "6_fundamental_audit.py",
 }
 
 
@@ -82,6 +89,8 @@ def fresh_stage_stdout(row: dict, artifact: dict) -> bytes | None:
            "--input", str(PROOF_ROOT / inputs["canonical_trade"])]
     if stage == 2:
         cmd += ["--ohlcv-fixture", str(PROOF_ROOT / inputs["truncated_fixtures"][0])]
+    if stage == 6:
+        cmd += ["--financials-fixture", str(PROOF_ROOT / inputs["financials_fixture"])]
     proc = subprocess.run(cmd, capture_output=True, check=False, cwd=REPO_ROOT)
     return proc.stdout if proc.returncode == 0 else None
 

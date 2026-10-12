@@ -240,7 +240,7 @@
 - [x] HTML report card design mockup / prototype ([reports/sample_report.html](file:///d:/Code/uvest/reports/sample_report.html)).
 - [x] Test seam implementation: `tests/test_12_generate_html_report.py` ([TICK-010 §3](file:///d:/Code/uvest/docs/tickets/TICK-010-html-visualizer.md#L19)).
 - [x] Script creation: `scripts/12_generate_html_report.py`.
-- [ ] Ingest canonical outputs: `current_trade.json` and `out_1_*.json` through `out_9_*.json` ([BRD.md §13](file:///d:/Code/uvest/BRD.md#L516), [TICK-010 §2](file:///d:/Code/uvest/docs/tickets/TICK-010-html-visualizer.md#L16)).
+- [x] Ingest canonical outputs: `current_trade.json` and `out_1_*.json` through `out_9_*.json` ([BRD.md §13](file:///d:/Code/uvest/BRD.md#L516), [TICK-010 §2](file:///d:/Code/uvest/docs/tickets/TICK-010-html-visualizer.md#L16)). Stages 1/2/9 keep their own sections; a supplied stage 3–11 payload renders a card of the scalar fields it states (verbatim, never recomputed), so evidence a report is given is never silently dropped — the specialized gauges below remain open.
 - [x] Standalone zero-dependency HTML5 rendering saved directly to `reports/report_{SYMBOL}_{DATE}.html` ([BRD.md §13.1](file:///d:/Code/uvest/BRD.md#L520)).
 - [x] Sleek dark mode palette (`#0d1117` background, emerald `#2ea043`, crimson `#da3633`, amber `#d29922`) and typography ([BRD.md §13.1](file:///d:/Code/uvest/BRD.md#L522)).
 - [ ] Header & Decision badge in canonical 7-state vocabulary with composite score, $P(\text{win})$, and expectancy ([BRD.md §13.2](file:///d:/Code/uvest/BRD.md#L527)).
@@ -262,11 +262,12 @@
 - [x] Zero Hallucination Audit grade: 100% exact JSON match pass.
 - [x] Price Cone Range Coverage grade: $\ge 80\%$ pass.
 - [x] Optimal Limit Slippage Reduction grade: $\ge 75\%$ pass.
-- [x] Partial golden dataset seeded (31 of 50 trades in `tests/evals/golden_dataset.json`).
-- [ ] Complete remaining 19 trades in `tests/evals/golden_dataset.json` to reach full 50 trades ([docs/agents/evals.md §2](file:///d:/Code/uvest/docs/agents/evals.md#L11)):
-  - 4 remaining High Promoter Pledging Traps (`pledge_hazard`: 1/5 currently seeded).
-  - 5 Impending Earnings Event Traps (`earnings_hazard`: 0/5 currently seeded).
+- [x] Partial golden dataset seeded (40 of 50 trades in `tests/evals/golden_dataset.json`).
+- [ ] Complete remaining 10 trades in `tests/evals/golden_dataset.json` to reach full 50 trades ([docs/agents/evals.md §2](file:///d:/Code/uvest/docs/agents/evals.md#L11)):
+  - [x] 4 remaining High Promoter Pledging Traps seeded (`pledge_hazard`: 5/5) — the catalog's own pledge rows (SCEN-007/009/011/012) with recorded stage-6 evidence, so gate 2 grades `promoter_pledging_gt_25pct` from proven bytes ([tests/evals/seed_hazard_records.py](file:///d:/Code/uvest/tests/evals/seed_hazard_records.py)).
+  - [x] 5 Impending Earnings Event Traps seeded (`earnings_hazard`: 5/5) — SCEN-013…017, the catalog's binary-event rows (its §5 roll-up counts SCEN-017's unscheduled board meeting as the fifth), each graded on `earnings_within_7d`; SCEN-016 needed the owner-commanded re-freeze R3 ([docs/agents/scenario-manifest-schema.md §10](file:///d:/Code/uvest/docs/agents/scenario-manifest-schema.md#L328)).
   - 10 Institutional Distribution Traps (`institutional_distribution`: 0/10 currently seeded).
+  - The authored hazard bundles disclose what is authored (the catalog's documented pledge/earnings level) versus absent (the issuers' FY statements, so the ratio metrics stay null with `missing_inputs` naming every gap).
 - [ ] Seed Option-instrument test cases (e.g. 5 CE/PE recommendations) to unskip Option Rejection Guardrail eval ([docs/agents/evals.md §3 #3](file:///d:/Code/uvest/docs/agents/evals.md#L37)).
 - [ ] Enable Directional Brier Score eval once Stage 4 emits probabilities (Brier score $\le 0.180$; [docs/agents/evals.md §3 #4](file:///d:/Code/uvest/docs/agents/evals.md#L38)).
 - [ ] Connect HTML visualizer validation in `tests/run_evals.py` once Stage 12 is implemented ([docs/agents/evals.md §3 #7](file:///d:/Code/uvest/docs/agents/evals.md#L41)).

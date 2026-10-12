@@ -1,0 +1,18 @@
+{
+  "symbol": "TECHM",
+  "exchange": "NSE",
+  "instrument_type": "FUT",
+  "expiry": "2023-08-31",
+  "action": "BUY",
+  "entry_price": 1100.0,
+  "entry_range_min": 1098.9,
+  "entry_range_max": 1101.1,
+  "live_price": 1100.0,
+  "target": 1136.4,
+  "stoploss": 1081.8,
+  "lot_size": 450,
+  "margin": 495000.0,
+  "recommended_date": "2023-07-28",
+  "app_warning": "catalog scaffold",
+  "user_capital_inr": 500000.0
+}

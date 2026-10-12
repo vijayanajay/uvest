@@ -1,0 +1,29 @@
+{
+  "schema": "uvest-fundamentals/1",
+  "symbol": "ZEEL",
+  "exchange": "NSE",
+  "source": "catalog-hazard-seed/1",
+  "as_of": "2019-01-25",
+  "units": "INR_CRORE",
+  "statement_fy_prior": {},
+  "statement_fy_current": {},
+  "governance": {
+    "promoter_pledged_pct": 62.5
+  },
+  "earnings": {},
+  "authoring": {
+    "source": "catalog-hazard-seed/1",
+    "catalog": "business_test_cases.md §3",
+    "scenario_id": "SCEN-009",
+    "trade_class": "pledge_hazard",
+    "catalog_name": "Zee Entertainment Collateral Dump",
+    "trap": "Promoters pledged > 60%; lenders sold collateral; -33% in 1 day",
+    "breaker": "promoter_pledging_gt_25pct",
+    "breaker_stage": 6,
+    "hazard_field": "promoter_pledged_pct",
+    "hazard_value": 62.5,
+    "documented": "catalog trap: \"Promoters pledged > 60%; lenders sold collateral; -33% in 1 day\"",
+    "rule": "the catalog documents the pledge above 60% without its exact level, so the fixture states a disclosed value above that floor (authored input, not a filing)",
+    "disclosure": "Authored hazard input (promoter_pledged_pct=62.5): the catalog documents the pledge above 60% without its exact level, so the fixture states a disclosed value above that floor (authored input, not a filing). catalog trap: \"Promoters pledged > 60%; lenders sold collateral; -33% in 1 day\". The statement blocks are deliberately empty — no offline source exists for the issuer's FY statements, so stage 6 emits null ratio metrics with `missing_inputs` naming every gap (E4: absence, never an invented filing)."
+  }
+}

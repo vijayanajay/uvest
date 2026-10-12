@@ -1,0 +1,29 @@
+{
+  "schema": "uvest-fundamentals/1",
+  "symbol": "ADANIENT",
+  "exchange": "NSE",
+  "source": "catalog-hazard-seed/1",
+  "as_of": "2023-01-25",
+  "units": "INR_CRORE",
+  "statement_fy_prior": {},
+  "statement_fy_current": {},
+  "governance": {
+    "promoter_pledged_pct": 34.7
+  },
+  "earnings": {},
+  "authoring": {
+    "source": "catalog-hazard-seed/1",
+    "catalog": "business_test_cases.md §3",
+    "scenario_id": "SCEN-007",
+    "trade_class": "pledge_hazard",
+    "catalog_name": "Adani-Hindenburg Governance Shock",
+    "trap": "Promoter pledge > 25%, offshore debt; multi-day lower circuits",
+    "breaker": "promoter_pledging_gt_25pct",
+    "breaker_stage": 6,
+    "hazard_field": "promoter_pledged_pct",
+    "hazard_value": 34.7,
+    "documented": "catalog trap: \"Promoter pledge > 25%, offshore debt; multi-day lower circuits\"",
+    "rule": "the catalog documents the pledge above the 25% kill switch without its exact level, so the fixture states a disclosed value above that floor (authored input, not a filing)",
+    "disclosure": "Authored hazard input (promoter_pledged_pct=34.7): the catalog documents the pledge above the 25% kill switch without its exact level, so the fixture states a disclosed value above that floor (authored input, not a filing). catalog trap: \"Promoter pledge > 25%, offshore debt; multi-day lower circuits\". The statement blocks are deliberately empty — no offline source exists for the issuer's FY statements, so stage 6 emits null ratio metrics with `missing_inputs` naming every gap (E4: absence, never an invented filing)."
+  }
+}

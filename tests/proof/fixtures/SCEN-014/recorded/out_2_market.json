@@ -1,0 +1,15 @@
+{
+  "symbol": "TCS",
+  "atr_14": 75.246393,
+  "sl_atr_ratio": 0.49995752050762643,
+  "is_tight_sl": true,
+  "ema_20": 3258.57,
+  "above_50_ema": false,
+  "above_200_sma": false,
+  "trend_state": "BEARISH",
+  "bollinger_upper": 3374.9,
+  "bollinger_lower": 3093.27,
+  "bollinger_bandwidth": 8.7081,
+  "waived": false,
+  "as_of": "2022-07-11"
+}

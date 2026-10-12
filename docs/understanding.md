@@ -355,7 +355,7 @@ For the suite, the suite's own files join this layer:
   in the scenario manifest — same drift-guard the BRD table already gets.
 
 **Layer 2 — Behavioral evals (`tests/run_evals.py`, golden dataset, offline deterministic).**
-Today it grades the 31-record golden dataset with 7 gates that emit `[SKIP]` on
+Today it grades the 40-record golden dataset with 7 gates that emit `[SKIP]` on
 absent inputs rather than fabricating numbers (option-rejection, hard breakers,
 zero-hallucination, Brier, cone coverage, limit-MAE, HTML validity). The suite
 **replaces this runner's gate list wholesale** with S1–S7 and its dataset model:

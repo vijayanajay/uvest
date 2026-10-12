@@ -14,15 +14,16 @@ frozen convention, and forward outcomes come from the symbol's real closes.
 
 Class plan against the frozen quotas (meta.class_counts_expected, 50 total):
   clean_bullish 15 · inverted_rr 10 · tight_stop 5   ← fillable from stages 0–2
-  pledge_hazard 5 · earnings_hazard 5 · institutional_distribution 10
-      ← their breakers live in stage 6 / stage 5 engines, which do not exist
-        yet; seeding them would force hand-typed breaker values the runner
-        would grade as if real. They stay untouched (honest [SKIP] / mid-
-        curation), exactly like the pre-existing 5 records' stage-6 payloads.
+  pledge_hazard 5 · earnings_hazard 5  ← seeded from the frozen catalog's own
+      hazard rows with recorded stage-6 evidence (tests/evals/seed_hazard_records.py,
+      which authors the fixtures, records `out_6_fundamental.json` and adds the
+      records); nothing here hand-types a breaker value the runner would grade.
+  institutional_distribution 10  ← its class breaker is not in the runner's
+      registry, so the slots stay untouched (honest [SKIP] / mid-curation).
 
 Existing records: 5 kept as committed (GB-2022-0001 … GB-2025-0005); the single
 hand-typed tight_stop record (GB-2025-0005) is REBASED onto recorded evidence
-below. Final dataset: 31/50 records.
+below. Final dataset: 40/50 records.
 
 Outcome conventions frozen here (derived from data, never asserted by fiat):
   Resolution: the frozen order-aware rule (`dataset_refs.resolution_of`, the
@@ -41,6 +42,7 @@ Outcome conventions frozen here (derived from data, never asserted by fiat):
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -411,15 +413,19 @@ def main() -> int:
         return 1
     data["trades"] = final
     notes = data.get("meta", {}).get("notes", [])
-    notes = [n for n in notes if not n.startswith("31 of 50")]
+    notes = [n for n in notes
+             if not re.match(r"^\d+ of 50 records", n.strip())]
     notes.append(
-        "31 of 50 records: the three stage-0..2-supportable classes are FULLY "
-        "seeded (clean_bullish 15/15, inverted_rr 10/10, tight_stop 5/5) and "
-        "the tight-stop breaker grades from recorded stage-2 bundles "
-        "(tests/fixtures/history/). pledge_hazard 1/5, earnings_hazard 0/5, "
-        "institutional_distribution 0/10 await stages 5/6 engines; every pre-proof "
-        "record's stage-6 payload is now retired to absence (`waived`, the proof "
-        "rows' declarations) and GB-2023-0003's is referenced from there as "
+        "40 of 50 records: five of the six classes are seeded and their breakers "
+        "grade from recorded stage-1/2/6 bundles (tests/fixtures/history/ and "
+        "tests/proof/fixtures/). This curator fills the three stage-0..2 classes "
+        "(clean_bullish 15/15, inverted_rr 10/10, tight_stop 5/5); the two hazard "
+        "classes (pledge_hazard 5/5, earnings_hazard 5/5) are seeded from the "
+        "frozen catalog's own hazard rows by tests/evals/seed_hazard_records.py, "
+        "with an authored, disclosed stage-6 bundle per row. "
+        "institutional_distribution 0/10 remains unauthored; every pre-proof "
+        "record's legacy stage-6 payload is retired to absence (`waived`, the "
+        "proof rows' declarations) and GB-2023-0003's is referenced from there as "
         "quarantined debt — disclosed, excluded from grading, and never grown "
         "(tests/evals/pin_legacy_records.py).")
     data["meta"]["notes"] = notes

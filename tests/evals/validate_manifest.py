@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """Scenario-manifest validator — checks V1–V14 (ADR-007 / scenario-manifest-schema.md).
 
+A row's stage-6 input bundle (`replay_inputs.financials_fixture`) is treated as
+replay evidence too: path-checked by V3, hash-frozen by V4/V5, and scanned by V7
+for a post-cutoff bar (its governance/earnings fields are not bar-shaped, so the
+scan reads none of them — the bundle can never smuggle forward knowledge).
+
 Pure stdlib, offline, deterministic. Usable as a library (the Layer-1 test seam
 imports `validate_manifest`) or as a CLI:
 
@@ -159,6 +164,15 @@ def _safe_relpath(value: Any) -> str | None:
 
 
 def _replay_paths(row: dict) -> list[str]:
+    """Every file a replayed row *reads*: inputs, plus the evidence it declares.
+
+    `financials_fixture` is stage 6's input bundle (the authored hazard block a
+    pledge/earnings row is graded on). It is an input like the truncated prefix,
+    so it is path-checked (V3), hash-frozen (V4/V5) and — because a bundle that
+    carried a `date`-keyed bar would be look-ahead — included in V7's scan, which
+    reads only bar-shaped records and so sees none of its governance/earnings
+    fields.
+    """
     inputs = row.get("replay_inputs") or {}
     paths: list[str] = []
     if isinstance(inputs, dict):
@@ -166,6 +180,7 @@ def _replay_paths(row: dict) -> list[str]:
         fixtures = inputs.get("truncated_fixtures")
         if isinstance(fixtures, list):
             paths.extend(fixtures)
+        paths.append(inputs.get("financials_fixture"))
     for artifact in row.get("recorded_artifacts") or []:
         if isinstance(artifact, dict) and artifact.get("path") is not None:
             paths.append(artifact.get("path"))

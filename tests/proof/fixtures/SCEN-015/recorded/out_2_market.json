@@ -1,0 +1,15 @@
+{
+  "symbol": "HDFCBANK",
+  "atr_14": 17.046429,
+  "sl_atr_ratio": 0.4998114393463216,
+  "is_tight_sl": true,
+  "ema_20": 825.2,
+  "above_50_ema": false,
+  "above_200_sma": false,
+  "trend_state": "BEARISH",
+  "bollinger_upper": 871.42,
+  "bollinger_lower": 798.95,
+  "bollinger_bandwidth": 8.6772,
+  "waived": false,
+  "as_of": "2024-01-17"
+}
