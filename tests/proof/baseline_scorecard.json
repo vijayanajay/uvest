@@ -1,7 +1,7 @@
 {
   "schema": "uvest-baseline-scorecard/1",
-  "scenario_manifest_sha256": "3a19aa46a1098c33a960c73305444c0d73ccb84a10e6cc0bde0fa13ecdc11710",
-  "manifest_sha256": "75c4338a97e5830b0438602f86df8476bca4df539860b51425f608794c991a45",
-  "quarantined_count": 1,
-  "quarantine_register_sha256": "9267c98e61640bcd466d1bf4c02f39dcbc25f015d8c3fb91d190fe81949308ea"
+  "scenario_manifest_sha256": "a019d696e5881f59e56fbd51d4202c72c2782bd031244896dd2dc8c4fb5a1178",
+  "manifest_sha256": "0d6f74a25b4160f464b0f905b0b05fd7190483dae36c2cd926421c72a5c27b98",
+  "quarantined_count": 0,
+  "quarantine_register_sha256": "440b46cb3f9865af6a2a672c2f3e62a0d25744a5bfef1d4b44a6bd910e0c4929"
 }

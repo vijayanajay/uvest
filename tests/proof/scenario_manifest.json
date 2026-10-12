@@ -1438,13 +1438,30 @@
         "legacy_trade_id": "GB-2023-0003",
         "legacy_dataset": "tests/evals/golden_dataset.json",
         "legacy_instrument": "FUT",
-        "note": "legacy levels preserved as published; real point-in-time VEDL tape re-recorded (live close 308.75); legacy forward stats 268/325 were hand-typed and are superseded by the tape 261.95/317.9; migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources"
+        "note": "legacy levels preserved as published; real point-in-time VEDL tape re-recorded (live close 308.75); legacy forward stats 268/325 were hand-typed and are superseded by the tape 261.95/317.9; migrated as CASH because the legacy FUT contract specifics (expiry/lot) are not verifiable from committed point-in-time sources",
+        "hazard_evidence": {
+          "fixture": "fixtures/GB-2023-0003/financials.json",
+          "breaker": "promoter_pledging_gt_25pct",
+          "hazard_field": "promoter_pledged_pct",
+          "hazard_value": 54.2,
+          "inherited_from": "fixtures/GB-2023-0003/quarantined/out_6_fundamental.json",
+          "disclosure": "Authored hazard input (promoter_pledged_pct=54.2), inherited verbatim from `fixtures/GB-2023-0003/quarantined/out_6_fundamental.json` — the hand-typed payload this row's quarantine held. The record keeps the level it always asserted; it now has a recorded stage-6 run behind it. The statement blocks are deliberately empty — no offline source exists for the issuer's FY statements, so stage 6 emits null ratio metrics with `missing_inputs` naming every gap (E4: absence, never an invented filing)."
+        },
+        "quarantine_retirement": {
+          "retired_on": "2026-10-12",
+          "tool": "quarantine-retirement/1",
+          "condition": "stage 6 records real evidence (quarantine_register.json)",
+          "previous_evidence": "quarantined",
+          "previous_payload": "fixtures/GB-2023-0003/quarantined/out_6_fundamental.json",
+          "note": "the hand-typed payload is deleted, not parked: it is no longer evidence for anything, and E1 forbids an unregistered typed payload on disk"
+        }
       },
       "classification_tags": [
         "QUARANTINE_MIGRATION"
       ],
       "gate_focus": [
-        "ZERO_HALLUCINATION"
+        "ZERO_HALLUCINATION",
+        "promoter_pledging_gt_25pct"
       ],
       "symbol": "VEDL",
       "exchange": "NSE",
@@ -1467,7 +1484,8 @@
           "cutoff": "2023-02-13",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "financials_fixture": "fixtures/GB-2023-0003/financials.json"
       },
       "recorded_artifacts": [
         {
@@ -1485,9 +1503,8 @@
         {
           "stage": 6,
           "artifact": "out_6_fundamental.json",
-          "path": "fixtures/GB-2023-0003/quarantined/out_6_fundamental.json",
-          "evidence": "quarantined",
-          "reason": "legacy hand-typed payload from tests/evals/golden_dataset.json GB-2023-0003; retire when stage 6 records real evidence"
+          "path": "fixtures/GB-2023-0003/recorded/out_6_fundamental.json",
+          "evidence": "recorded"
         }
       ],
       "scoring": {

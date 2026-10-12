@@ -1,0 +1,28 @@
+{
+  "schema": "uvest-fundamentals/1",
+  "symbol": "VEDL",
+  "exchange": "NSE",
+  "source": "quarantine-retirement/1",
+  "as_of": "2023-02-13",
+  "units": "INR_CRORE",
+  "statement_fy_prior": {},
+  "statement_fy_current": {},
+  "governance": {
+    "promoter_pledged_pct": 54.2
+  },
+  "earnings": {},
+  "authoring": {
+    "source": "quarantine-retirement/1",
+    "scenario_id": "GB-2023-0003",
+    "trade_class": "pledge_hazard",
+    "trade_id": "GB-2023-0003",
+    "breaker": "promoter_pledging_gt_25pct",
+    "breaker_stage": 6,
+    "hazard_field": "promoter_pledged_pct",
+    "hazard_value": 54.2,
+    "inherited_from": "fixtures/GB-2023-0003/quarantined/out_6_fundamental.json",
+    "documented": "the quarantined payload's own promoter_pledge_pct=54.2",
+    "rule": "the record's own asserted level is carried into the bundle verbatim and recorded; nothing here is re-derived or tuned",
+    "disclosure": "Authored hazard input (promoter_pledged_pct=54.2), inherited verbatim from `fixtures/GB-2023-0003/quarantined/out_6_fundamental.json` — the hand-typed payload this row's quarantine held. The record keeps the level it always asserted; it now has a recorded stage-6 run behind it. The statement blocks are deliberately empty — no offline source exists for the issuer's FY statements, so stage 6 emits null ratio metrics with `missing_inputs` naming every gap (E4: absence, never an invented filing)."
+  }
+}

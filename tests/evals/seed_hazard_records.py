@@ -38,10 +38,10 @@ this tool closes the two classes end to end:
 
 What this tool does NOT do, and why:
 
-* **It never clears the quarantine register.** `GB-2023-0003`'s legacy
-  hand-typed pledge payload stays registered debt (E5's non-increasing meter);
-  its record abstains in gate 2 exactly as before. Retiring it is a separate,
-  owner-visible change.
+* **It never clears the quarantine register.** Retiring a registered row is a
+  separate, owner-visible act with its own tool
+  (`tests/evals/retire_quarantine_records.py`, §8.3 of the schema doc) — this
+  tool seeds new evidence and leaves the E5 meter exactly where it found it.
 * **It never tunes a slot to the quota.** A row the tape blocks (the catalog
   says LOSS, the ≤T_rec-derived geometry says otherwise) stays unauthored and
   the shortfall is printed — the class is seeded from evidence or not at all.
@@ -341,9 +341,11 @@ def dataset_note(records: list[dict], blocked: list[str], seeded: int, expected:
         "documented floor where it states only the inequality. The statement "
         "blocks are deliberately empty, so stage 6 emits null Piotroski/Altman/"
         "CFO-PAT metrics with `missing_inputs` naming every gap — absence, never an "
-        "invented filing (E4). GB-2023-0003's legacy pledge payload stays "
-        "registered quarantined debt and still abstains; institutional_distribution "
-        "0/10 remains unauthored. Authored by tests/evals/seed_hazard_records.py."
+        "invented filing (E4). GB-2023-0003's legacy pledge payload was retired "
+        "into recorded stage-6 evidence (tests/evals/retire_quarantine_records.py, "
+        "E5 meter 0), so the pledge class grades 5/5 and gate 2 has no abstention "
+        "left; institutional_distribution 0/10 remains unauthored. Authored by "
+        "tests/evals/seed_hazard_records.py."
         + ((" Slot(s) left unauthored because the point-in-time tape contradicts "
             "the catalog's realized outcome under the frozen class geometry: "
             + ", ".join(blocked)

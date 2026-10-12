@@ -148,31 +148,44 @@ class TestCommittedProofManifest(unittest.TestCase):
                 self.assertTrue((PROOF_ROOT / artifact["path"]).exists(),
                                 f"{row['scenario_id']}: recorded artifact missing")
 
-    def test_quarantine_register_matches_manifest_and_baseline(self):
-        """The first quarantined row (legacy stage-6 pledge payload) and its frozen meter."""
+    def test_the_quarantine_register_is_empty_and_the_meter_is_at_its_floor(self):
+        """The register's one row was retired; the meter may not regrow.
+
+        GB-2023-0003's legacy stage-6 pledge payload was the register's single
+        entry, and its own reason stated the exit condition — *retire when stage 6
+        records real evidence*. Stage 6 records it now
+        (`tests/evals/retire_quarantine_records.py`), so the row declares recorded
+        bytes, the hand-typed payload is deleted rather than parked, and the E5
+        meter is re-frozen at 0. What this seam keeps frozen is the floor: an empty
+        register plus a baseline at 0, so reintroducing a quarantined artifact is a
+        visible regression instead of a quiet swap.
+        """
         quarantined = [(row["scenario_id"], a["stage"], a["artifact"])
                        for row in self.manifest["scenarios"]
                        for a in row.get("recorded_artifacts", [])
                        if a.get("evidence") == "quarantined"]
-        self.assertEqual(quarantined, [("GB-2023-0003", 6, "out_6_fundamental.json")])
+        self.assertEqual(quarantined, [],
+                         "no row may declare quarantined evidence without a register row")
         register = json.loads((PROOF_ROOT / vm.REGISTER_FILE).read_text(encoding="utf-8"))
         self.assertEqual(register.get("schema"), vm.REGISTER_SCHEMA)
-        self.assertEqual(
-            [(r["scenario_id"], r["stage"], r["artifact"]) for r in register.get("rows", [])],
-            quarantined,
-        )
+        self.assertEqual(register.get("rows"), [])
         baseline = json.loads((PROOF_ROOT / vm.BASELINE_FILE).read_text(encoding="utf-8"))
-        self.assertEqual(baseline.get("quarantined_count"), len(quarantined),
+        self.assertEqual(baseline.get("quarantined_count"), 0,
                          "baseline must freeze the non-increasing quarantine meter")
         self.assertEqual(
             baseline.get("quarantine_register_sha256"),
             hashlib.sha256((PROOF_ROOT / vm.REGISTER_FILE).read_bytes()).hexdigest(),
         )
-        artifact = next(a for row in self.manifest["scenarios"]
-                        for a in row.get("recorded_artifacts", [])
-                        if a.get("evidence") == "quarantined")
-        self.assertTrue((PROOF_ROOT / artifact["path"]).exists(),
-                        "quarantined payload must stay on disk as the tracked debt")
+        retired = PROOF_ROOT / "fixtures" / "GB-2023-0003" / "quarantined" / \
+            "out_6_fundamental.json"
+        self.assertFalse(retired.exists(),
+                         "the retired hand-typed payload is deleted, not parked")
+        row = next(r for r in self.manifest["scenarios"]
+                   if r["scenario_id"] == "GB-2023-0003")
+        declared = next(a for a in row["recorded_artifacts"]
+                        if a["artifact"] == "out_6_fundamental.json")
+        self.assertEqual(declared["evidence"], "recorded")
+        self.assertTrue((PROOF_ROOT / declared["path"]).exists())
 
 
     # ------------------------------------------------ golden dataset references

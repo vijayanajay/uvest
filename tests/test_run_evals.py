@@ -623,11 +623,20 @@ class TestProofRootPayloadEvidence(unittest.TestCase):
                 self.assertIsNone(row["artifact_path"], row["artifact"])
                 self.assertIsNone(row["artifact_sha256"], row["artifact"])
 
-    def test_the_two_unproven_declarations_fold_to_disclosed_skips(self):
-        quarantined = self.by_label["GB-2023-0003:out_6_fundamental.json"]
-        self.assertEqual(quarantined["status"], "skipped")
-        self.assertIn(proof_root.REGISTER_FILE, quarantined["skip_reason"])
-        self.assertIn("never evidence", quarantined["skip_reason"])
+    def test_the_retired_row_folds_to_ran_and_the_rest_to_disclosed_skips(self):
+        """One declaration was retired; the remaining debt is the waivers.
+
+        GB-2023-0003's stage-6 payload was the register's single quarantined row
+        (now retired into recorded bytes), so the folded record must show it as
+        `ran` with a matching hash, and no row may carry a quarantine skip reason.
+        The stage-6 payloads whose engine has no input remain disclosed skips.
+        """
+        retired = self.by_label["GB-2023-0003:out_6_fundamental.json"]
+        self.assertEqual(retired["status"], "ran")
+        self.assertIsNotNone(retired["artifact_sha256"])
+        self.assertFalse([row for row in self.rows
+                          if proof_root.REGISTER_FILE in (row["skip_reason"] or "")],
+                         "nothing is registered quarantined any more")
         waived = self.by_label["GB-2022-0001:out_6_fundamental.json"]
         self.assertEqual(waived["status"], "skipped")
         self.assertTrue(waived["skip_reason"].startswith("waived:"))
@@ -790,15 +799,17 @@ class TestProofRootPayloadEvidence(unittest.TestCase):
         self.assertIn("contradicts itself", str(ctx.exception))
 
     # ------------------------------------------------------ the real proof root
-    def test_the_registered_debt_is_disclosed_and_no_record_types_bytes_inline(self):
-        """The roster splits into covered records and *registered* exclusions.
+    def test_declared_debt_is_disclosed_and_no_record_types_bytes_inline(self):
+        """The roster splits into covered records and *declared* exclusions.
 
         A gap is fatal only when nobody declared it (E1: bytes the dataset typed
         inline, an artifact no declaration covers). Signature debt — the proof
         root's `waived`/`quarantined` declarations — is disclosed and excluded
-        (E4/E5) exactly as the dataset's own mid-curation note says. The inline
-        half of that split must stay empty: a curator reintroducing a typed
-        payload fails this seam before it reaches a commit.
+        (E4/E5) exactly as the dataset's own mid-curation note says, and the
+        exclusions must equal the live register exactly (which is now empty, so
+        the pledge class grades every one of its records). The inline half of that
+        split must stay empty: a curator reintroducing a typed payload fails this
+        seam before it reaches a commit.
         """
         covered, uncovered, excluded = run_evals.check_payload_coverage(
             self.trades, self.proof, self.targets)
@@ -818,7 +829,7 @@ class TestProofRootPayloadEvidence(unittest.TestCase):
         self.assertEqual(offenders, registered,
                          "the disclosed exclusions are exactly the registered debt")
 
-    def test_the_scorecard_discloses_the_registered_debt_and_stays_green(self):
+    def test_the_scorecard_discloses_declared_debt_and_stays_green(self):
         """End to end: red only for an undeclared gap, and never silently so."""
         covered, uncovered, excluded = run_evals.check_payload_coverage(
             self.trades, self.proof, self.targets)

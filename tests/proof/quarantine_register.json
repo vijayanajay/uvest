@@ -1,10 +1,4 @@
 {
   "schema": "uvest-quarantine-register/1",
-  "rows": [
-    {
-      "scenario_id": "GB-2023-0003",
-      "stage": 6,
-      "artifact": "out_6_fundamental.json"
-    }
-  ]
+  "rows": []
 }

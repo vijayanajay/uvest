@@ -171,11 +171,16 @@ class TestSeedHazardRecords(unittest.TestCase):
         gate = run_evals.gate_hard_breakers(self.dataset["trades"], unbacked)
         self.assertFalse(gate.skipped, gate.detail)
         self.assertEqual(gate.value, 100.0, gate.detail)
-        # Every seeded hazard record is graded, and the only abstention is the
-        # registered quarantine this change deliberately leaves in place.
+        # Every hazard record is graded — nothing abstains. The class that used to
+        # be pinned by a quarantine (GB-2023-0003, the pledge legacy record) was
+        # retired into recorded bytes by tests/evals/retire_quarantine_records.py,
+        # so the pledge class grades 5 of 5.
         for sid in self.roster:
             self.assertNotIn(sid, gate.detail, gate.detail)
-        self.assertIn("GB-2023-0003: out_6_fundamental.json quarantined", gate.detail)
+        self.assertNotIn("not graded", gate.detail, gate.detail)
+        retired = self.by_id["GB-2023-0003"]
+        self.assertIs(run_evals.class_breaker_observed(retired, unbacked=unbacked),
+                      True, "the retired quarantine row must grade from recorded bytes")
 
     def test_the_classes_meet_their_frozen_quotas(self):
         counts: dict[str, int] = {}

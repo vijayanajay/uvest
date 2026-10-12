@@ -5,14 +5,17 @@ extracted subset of its values:
 
     "script_outputs": {
       "out_6_fundamental.json": {
-        "$ref": "tests/proof/fixtures/GB-2023-0003/quarantined/out_6_fundamental.json"
+        "$ref": "tests/proof/fixtures/GB-2023-0003/recorded/out_6_fundamental.json"
       }
     }
 
 The referenced file is then the single source of truth for those bytes: the
 proof root's `manifest.sha256` freezes them and `quarantine_register.json`
 records their provenance, so the same payload can never also be copied inline
-and drift (`tests/test_proof_manifest.py` enforces that).
+and drift (`tests/test_proof_manifest.py` enforces that). The register is
+empty — its last row, a legacy hand-typed stage-6 pledge payload, was retired
+into recorded evidence (`tests/evals/retire_quarantine_records.py`) — so a ref
+resolving to `recorded` is now the only case the live proof root holds.
 
 Outcome claims can also be *derived* from a pinned tape instead of typed:
 

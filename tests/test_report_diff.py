@@ -20,6 +20,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 TESTS_DIR = Path(__file__).resolve().parent
 REPO_ROOT = TESTS_DIR.parent
@@ -124,23 +125,43 @@ class TestBackingRule(unittest.TestCase):
         self.assertEqual(len(problems), 1, problems)
         self.assertIn("85.02", problems[0])
 
-    def test_quarantined_payload_numbers_back_nothing(self):
-        """GB-2023-0003's stage-6 payload is registered quarantined (E5).
+    def test_a_registered_payload_numbers_back_nothing(self):
+        """A payload's numbers are evidence only while the register lets them be.
 
-        Its numbers are visible in the record but are never evidence — the
-        differ refuses them exactly as the breaker gate does.
+        The register's one row (GB-2023-0003's legacy stage-6 pledge payload) was
+        retired once stage 6 could record real evidence, so the E5 rule is pinned
+        against a synthetic register instead of a live entry: the *same bytes*
+        back nothing while registered and back the report's number once the
+        registration is gone. That is what makes the exclusion a property of the
+        register — never a hardcoded trade id — and what makes a retired payload's
+        bytes gradeable rather than visible-but-inert.
         """
         trade = {
-            "trade_id": "GB-2023-0003",
+            "trade_id": "GB-TEST-9",
             "symbol": "HDFCBANK",
             "recommendation_date": "2023-11-20",
             "script_outputs": {"out_6_fundamental.json": {"promoter_pledge_pct": 54.2}},
         }
-        self.assertEqual(dataset_refs.quarantined_in(trade),
-                         ["out_6_fundamental.json"])
-        problems = report_diff.diff(wrap("Promoter pledge: 54.2%"), trade)
-        self.assertEqual(len(problems), 1, problems)
-        self.assertIn("54.2", problems[0])
+        register = json.dumps({"schema": "uvest-quarantine-register/1",
+                               "rows": [{"scenario_id": "GB-TEST-9", "stage": 6,
+                                         "artifact": "out_6_fundamental.json"}]})
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "tests" / "proof").mkdir(parents=True)
+            path = root / "tests" / "proof" / "quarantine_register.json"
+            path.write_text(register, encoding="utf-8")
+            with mock.patch.object(dataset_refs, "REPO_ROOT", root):
+                self.assertEqual(dataset_refs.quarantined_in(trade),
+                                 ["out_6_fundamental.json"])
+                problems = report_diff.diff(wrap("Promoter pledge: 54.2%"), trade)
+                self.assertEqual(len(problems), 1, problems)
+                self.assertIn("54.2", problems[0])
+                path.write_text(json.dumps({"schema": "uvest-quarantine-register/1",
+                                            "rows": []}), encoding="utf-8")
+                self.assertEqual(dataset_refs.quarantined_in(trade), [])
+                self.assertEqual(report_diff.diff(wrap("Promoter pledge: 54.2%"),
+                                                  trade), [],
+                                 "retired bytes are evidence, not decoration")
 
 
 class TestHallucinationGate(unittest.TestCase):

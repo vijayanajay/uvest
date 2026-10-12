@@ -20,6 +20,9 @@ Class plan against the frozen quotas (meta.class_counts_expected, 50 total):
       records); nothing here hand-types a breaker value the runner would grade.
   institutional_distribution 10  ← its class breaker is not in the runner's
       registry, so the slots stay untouched (honest [SKIP] / mid-curation).
+  Neither class's seeding touches the quarantine register, and the register's
+  last entry (GB-2023-0003's legacy stage-6 payload) was retired into recorded
+  evidence by its own tool — the E5 meter sits at 0.
 
 Existing records: 5 kept as committed (GB-2022-0001 … GB-2025-0005); the single
 hand-typed tight_stop record (GB-2025-0005) is REBASED onto recorded evidence
@@ -425,9 +428,11 @@ def main() -> int:
         "with an authored, disclosed stage-6 bundle per row. "
         "institutional_distribution 0/10 remains unauthored; every pre-proof "
         "record's legacy stage-6 payload is retired to absence (`waived`, the "
-        "proof rows' declarations) and GB-2023-0003's is referenced from there as "
-        "quarantined debt — disclosed, excluded from grading, and never grown "
-        "(tests/evals/pin_legacy_records.py).")
+        "proof rows' declarations), and GB-2023-0003's — the register's last "
+        "quarantined row — was retired into recorded stage-6 evidence, so the E5 "
+        "meter is at 0 and no payload a gate reads is typed "
+        "(tests/evals/pin_legacy_records.py, "
+        "tests/evals/retire_quarantine_records.py).")
     data["meta"]["notes"] = notes
     data["meta"]["generated_on"] = "2026-10-10"
     DATASET_FILE.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")

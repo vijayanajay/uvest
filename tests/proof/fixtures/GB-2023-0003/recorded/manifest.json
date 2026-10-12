@@ -10,6 +10,11 @@
       "stage": 2,
       "artifact": "out_2_market.json",
       "recorded_at": "2026-10-10T17:19:21+00:00"
+    },
+    {
+      "stage": 6,
+      "artifact": "out_6_fundamental.json",
+      "recorded_at": "2026-10-12T18:14:14+00:00"
     }
   ]
 }
