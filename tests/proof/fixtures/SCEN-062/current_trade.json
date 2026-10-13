@@ -1,0 +1,18 @@
+{
+  "symbol": "TCS",
+  "exchange": "NSE",
+  "instrument_type": "FUT",
+  "expiry": "2024-07-25",
+  "action": "BUY",
+  "entry_price": 3983.7,
+  "entry_range_min": 3979.72,
+  "entry_range_max": 3987.68,
+  "live_price": 3983.7,
+  "target": 4052.76,
+  "stoploss": 3949.17,
+  "lot_size": 125,
+  "margin": 497962.5,
+  "recommended_date": "2024-07-10",
+  "app_warning": "catalog scaffold",
+  "user_capital_inr": 500000.0
+}

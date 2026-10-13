@@ -24,7 +24,7 @@ To eliminate lookahead bias, survivorship bias, and curve-fitting, the suite run
 tests/proof/
 ├── fixtures/                     # Immutable point-in-time daily bars & bhavcopy
 ├── manifest.sha256               # Cryptographic SHA-256 hashes of all ≤T fixtures
-├── scenarios/                    # The 60 isolated historical trade cases
+├── scenarios/                    # The 62 isolated historical trade cases
 │   ├── SCEN-001_.../
 │   │   ├── content/              # The ONLY directory the engine can see (tape ≤ T_rec)
 │   │   │   ├── current_trade.json
@@ -36,16 +36,16 @@ tests/proof/
 
 - **Filesystem Isolation:** The pipeline stages ($0 \to 9$) execute inside `content/`. The forward tape in `outcome/` is physically inaccessible until the decision engine has exited and written its verdict.
 - **Fixture SHA Integrity:** If any fixture is altered or tampered with, the suite fails immediately with code `ERR_FIXTURE_INTEGRITY`.
-- **Zero Network, Local-First:** All 60 scenarios execute headlessly in $<5$ seconds via:
+- **Zero Network, Local-First:** All 62 scenarios execute headlessly in $<5$ seconds via:
   ```bash
   python tests/run_business_proof.py
   ```
 
 ---
 
-## 3. The 60-Scenario Historical Catalog (2018–2026 Real NSE Tape)
+## 3. The 62-Scenario Historical Catalog (2018–2026 Real NSE Tape)
 
-The suite spans 60 real historical situations across 9 distinct Indian market stress regimes. Prices, volumes, delivery percentages, and corporate actions are taken from real historical NSE Bhavcopy and exchange filings.
+The suite spans 62 real historical situations across 9 distinct Indian market stress regimes. Prices, volumes, delivery percentages, and corporate actions are taken from real historical NSE Bhavcopy and exchange filings.
 
 ### Regimes & Scenarios Matrix
 
@@ -111,6 +111,10 @@ The suite spans 60 real historical situations across 9 distinct Indian market st
 | **SCEN-058** | 2024-02-28 | SBIN | FUT | Stewardship Success: Shakeout Absorption | GO trade; Day 3 shakeout held above AVWAP; held to target (+4.5%) | **`🟢 GO`** | **`WIN`** | **TP** |
 | **SCEN-059** | 2023-12-18 | HDFCBANK | FUT | Stewardship Noise Immunity: Normal Pullback | Drawdown 0.7× ATR held within normal noise buffer; reached target | **`🟢 GO`** | **`WIN`** | **TP** |
 | **SCEN-060** | 2024-03-20 | LT | CASH | Overfitted Analog Trap (Too-Good-To-Be-True) | DTW analog matched 98% with 2017 rally, but macro regime inverted | **`🔴 AVOID`** | **`LOSS`** | **TN** |> **Re-freeze R1 (owner-commanded, 2026-10-10):** SCEN-001 and SCEN-005 move `LOSS`/`TN` → `WIN`/`FN`. Their recorded point-in-time tape (frozen resolution: outcome bars strictly after `T_rec`) reaches the `2R` target without ever touching even the tightest documented advisory stop (`0.32×ATR`): both advisories rejected realized winners — the honest false-negative accounting of §4.1, never a geometry tuned to preserve the prior claim. Evidence and row provenance: `docs/agents/scenario-manifest-schema.md` §10.
+| **SCEN-062** | 2024-07-10 | TCS | FUT | Knife-Edge Earnings Probe (1 Session) | Results announced 1 trading session after T_rec; pre-release drift pierced the crisis stop at that session's open | **`🔴 AVOID`** | **`LOSS`** | **TN** |
+| **SCEN-063** | 2024-07-09 | INFY | FUT | Far-Edge Earnings Probe (6 Sessions) | Results announced 6 trading sessions after T_rec (17 Jul Moharram holiday); pre-release drift struck the stop first | **`🔴 AVOID`** | **`LOSS`** | **TN** |
+
+> **ADR-009 boundary probes (owner-commanded, 2026-10-13):** `SCEN-062` and `SCEN-063` are added as the earnings boundary probes — windows of 1 and 6 trading sessions, each pinned to the issuer's announced NSE results date per ADR-008, each a full pinned-tape scenario whose forward tape realizes the documented `LOSS` under the frozen first-touch resolution. `SCEN-061` (the marginal-pledge probe) is **dropped and disclosed**: no shareholding-pattern disclosure in the 25.1–28.0% band was sourceable, so no authored level replaces it (refusal rule of ADR-009 §3; sourcing proof in `docs/agents/adr-009-hazard-boundary-probes.md`, addendum 2026-10-13). Evidence and row provenance: `docs/agents/scenario-manifest-schema.md` §10.
 
 > **Re-freeze R2 (reconciliation, 2026-10-11):** SCEN-011 moves `LOSS`/`TN` → `WIN`/`FN`, and `SCEN-009`'s basis label is corrected to `stop_first` (its `LOSS` never moved). The pinned forward tape prints the target `259.14` on 2019-10-03 — the first bar after `T_rec` — and the stop `208.71` only on 2019-10-07, so the frozen order-aware resolution (`dataset_refs.resolution_of`, first touch wins) is `WIN`/`target_first`; the seeded `LOSS` came from the retired window-level scan (any stop touch inside the window ⇒ `LOSS`). One rule now decides everywhere: the curator's seed scan, the catalog scaffolder, the migration tool and the `$derive` rule all delegate to `resolution_of`, so this row is the honest false negative of §4.1 — an AVOID that rejected a realized winner, never a tuned loss. Evidence and row provenance: `docs/agents/scenario-manifest-schema.md` §10.
 
@@ -184,13 +188,13 @@ Every suite execution calculates this definitive business scorecard:
 ================================================================================
                     UVEST BUSINESS PROOF SCORECARD (FROZEN v1.0)
 ================================================================================
-  Evaluated: 60 Historical Replays across 2018–2026 NSE Tape
+  Evaluated: 62 Historical Replays across 2018–2026 NSE Tape
   Blindness Integrity (S6):   [PASS] 100.0% (Zero Lookahead / Fixture SHA Verified)
 
   CONFUSION MATRIX:
   ├── True Positives  (TP) : 21  (Realized Winners stamped GO / GO_WEAK)
   ├── False Positives (FP) :  4  (Realized Losers stamped GO — Critical Error)
-  ├── True Negatives  (TN) : 24  (Realized Hazards/Traps blocked by AVOID)
+  ├── True Negatives  (TN) : 26  (Realized Hazards/Traps blocked by AVOID)
   └── False Negatives (FN) : 11  (Realized Winners rejected — Cost of Strictness)
 
   THE THREE BUSINESS METRICS:
@@ -202,7 +206,7 @@ Every suite execution calculates this definitive business scorecard:
   SAFETY GATES & CIRCUIT BREAKERS:
   ├── Hard Governance Breakers (Pledge > 25%): 100.0% Blocked (6/6)       [PASS]
   ├── Inverted Risk-Reward Prevention       : 100.0% Blocked/Flipped (8/8) [PASS]
-  ├── Binary Earnings Hazard Prevention     : 100.0% Blocked (5/5)       [PASS]
+  ├── Binary Earnings Hazard Prevention     : 100.0% Blocked (7/7)       [PASS]
   └── Stewardship Alpha (S5 Soft Exit Value): +19.2% Drawdown Reduction  [PASS]
 ================================================================================
   VERDICT: SUITE PASSED — SYSTEM DEMONSTRATES STATISTICAL EDGE IMPROVEMENT
@@ -218,7 +222,7 @@ Every suite execution calculates this definitive business scorecard:
 | **S1** | **Filter Delta (55% Gate)** | Trades stamped `GO` must have entered with $P_{\text{win}} \ge 55.0\%$, and the realized win frequency must exceed $50.0\%$. Realized expectancy of `GO` bucket must exceed the advisory baseline ($E_{\text{GO}} > E_{\text{baseline}}$). | Proves that the system's "yes" actually makes money on the real tape. |
 | **S2** | **Calibration** | Absolute Brier Score on 22-day direction $\le 0.180$. Absolute calibration error per bucket: $\|P_{\text{predicted}} - P_{\text{realized}}\| \le 10.0\text{pp}$. | Prevents probability hallucination and ungrounded confidence. |
 | **S3** | **Per-Regime Honesty** | Expectancy of `GO` bucket must remain strictly positive ($E > 0$) across individual market regimes (VIX bands, sector groups). | Prevents bull-market runs from masking fatal flaws in choppy or bear regimes. |
-| **S4** | **AVOID Cost Accounting** | False Negative rate must not exceed $20.0\%$ ($FN \le 12 / 60$). Forgone expectancy is published. | Prevents the engine from taking the cowardly way out by rejecting everything. |
+| **S4** | **AVOID Cost Accounting** | False Negative rate must not exceed $20.0\%$ ($FN \le 12 / 62$). Forgone expectancy is published. | Prevents the engine from taking the cowardly way out by rejecting everything. |
 | **S5** | **Stewardship Value-Add** | Evaluated across losing setups ($N \ge 25$) with a $1.0\times\text{ATR}$ noise buffer. Counterfactual exits at `soft_exit_zone` must reduce cumulative portfolio drawdown by $\ge 15.0\%$ compared to hard stop-loss exits. | Proves that daily position triage actually saves retail capital. |
 | **S6** | **No-Lookahead Integrity** | 100% match on fixture SHA-256 checksums. Zero forward leakage. Truncation verified at $T_{\text{rec}}$. | Guarantees test results are physically genuine and un-gameable. |
 | **S7** | **Marginal-Band Honesty** | Setups in the $55.0\%–62.0\%$ predicted win rate band must realize positive mathematical expectancy ($E \ge 0$). | Validates the owner's exact rule: *"even >55% is enough if managed properly."* |

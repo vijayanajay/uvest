@@ -309,6 +309,7 @@ Every tool is an independent, single-responsibility CLI script that reads `curre
 | 11 | `scripts/11_postmortem_learning.py` | `out_11_postmortem.json`, `thresholds.json` | `tests/test_11_postmortem_learning.py` | `TICK-012` |
 | 12 | `scripts/12_generate_html_report.py` | `reports/report_{SYMBOL}_{DATE}.html` | `tests/test_12_generate_html_report.py` | `TICK-010` |
 | — | `tests/run_evals.py` (Evals harness) | `tests/evals/golden_dataset.json` scorecard | `tests/run_evals.py` | `EVAL-001` |
+| — | `tests/run_evals.py` (Evals harness — hazard census) | `tests/evals/golden_dataset.json` hazard rows | `tests/test_seed_hazard_records.py` | `EVAL-002` |
 
 **Conditional stage:** Stage 11 (`11_postmortem_learning.py`) executes only when a tracked trade resolves. It is the sole writer of `thresholds.json` (Bayesian calibration weights) and therefore never runs during the standard validation chain.
 

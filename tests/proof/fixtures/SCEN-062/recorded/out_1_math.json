@@ -1,0 +1,12 @@
+{
+  "symbol": "TCS",
+  "instrument_type": "FUT",
+  "raw_rr": 2.000000000000026,
+  "live_rr": 2.000000000000026,
+  "risk_inr": 4316.25,
+  "reward_inr": 8632.5,
+  "quantity": 125,
+  "outside_range_pct": 0.0,
+  "inverted_rr_flag": false,
+  "capital_allocation_pct": 0.8632
+}

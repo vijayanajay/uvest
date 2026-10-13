@@ -1,12 +1,12 @@
 {
   "schema": "uvest-baseline-scorecard/1",
-  "scenario_manifest_sha256": "aace1047fc4b41ffb0d9f0422c15cbd0a360511ea1a8fe5ee0d55021a36119f9",
-  "manifest_sha256": "6114a6888a64f110af5ceb9695fb20ff534734716f9c90348eafad17e440f488",
+  "scenario_manifest_sha256": "9188a170fd9d8be9cfaf459e2001a0aa1baca17c8049ff84210f45fb76bb12cf",
+  "manifest_sha256": "355c655fd50bd9c56a3fc4ae4ee666cc30cf9a2a3450b9818c6d1a3d3b4fc14b",
   "quarantined_count": 0,
   "quarantine_register_sha256": "440b46cb3f9865af6a2a672c2f3e62a0d25744a5bfef1d4b44a6bd910e0c4929",
   "rule_exercises": {
     "clean_bullish": 18,
-    "earnings_hazard": 2,
+    "earnings_hazard": 4,
     "inverted_rr": 8,
     "pledge_hazard": 5,
     "tight_stop": 5

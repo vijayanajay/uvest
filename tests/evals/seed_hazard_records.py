@@ -4,8 +4,8 @@
     python tests/evals/seed_hazard_records.py              # dry run
     python tests/evals/seed_hazard_records.py --apply
 
-`meta.class_counts_expected` asks for 5 pledging traps and 5 impending-earnings
-traps. Neither class is gradable from stages 0–2 — gate 2 reads their breaker
+`meta.class_counts_expected` asks for 5 pledging traps and 7 impending-earnings
+traps (the five catalog windows plus the two ADR-009 boundary probes). Neither class is gradable from stages 0–2 — gate 2 reads their breaker
 out of `out_6_fundamental.json` — so while stage 6 had no engine their slots
 stayed unseeded (honest [SKIP], never a hand-typed breaker value). Stage 6 now
 exists, and the frozen catalog already documents exactly these situations, so
@@ -73,13 +73,18 @@ GOLDEN = REPO_ROOT / "tests" / "evals" / "golden_dataset.json"
 FIXTURE_SCHEMA = "uvest-fundamentals/1"
 SEED_SOURCE = "catalog-hazard-seed/1"
 # The dataset's roster summary is one note, replaced in place by each curation
-# pass (curate.py's `31 of 50 records: …`, then this tool's), never stacked.
-COUNT_NOTE_RE = re.compile(r"^\d+ of 50 records")
+# pass (curate.py's `31 of 52 records: …`, then this tool's), never stacked.
+# The total is read from the pattern, not baked in, so a quota bump (ADR-009's
+# 50→52) does not strand the note outside its own filter.
+COUNT_NOTE_RE = re.compile(r"^\d+ of \d+ records")
 
 # The roster: the catalog's own hazard scenarios, split to fill the two frozen
 # quotas. Pledge (4 + the already-seeded VEDL legacy record = 5/5) and earnings
-# (5/5, the catalog's §5 roll-up counts SCEN-017's unscheduled board meeting as
-# the fifth binary event inside the window).
+# (7/7: the five catalog windows — the §5 roll-up counts SCEN-017's unscheduled
+# board meeting as the fifth binary event inside the window — plus the two
+# ADR-009 boundary probes, SCEN-062 at 1 session and SCEN-063 at 6, each window
+# pinned to the issuer's announced results date; SCEN-061's marginal-pledge cell
+# was dropped under ADR-009 §3's refusal rule, never authored).
 ROSTER: tuple[dict, ...] = (
     {"scenario_id": "SCEN-007", "trade_class": "pledge_hazard",
      "field": "promoter_pledged_pct", "value": 34.7,
@@ -140,6 +145,25 @@ ROSTER: tuple[dict, ...] = (
      "rule": "the catalog documents the unscheduled event without a session "
              "count, so the fixture states the class's frozen 2-session window "
              "(authored input, not a board-meeting date)"},
+    {"scenario_id": "SCEN-062", "trade_class": "earnings_hazard",
+     "field": "sessions_to_earnings", "value": 1,
+     "documented": "catalog trap: \"Results announced 1 trading session after "
+                   "T_rec; pre-release drift pierced the crisis stop at that "
+                   "session's open\"",
+     "rule": "the catalog states the window (1 session), pinned to the issuer's "
+             "announced NSE results date (TCS: after market 2024-07-11), so the "
+             "fixture uses it verbatim (window pinning per ADR-008, never an "
+             "authored default)"},
+    {"scenario_id": "SCEN-063", "trade_class": "earnings_hazard",
+     "field": "sessions_to_earnings", "value": 6,
+     "documented": "catalog trap: \"Results announced 6 trading sessions after "
+                   "T_rec (17 Jul Moharram holiday); pre-release drift struck "
+                   "the stop first\"",
+     "rule": "the catalog states the window (6 sessions), pinned to the issuer's "
+             "announced NSE results date (INFY: after market 2024-07-18; "
+             "2024-07-17 was the Moharram holiday, so weekday counting would "
+             "wrongly say 7), so the fixture uses it verbatim (window pinning "
+             "per ADR-008, never an authored default)"},
 )
 
 CLASS_BREAKER = {"pledge_hazard": "promoter_pledging_gt_25pct",

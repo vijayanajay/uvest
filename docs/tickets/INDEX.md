@@ -19,6 +19,7 @@
 | `TICK-012` | [Continuous Learning & Failure Autopsy Engine](file:///d:/Code/uvest/docs/tickets/TICK-012-failure-autopsy.md) | FROZEN (sliced) | `tests/test_11_postmortem_learning.py` | P2 |
 | `TICK-013` | [Daily OHLCV, ATR & Trend Regime Engine](file:///d:/Code/uvest/docs/tickets/TICK-013-market-data.md) | FROZEN (sliced) | `tests/test_2_market_data.py` | P1 |
 | `EVAL-001` | [Behavioral Evals Benchmark Suite (50 Trades)](file:///d:/Code/uvest/docs/tickets/EVAL-001-benchmark-suite.md) | FROZEN (sliced) | `tests/run_evals.py` | P0 |
+| `EVAL-002` | [Hazard Boundary-Probe Rows (Pinned Evidence)](file:///d:/Code/uvest/docs/tickets/EVAL-002-hazard-boundary-probes.md) | FROZEN (sliced) | `tests/test_seed_hazard_records.py` | P1 |
 
 ---
 
@@ -42,6 +43,7 @@ Ticket IDs were assigned in **slicing order**; stage numbers encode **execution 
 | `TICK-012` | 11 | `scripts/11_postmortem_learning.py` |
 | `TICK-013` | 2 | `scripts/2_market_data.py` |
 | `EVAL-001` | — | `tests/run_evals.py` (harness) |
+| `EVAL-002` | — | `tests/run_evals.py` (hazard census) |
 
 **Stage coverage:** every stage `0 → 12` in `BRD.md` §9.1 now has an owning ticket. `TICK-013` was sliced last (hence the highest ID) to claim stage 2, which is why ticket IDs and stage numbers must never be assumed to correspond.
 
@@ -49,7 +51,7 @@ Ticket IDs were assigned in **slicing order**; stage numbers encode **execution 
 
 ## Slice Status
 
-- **Sliced** — all ticket files are committed in `docs/tickets/`: `TICK-001` through `TICK-013`, `EVAL-001`.
+- **Sliced** — all ticket files are committed in `docs/tickets/`: `TICK-001` through `TICK-013`, `EVAL-001`, `EVAL-002`.
 - **Pending** — none; all pipeline stages are formally specced, sliced, and ready for TDD implementation.
 
 ## The Spec-and-Freeze Milestone

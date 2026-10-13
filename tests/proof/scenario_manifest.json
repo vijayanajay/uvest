@@ -4009,7 +4009,7 @@
       "scenario_id": "SCEN-007",
       "schema_version": "uvest-scenario-manifest/1",
       "origin": "curated_behavioral",
-      "created_on": "2026-10-12",
+      "created_on": "2026-10-13",
       "authoring": {
         "source": "catalog-scaffold/1",
         "catalog": "business_test_cases.md §3",
@@ -4190,7 +4190,7 @@
       "scenario_id": "SCEN-009",
       "schema_version": "uvest-scenario-manifest/1",
       "origin": "curated_behavioral",
-      "created_on": "2026-10-12",
+      "created_on": "2026-10-13",
       "authoring": {
         "source": "catalog-scaffold/1",
         "catalog": "business_test_cases.md §3",
@@ -4369,7 +4369,7 @@
       "scenario_id": "SCEN-011",
       "schema_version": "uvest-scenario-manifest/1",
       "origin": "curated_behavioral",
-      "created_on": "2026-10-12",
+      "created_on": "2026-10-13",
       "authoring": {
         "source": "catalog-scaffold/1",
         "catalog": "business_test_cases.md §3",
@@ -4471,7 +4471,7 @@
       "scenario_id": "SCEN-012",
       "schema_version": "uvest-scenario-manifest/1",
       "origin": "curated_behavioral",
-      "created_on": "2026-10-12",
+      "created_on": "2026-10-13",
       "authoring": {
         "source": "catalog-scaffold/1",
         "catalog": "business_test_cases.md §3",
@@ -4568,7 +4568,7 @@
       "scenario_id": "SCEN-013",
       "schema_version": "uvest-scenario-manifest/1",
       "origin": "curated_behavioral",
-      "created_on": "2026-10-12",
+      "created_on": "2026-10-13",
       "authoring": {
         "source": "catalog-scaffold/1",
         "catalog": "business_test_cases.md §3",
@@ -4665,7 +4665,7 @@
       "scenario_id": "SCEN-014",
       "schema_version": "uvest-scenario-manifest/1",
       "origin": "curated_behavioral",
-      "created_on": "2026-10-12",
+      "created_on": "2026-10-13",
       "authoring": {
         "source": "catalog-scaffold/1",
         "catalog": "business_test_cases.md §3",
@@ -4762,7 +4762,7 @@
       "scenario_id": "SCEN-015",
       "schema_version": "uvest-scenario-manifest/1",
       "origin": "curated_behavioral",
-      "created_on": "2026-10-12",
+      "created_on": "2026-10-13",
       "authoring": {
         "source": "catalog-scaffold/1",
         "catalog": "business_test_cases.md §3",
@@ -4859,7 +4859,7 @@
       "scenario_id": "SCEN-016",
       "schema_version": "uvest-scenario-manifest/1",
       "origin": "curated_behavioral",
-      "created_on": "2026-10-12",
+      "created_on": "2026-10-13",
       "authoring": {
         "source": "catalog-scaffold/1",
         "catalog": "business_test_cases.md §3",
@@ -4956,7 +4956,7 @@
       "scenario_id": "SCEN-017",
       "schema_version": "uvest-scenario-manifest/1",
       "origin": "curated_behavioral",
-      "created_on": "2026-10-12",
+      "created_on": "2026-10-13",
       "authoring": {
         "source": "catalog-scaffold/1",
         "catalog": "business_test_cases.md §3",
@@ -5048,6 +5048,200 @@
       },
       "expected_verdict": "AVOID",
       "expiry": "2024-05-30"
+    },
+    {
+      "scenario_id": "SCEN-062",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-13",
+      "authoring": {
+        "source": "catalog-scaffold/1",
+        "catalog": "business_test_cases.md §3",
+        "catalog_name": "Knife-Edge Earnings Probe (1 Session)",
+        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR); a row whose tape then rallies records the honest false negative (§4.1), never a tuned loss",
+        "entry_basis": "open",
+        "shape": {
+          "risk_atr": 0.5,
+          "rr": 2.0
+        },
+        "atr_14": 69.053557,
+        "expiry_rule": "NSE monthly last-Thursday, rolled when within 7 days of T_rec",
+        "lot_size_rule": "₹500000 notional band on the authored entry, rounded to a 25-share grid; historical NSE lot revisions are not archived offline",
+        "realized_outcome_basis": "stop_first",
+        "catalog_trap": "Results announced 1 trading session after T_rec; pre-release drift pierced the crisis stop at that session's open",
+        "hazard_evidence": {
+          "fixture": "fixtures/SCEN-062/financials.json",
+          "breaker": "earnings_within_7d",
+          "hazard_field": "sessions_to_earnings",
+          "hazard_value": 1,
+          "documented": "catalog trap: \"Results announced 1 trading session after T_rec; pre-release drift pierced the crisis stop at that session's open\"",
+          "disclosure": "Authored hazard input (sessions_to_earnings=1): the catalog states the window (1 session), pinned to the issuer's announced NSE results date (TCS: after market 2024-07-11), so the fixture uses it verbatim (window pinning per ADR-008, never an authored default). catalog trap: \"Results announced 1 trading session after T_rec; pre-release drift pierced the crisis stop at that session's open\". The statement blocks are deliberately empty — no offline source exists for the issuer's FY statements, so stage 6 emits null ratio metrics with `missing_inputs` naming every gap (E4: absence, never an invented filing)."
+        }
+      },
+      "classification_tags": [
+        "CATALOG"
+      ],
+      "gate_focus": [
+        "S3",
+        "S4",
+        "S6",
+        "earnings_within_7d"
+      ],
+      "symbol": "TCS",
+      "exchange": "NSE",
+      "instrument": "FUT",
+      "action": "BUY",
+      "recommendation_date": "2024-07-10",
+      "entry_price": 3983.7,
+      "entry_range_min": 3979.72,
+      "entry_range_max": 3987.68,
+      "target_price": 4052.76,
+      "stop_loss": 3949.17,
+      "lot_size": 125,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/SCEN-062/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/SCEN-062/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2024-07-10",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        },
+        "financials_fixture": "fixtures/SCEN-062/financials.json"
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/SCEN-062/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/SCEN-062/recorded/out_2_market.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 6,
+          "artifact": "out_6_fundamental.json",
+          "path": "fixtures/SCEN-062/recorded/out_6_fundamental.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/SCEN-062/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2024-08-12",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 3895.6001,
+          "max": 4431.0
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID",
+      "expiry": "2024-07-25"
+    },
+    {
+      "scenario_id": "SCEN-063",
+      "schema_version": "uvest-scenario-manifest/1",
+      "origin": "curated_behavioral",
+      "created_on": "2026-10-13",
+      "authoring": {
+        "source": "catalog-scaffold/1",
+        "catalog": "business_test_cases.md §3",
+        "catalog_name": "Far-Edge Earnings Probe (6 Sessions)",
+        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR); a row whose tape then rallies records the honest false negative (§4.1), never a tuned loss",
+        "entry_basis": "open",
+        "shape": {
+          "risk_atr": 0.5,
+          "rr": 2.0
+        },
+        "atr_14": 29.328571,
+        "expiry_rule": "NSE monthly last-Thursday, rolled when within 7 days of T_rec",
+        "lot_size_rule": "₹500000 notional band on the authored entry, rounded to a 25-share grid; historical NSE lot revisions are not archived offline",
+        "realized_outcome_basis": "stop_first",
+        "catalog_trap": "Results announced 6 trading sessions after T_rec (17 Jul Moharram holiday); pre-release drift struck the stop first",
+        "hazard_evidence": {
+          "fixture": "fixtures/SCEN-063/financials.json",
+          "breaker": "earnings_within_7d",
+          "hazard_field": "sessions_to_earnings",
+          "hazard_value": 6,
+          "documented": "catalog trap: \"Results announced 6 trading sessions after T_rec (17 Jul Moharram holiday); pre-release drift struck the stop first\"",
+          "disclosure": "Authored hazard input (sessions_to_earnings=6): the catalog states the window (6 sessions), pinned to the issuer's announced NSE results date (INFY: after market 2024-07-18; 2024-07-17 was the Moharram holiday, so weekday counting would wrongly say 7), so the fixture uses it verbatim (window pinning per ADR-008, never an authored default). catalog trap: \"Results announced 6 trading sessions after T_rec (17 Jul Moharram holiday); pre-release drift struck the stop first\". The statement blocks are deliberately empty — no offline source exists for the issuer's FY statements, so stage 6 emits null ratio metrics with `missing_inputs` naming every gap (E4: absence, never an invented filing)."
+        }
+      },
+      "classification_tags": [
+        "CATALOG"
+      ],
+      "gate_focus": [
+        "S3",
+        "S4",
+        "S6",
+        "earnings_within_7d"
+      ],
+      "symbol": "INFY",
+      "exchange": "NSE",
+      "instrument": "FUT",
+      "action": "BUY",
+      "recommendation_date": "2024-07-09",
+      "entry_price": 1659.9,
+      "entry_range_min": 1658.24,
+      "entry_range_max": 1661.56,
+      "target_price": 1689.22,
+      "stop_loss": 1645.24,
+      "lot_size": 300,
+      "user_capital_inr": 500000.0,
+      "replay_inputs": {
+        "canonical_trade": "fixtures/SCEN-063/current_trade.json",
+        "truncated_fixtures": [
+          "fixtures/SCEN-063/ohlcv_prefix.json"
+        ],
+        "truncation": {
+          "cutoff": "2024-07-09",
+          "rule": "date <= T_rec",
+          "min_bars": 200
+        },
+        "financials_fixture": "fixtures/SCEN-063/financials.json"
+      },
+      "recorded_artifacts": [
+        {
+          "stage": 1,
+          "artifact": "out_1_math.json",
+          "path": "fixtures/SCEN-063/recorded/out_1_math.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 2,
+          "artifact": "out_2_market.json",
+          "path": "fixtures/SCEN-063/recorded/out_2_market.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 6,
+          "artifact": "out_6_fundamental.json",
+          "path": "fixtures/SCEN-063/recorded/out_6_fundamental.json",
+          "evidence": "recorded"
+        }
+      ],
+      "scoring": {
+        "forward_tape": "fixtures/SCEN-063/forward_tape.json",
+        "bars": 22,
+        "resolution_date": "2024-08-09",
+        "resolution_outcome": "LOSS",
+        "resolution_basis": "stop_first",
+        "forward_derived_cache": {
+          "min": 1637.55,
+          "max": 1903.0
+        },
+        "quadrant_target": "TN"
+      },
+      "expected_verdict": "AVOID",
+      "expiry": "2024-07-25"
     },
     {
       "scenario_id": "SCEN-901",

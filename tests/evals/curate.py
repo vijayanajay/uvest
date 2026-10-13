@@ -417,13 +417,13 @@ def main() -> int:
     data["trades"] = final
     notes = data.get("meta", {}).get("notes", [])
     notes = [n for n in notes
-             if not re.match(r"^\d+ of 50 records", n.strip())]
+             if not re.match(r"^\d+ of \d+ records", n.strip())]
     notes.append(
-        "40 of 50 records: five of the six classes are seeded and their breakers "
+        "42 of 52 records: five of the six classes are seeded and their breakers "
         "grade from recorded stage-1/2/6 bundles (tests/fixtures/history/ and "
         "tests/proof/fixtures/). This curator fills the three stage-0..2 classes "
         "(clean_bullish 15/15, inverted_rr 10/10, tight_stop 5/5); the two hazard "
-        "classes (pledge_hazard 5/5, earnings_hazard 5/5) are seeded from the "
+        "classes (pledge_hazard 5/5, earnings_hazard 7/7) are seeded from the "
         "frozen catalog's own hazard rows by tests/evals/seed_hazard_records.py, "
         "with an authored, disclosed stage-6 bundle per row. "
         "institutional_distribution 0/10 remains unauthored; every pre-proof "

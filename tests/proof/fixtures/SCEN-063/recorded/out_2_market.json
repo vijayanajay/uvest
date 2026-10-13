@@ -1,0 +1,15 @@
+{
+  "symbol": "INFY",
+  "atr_14": 29.328571,
+  "sl_atr_ratio": 0.4998538723818828,
+  "is_tight_sl": true,
+  "ema_20": 1575.69,
+  "above_50_ema": true,
+  "above_200_sma": true,
+  "trend_state": "BULLISH",
+  "bollinger_upper": 1683.75,
+  "bollinger_lower": 1439.0,
+  "bollinger_bandwidth": 15.6754,
+  "waived": false,
+  "as_of": "2024-07-09"
+}

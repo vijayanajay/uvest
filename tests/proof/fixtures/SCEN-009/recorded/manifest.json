@@ -4,17 +4,17 @@
     {
       "stage": 1,
       "artifact": "out_1_math.json",
-      "recorded_at": "2026-10-12T17:52:12+00:00"
+      "recorded_at": "2026-10-13T06:50:00+00:00"
     },
     {
       "stage": 2,
       "artifact": "out_2_market.json",
-      "recorded_at": "2026-10-12T17:52:12+00:00"
+      "recorded_at": "2026-10-13T06:50:00+00:00"
     },
     {
       "stage": 6,
       "artifact": "out_6_fundamental.json",
-      "recorded_at": "2026-10-12T17:52:12+00:00"
+      "recorded_at": "2026-10-13T06:50:00+00:00"
     }
   ]
 }

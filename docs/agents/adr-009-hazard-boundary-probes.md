@@ -1,7 +1,7 @@
 # ADR-009 (PROPOSED): Hazard Boundary Probes — Pinned Evidence at the Breaker Thresholds
 *Decision memo for owner approval. No frozen document is edited by this file; approval means the paste-ready edits at the bottom are applied together, in one command.*
 
-**Status:** PROPOSED — do not implement until approved
+**Status:** APPROVED (2026-10-13), scoped by the owner's ruling — `SCEN-062`/`SCEN-063` implemented; `SCEN-061` dropped under §3's refusal rule (see the addendum below). The three-row plan in §3 is the proposal as grilled; the approved change set is the two earnings probes.
 **Date:** 2026-10-13
 **Extends (does not amend):** ADR-008 (`docs/agents/domain.md`) — the level-sourcing, window-pinning and boundary-probe rules frozen there govern every row this memo proposes
 **Honors unchanged:** `business_test_cases.md` (frozen & immutable; this memo asks the owner to command its §3/§5 amendment), ADR-007 (pending; interaction noted in §7)
@@ -99,6 +99,8 @@ Add exactly three hazard rows, each a full point-in-time scenario under ADR-008'
 ## Addendum — Sourcing Proof Outcome (2026-10-13)
 
 Step 1 of §6 executed as a refusal-capable proof. Results recorded here so the decision rests on measured evidence, not intent.
+
+**Ruling (owner command, 2026-10-13): `SCEN-061` = DROP.** The evidence below left exactly two honest paths — drop, or amend ADR-008's band to admit Indus Towers 30.5% — and the ruling is **drop**, on three grounds: §3 pre-commits to it ("if no sourceable issuer lands a real marginal pledge, `SCEN-061` is dropped and disclosed rather than authored"); the sourcing proof found no in-band disclosure; and widening would amend a frozen sourcing rule to fit a census cell, the very shape of tuning this memo forbids. The two earnings probes ship (`SCEN-062`, `SCEN-063`): quotas `earnings_hazard` 5→7, `pledge_hazard` 5→5, total 50→52; census 38→**40**; catalog §5 roll-up earnings (5/5)→(7/7), §6's S4 bound re-expressed at 62 scenarios (`FN ≤ 12` unchanged). Nothing was authored to complete a table.
 
 ### Earnings probes: both pinned and tape-verified
 
