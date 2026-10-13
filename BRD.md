@@ -567,7 +567,7 @@ To prevent "vibe coding" and enforce strict engineering verification, UVEST adop
 │ 2. /to-spec         ──► Locks architecture, schemas, and math into BRD │
 │                         ★ MILESTONE: EVERYTHING SPECCED & FROZEN ★     │
 │ 3. /to-tickets      ──► Slices vertical tracer-bullet tickets          │
-│ 4. /evals           ──► 50-trade benchmark & behavioral pass criteria  │
+│ 4. /evals           ──► 52-trade benchmark & behavioral pass criteria  │
 │ 5. Strict TDD       ──► Failing test seam written ──► Implementation   │
 │ 6. /code-review     ──► Invariant audit against frozen specification   │
 └────────────────────────────────────────────────────────────────────────┘
@@ -717,4 +717,4 @@ When the user provides a recommendation, the Agent executes the script suite and
    - Persistent database and daily triage protocol (`10_daily_triage.py`).
    - Failure autopsy and self-audit engine (`11_postmortem_learning.py`).
 5. **Phase 5: Evals Benchmark Validation**
-   - Run `tests/run_evals.py` against 50-trade benchmark. All gates must pass 100%.
+   - Run `tests/run_evals.py` against 52-trade benchmark. All gates must pass 100%.

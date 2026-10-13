@@ -8,14 +8,14 @@ Before any production Python script is implemented, the evaluation criteria and 
 
 ---
 
-## 2. The 50-Trade Golden Benchmark Dataset (`tests/evals/golden_dataset.json`)
+## 2. The 52-Trade Golden Benchmark Dataset (`tests/evals/golden_dataset.json`)
 
-The Evals suite evaluates the entire pipeline against a curated benchmark of 50 historical Univest recommendations across Indian equities and futures spanning 2022–2026:
+The Evals suite evaluates the entire pipeline against a curated benchmark of 52 historical Univest recommendations across Indian equities and futures spanning 2022–2026:
 - **15 Clean Bullish Setups:** High delivery %, positive F&O buildup, clean fundamentals, R:R $\ge 1.8$, resulting in forward targets being achieved.
 - **10 Inverted Risk-Reward / Slippage Traps:** Reached user after price had moved $>1.5\%$ above entry; live R:R $< 1.0$.
 - **10 Institutional Distribution Traps:** Price rising on falling Futures OI and low Delivery % ($<25\%$), resulting in subsequent sharp sell-offs.
 - **5 High Promoter Pledging Traps:** Companies with promoter pledge $> 25\%$ (e.g., historical Zee / Adani stress / Vedanta pledge events).
-- **5 Impending Earnings Event Traps:** Recommended 2–4 days before quarterly board meeting; resulted in binary earnings gap-down.
+- **7 Impending Earnings Event Traps:** Recommended 1–6 sessions before the quarterly board meeting (the catalog's pre-earnings windows plus the two ADR-009 boundary probes at 1 and 6 sessions); resulted in binary earnings gap-down.
 - **5 High Volatility / Tight Stop Traps:** Stop Loss placed $< 0.75 \times \text{Daily ATR}$, resulting in intraday noise stopouts.
 
 **Shape families.** The three geometry classes' *shapes* are curation parameters, not catalog facts, and each class declares a **family** of them: its frozen curator shape (`2.0×ATR` & `2.2R`, `1.2×ATR` & `0.9R`, `0.6×ATR`) plus rungs spanning the documented parameter space (`clean_bullish` 1.0–3.0×ATR across 1.8–3.0R, `inverted_rr` 0.9–2.0×ATR across 0.35–0.9R, `tight_stop` 0.35–0.70×ATR). `tests/evals/reshape_records.py` places a class's rows on the rungs their own pinned tape admits, and only there: a rung is authored for a row only if (a) it realizes the class's documented realized outcome on that row's tape — so no row is moved to manufacture an `FP`/`FN` — and (b) it adds at least one rule exercise the class does not already stand for. Everything the rule refuses is printed and frozen: the rungs the tape rejected (`authoring.reshape.refused_rungs`), the shape each moved row came from and the outcome it changed (`authoring.reshape`), and the rows left standing at the frozen shape. Rows whose geometry is their own published claim — `GB-2024-0004` at `2.17R`, `GB-2025-0005` with its legacy target — are not the campaign's to re-author and are kept as published. The two hazard classes have no family: their measurements come from the immutable catalog (pledge levels, the 2–4 session windows), so there is no shape to author. The family is what lets the rule-exercise census measure a class's *parameter coverage* instead of the replication count of one shape.
@@ -78,11 +78,11 @@ Output scorecard template:
            5 distinct rule exercise(s); earnings_hazard 5/5 graded, 2 distinct rule
            exercise(s) (3 of 5 repeat an exercise); tight_stop 5/5 graded,
            5 distinct rule exercise(s)
-  [PASS] Zero Hallucination Audit:        100.0% (50 graded, 0 with discrepancies)
+  [PASS] Zero Hallucination Audit:        100.0% (52 graded, 0 with discrepancies)
   [PASS] Directional Brier Score:          0.142  (Threshold <= 0.180)
   [PASS] Price Cone Range Coverage:        86.4%  (Threshold >= 80.0%)
   [PASS] Optimal Limit Slippage Reduction: +1.42% net expectancy improvement
-  [PASS] HTML Visualizer Validation:       50/50 standalone files valid
+  [PASS] HTML Visualizer Validation:       52/52 standalone files valid
 ======================================================================
   FINAL EVALUATION VERDICT: SUITE PASSED (Ready for Live Operation)
 ======================================================================
@@ -91,10 +91,10 @@ Output scorecard template:
   Records read: 2
     ↳ reports/run_record.json (complete, exit 0) — stages ran: [12] · skipped: none · failed: none
     ↳ tests/proof/scenario_manifest.json (complete, exit 0) — stages ran: [1, 2, 6] · skipped: none · failed: none
-  Stage-12 reports proven: 50/50
-  Gate payloads proven: 50/50
-  Evidence completeness: OK (50/50 record(s) carry proven stage-12 evidence;
-    50/50 record(s) carry proven gate payloads)
+  Stage-12 reports proven: 52/52
+  Gate payloads proven: 52/52
+  Evidence completeness: OK (52/52 record(s) carry proven stage-12 evidence;
+    52/52 record(s) carry proven gate payloads)
   Rule coverage: OK (38 distinct rule exercise(s) across the graded classes;
     frozen floor 38)
 ```
