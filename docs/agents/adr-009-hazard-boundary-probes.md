@@ -96,6 +96,33 @@ Add exactly three hazard rows, each a full point-in-time scenario under ADR-008'
 
 ---
 
+## Addendum — Sourcing Proof Outcome (2026-10-13)
+
+Step 1 of §6 executed as a refusal-capable proof. Results recorded here so the decision rests on measured evidence, not intent.
+
+### Earnings probes: both pinned and tape-verified
+
+| Probe | Pinned announcement | Session count (real tape) | Frozen-rule resolution |
+| :--- | :--- | :--- | :--- |
+| `SCEN-062` TCS.NS | Results after market Thu 11 Jul 2024; anchor Wed 10 Jul 2024 | **1** ✓ (NSE calendar) | **LOSS** (`stop_first`) — entry 3983.70 (T_rec open), stop 3949.17 (0.5×ATR14 69.05), target 4052.76; stop pierced at the 11 Jul **open** (3931.00) |
+| `SCEN-063` INFY.NS | Results after market Thu 18 Jul 2024; anchor Tue 9 Jul 2024 | **6** ✓ — 17 Jul absent (Moharram holiday), sessions 10/11/12/15/16; weekday counting would wrongly say 7 | **LOSS** (`stop_first`) — entry 1659.90, stop 1645.24 (ATR 29.33), target 1689.22; stop touched intraday 10 Jul |
+
+Resolved with the repo's own machinery: `curate.atr14_simple_mean`, the catalog's crisis geometry policy (entry = T_rec open, stop = entry − 0.5×ATR(14), 2.0R target), and `dataset_refs.resolution_of` (first-touch-wins — the single implementation shared by the `$derive` rule, seed scan, scaffolder, and migration tool). Stable across the full forward window and the frozen 22-session window; the stop bar precedes the target bar in both pairs, so neither LOSS is a `both_hit_conservative_loss` artifact.
+
+**Disclosure (stop-before-release):** in both pairs the stop prints *before* the announcement itself — TCS gapped through the stop at the 11 Jul open and that evening's release was received well (+6.63% next session, target printed 12 Jul); INFY stopped six sessions pre-results. Both are pre-release drift inside the hazard window, not realized earnings shocks. Under the tape-truth rule (SCEN-016 precedent) each remains an honest `LOSS`/`TN`: the row documents "advisory issued inside the binary window, tape resolved LOSS," and the census grades the stage-6 hazard *value*, not the loss's cause. A probe where the announcement itself breaks the tape would be a different sourcing target, not a spec violation of these. Tapes are live yfinance pulls (`auto_adjust=False`, raw OHLCV); fixture bytes get pinned at authoring, which is where any price-source divergence would surface.
+
+### Marginal pledge probe: in-band unobtainable
+
+~18 candidate issuers were checked against actual shareholding-pattern pages; **none** discloses a promoter pledge in the 25.1–28.0% band with a pinnable tape. Under §3's refusal clause, `SCEN-061` cannot be authored as designed. Closest real sourced value: **Indus Towers at 30.5%** (pattern as of 30 Jun 2023, Trendlyne shareholding page; yfinance price history verified) — a genuine disclosure nearish the kill switch, but outside the designed band and a hair under the class's existing minimum level (32.0), so it would not by itself probe closer to 25% than the census already does.
+
+**Owner ruling (open question 2), on the evidence:** `SCEN-061` is drop-or-widen — (a) drop it and ship the two earnings probes alone (census 38→40, quotas 50→52, `earnings_hazard` 2→4), or (b) widen the band to admit Indus Towers 30.5% (a real pinned disclosure, three rows intact, census 38→41 as §3 states). Either way nothing is authored to complete a table.
+
+### Side finding (recorded, not acted on)
+
+The frozen catalog's own `SCEN-054` clue — Bajaj Finance "pledge > 25%" — reads **0.0%** in the readable disclosures, so that row's pledge claim is uncorroborated by its source. It grades nothing today (no mutation implied); flagged for the owner.
+
+---
+
 ## Paste-Ready Edits (for `business_test_cases.md` §3, on approval — sourced fields filled by step 1)
 
 ```
