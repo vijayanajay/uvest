@@ -1,0 +1,15 @@
+{
+  "symbol": "RBLBANK",
+  "atr_14": 5.225,
+  "sl_atr_ratio": 0.49952153110048136,
+  "is_tight_sl": true,
+  "ema_20": 134.07,
+  "above_50_ema": false,
+  "above_200_sma": false,
+  "trend_state": "BEARISH",
+  "bollinger_upper": 141.92,
+  "bollinger_lower": 125.76,
+  "bollinger_bandwidth": 12.0767,
+  "waived": false,
+  "as_of": "2022-04-12"
+}

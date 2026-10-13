@@ -1,0 +1,15 @@
+{
+  "symbol": "DIXON",
+  "atr_14": 86.15715,
+  "sl_atr_ratio": 0.500016539544308,
+  "is_tight_sl": true,
+  "ema_20": 2875.21,
+  "above_50_ema": false,
+  "above_200_sma": false,
+  "trend_state": "BEARISH",
+  "bollinger_upper": 2987.59,
+  "bollinger_lower": 2552.02,
+  "bollinger_bandwidth": 15.7257,
+  "waived": false,
+  "as_of": "2023-03-06"
+}

@@ -1,0 +1,18 @@
+{
+  "symbol": "AMBUJACEM",
+  "exchange": "NSE",
+  "instrument_type": "FUT",
+  "expiry": "2022-09-29",
+  "action": "BUY",
+  "entry_price": 579.0,
+  "entry_range_min": 578.0,
+  "entry_range_max": 580.0,
+  "live_price": 579.0,
+  "target": 605.98,
+  "stoploss": 565.51,
+  "lot_size": 875,
+  "margin": 506625.0,
+  "recommended_date": "2022-09-20",
+  "app_warning": "catalog scaffold",
+  "user_capital_inr": 500000.0
+}

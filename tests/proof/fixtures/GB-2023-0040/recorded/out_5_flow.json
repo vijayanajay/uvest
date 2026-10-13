@@ -1,0 +1,11 @@
+{
+  "symbol": "ADANIENT",
+  "delivery_pct": 13.87,
+  "delivery_zscore": -0.19,
+  "oi_change_pct": -5.35,
+  "matrix_verdict": "SHORT_COVERING_TRAP",
+  "basis_annualized": 6.4,
+  "rollover_pct": null,
+  "waived": false,
+  "as_of": "2023-03-06"
+}

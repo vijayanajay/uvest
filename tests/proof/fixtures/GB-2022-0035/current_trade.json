@@ -1,0 +1,18 @@
+{
+  "symbol": "JKCEMENT",
+  "exchange": "NSE",
+  "instrument_type": "FUT",
+  "expiry": "2022-04-28",
+  "action": "BUY",
+  "entry_price": 2760.0,
+  "entry_range_min": 2757.24,
+  "entry_range_max": 2762.76,
+  "live_price": 2760.0,
+  "target": 2863.32,
+  "stoploss": 2708.34,
+  "lot_size": 175,
+  "margin": 483000.0,
+  "recommended_date": "2022-04-13",
+  "app_warning": "catalog scaffold",
+  "user_capital_inr": 500000.0
+}

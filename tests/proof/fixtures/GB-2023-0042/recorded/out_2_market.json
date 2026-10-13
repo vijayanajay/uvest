@@ -1,0 +1,15 @@
+{
+  "symbol": "ESCORTS",
+  "atr_14": 108.514279,
+  "sl_atr_ratio": 0.5000263625609793,
+  "is_tight_sl": true,
+  "ema_20": 3200.82,
+  "above_50_ema": true,
+  "above_200_sma": true,
+  "trend_state": "BULLISH",
+  "bollinger_upper": 3367.53,
+  "bollinger_lower": 3026.51,
+  "bollinger_bandwidth": 10.667,
+  "waived": false,
+  "as_of": "2023-10-11"
+}

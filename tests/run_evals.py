@@ -6,8 +6,9 @@ Run headlessly:
 
 Emits the evaluation scorecard to stdout, zero network calls, deterministic:
 the JSON file drives the score exactly. When a gate's inputs exist for the graded records,
-it is graded. When its inputs are absent (only 5 of 50 trades seeded so far),
-the runner prints [SKIP] rather than inventing a number.
+it is graded. When its inputs are absent (the dataset is complete at 52/52, so
+the engine behind the gate does not exist yet), the runner prints [SKIP] rather
+than inventing a number.
 
 Stage-12 reports are gitignored *generated* artifacts, so the two
 artifact-graded gates (Zero Hallucination, HTML Validity) first replay any
@@ -1204,7 +1205,7 @@ def check_class_distribution(data: dict) -> tuple[bool, str]:
 
     A partially seeded dataset is not an integrity failure: the roster is
     explicitly mid-curation (see `meta.notes`), and `distribution_verified`
-    flips to `true` ONLY when all 50 records exist AND every class count
+    flips to `true` ONLY when all 52 records exist AND every class count
     matches. Until then the check verifies the *plausible* invariant — no
     single class exceeds its expected count — so seeding cannot silently
     overwrite a class quota.

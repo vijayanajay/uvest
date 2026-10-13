@@ -1,0 +1,20 @@
+{
+  "schema": "uvest-replay-manifest/1",
+  "stages": [
+    {
+      "stage": 1,
+      "artifact": "out_1_math.json",
+      "recorded_at": "2026-10-13T11:57:08+00:00"
+    },
+    {
+      "stage": 2,
+      "artifact": "out_2_market.json",
+      "recorded_at": "2026-10-13T11:57:08+00:00"
+    },
+    {
+      "stage": 5,
+      "artifact": "out_5_flow.json",
+      "recorded_at": "2026-10-13T11:57:08+00:00"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "symbol": "AUBANK",
+  "exchange": "NSE",
+  "instrument_type": "FUT",
+  "expiry": "2022-04-28",
+  "action": "BUY",
+  "entry_price": 669.5,
+  "entry_range_min": 668.5,
+  "entry_range_max": 670.5,
+  "live_price": 669.5,
+  "target": 690.06,
+  "stoploss": 659.22,
+  "lot_size": 750,
+  "margin": 502125.0,
+  "recommended_date": "2022-04-05",
+  "app_warning": "catalog scaffold",
+  "user_capital_inr": 500000.0
+}

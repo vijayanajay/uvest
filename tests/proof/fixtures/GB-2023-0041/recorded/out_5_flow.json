@@ -1,0 +1,11 @@
+{
+  "symbol": "DIXON",
+  "delivery_pct": 24.91,
+  "delivery_zscore": -0.89,
+  "oi_change_pct": -5.32,
+  "matrix_verdict": "SHORT_COVERING_TRAP",
+  "basis_annualized": -1.19,
+  "rollover_pct": null,
+  "waived": false,
+  "as_of": "2023-03-06"
+}

@@ -1,0 +1,11 @@
+{
+  "symbol": "MRF",
+  "delivery_pct": 23.48,
+  "delivery_zscore": 0.08,
+  "oi_change_pct": -5.76,
+  "matrix_verdict": "SHORT_COVERING_TRAP",
+  "basis_annualized": 0.96,
+  "rollover_pct": null,
+  "waived": false,
+  "as_of": "2023-03-02"
+}

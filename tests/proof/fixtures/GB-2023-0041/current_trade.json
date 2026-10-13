@@ -1,0 +1,18 @@
+{
+  "symbol": "DIXON",
+  "exchange": "NSE",
+  "instrument_type": "FUT",
+  "expiry": "2023-03-29",
+  "action": "BUY",
+  "entry_price": 2995.0,
+  "entry_range_min": 2992.0,
+  "entry_range_max": 2998.0,
+  "live_price": 2995.0,
+  "target": 3081.16,
+  "stoploss": 2951.92,
+  "lot_size": 175,
+  "margin": 524125.0,
+  "recommended_date": "2023-03-06",
+  "app_warning": "catalog scaffold",
+  "user_capital_inr": 500000.0
+}

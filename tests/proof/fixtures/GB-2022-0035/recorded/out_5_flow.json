@@ -1,0 +1,11 @@
+{
+  "symbol": "JKCEMENT",
+  "delivery_pct": 14.4,
+  "delivery_zscore": -1.71,
+  "oi_change_pct": -8.53,
+  "matrix_verdict": "SHORT_COVERING_TRAP",
+  "basis_annualized": 5.7,
+  "rollover_pct": null,
+  "waived": false,
+  "as_of": "2022-04-13"
+}

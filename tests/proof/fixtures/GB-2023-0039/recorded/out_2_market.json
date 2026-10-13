@@ -1,0 +1,15 @@
+{
+  "symbol": "MRF",
+  "atr_14": 1467.904564,
+  "sl_atr_ratio": 0.4999984453056993,
+  "is_tight_sl": true,
+  "ema_20": 88054.62,
+  "above_50_ema": false,
+  "above_200_sma": true,
+  "trend_state": "MIXED",
+  "bollinger_upper": 93237.3,
+  "bollinger_lower": 84232.17,
+  "bollinger_bandwidth": 10.1484,
+  "waived": false,
+  "as_of": "2023-03-02"
+}

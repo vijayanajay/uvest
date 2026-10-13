@@ -5,7 +5,7 @@ Guards the line between two kinds of JSON in this repo:
 * **Generated per-run artifacts** (`out_*.json`, `current_trade.json`,
   `thresholds.json`, `uvest_history.db`, generated reports) — must never be
   committed, or the suite starts asserting against stale local state.
-* **Spec artifacts** (the 50-trade eval dataset, recorded OHLCV fixtures, the
+* **Spec artifacts** (the 52-trade eval dataset, recorded OHLCV fixtures, the
   pinned `skills-lock.json`) — must always be committable, or a fresh clone
   cannot reproduce a single evaluation.
 

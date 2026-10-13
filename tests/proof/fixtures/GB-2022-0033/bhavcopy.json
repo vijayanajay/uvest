@@ -1,0 +1,137 @@
+{
+  "schema": "uvest-bhavcopy/1",
+  "symbol": "AUBANK",
+  "exchange": "NSE",
+  "source": "nse-archives",
+  "as_of": "2022-04-05",
+  "delivery_pct": 21.45,
+  "delivery_mean_20d": 27.0185,
+  "delivery_std_20d": 9.9879,
+  "price_change_pct": 0.4699,
+  "spot_price": 1314.85,
+  "futures_price": 1314.9,
+  "days_to_expiry": 23,
+  "oi_change_pct": -7.3772,
+  "authoring": {
+    "source": "distribution-seed/1",
+    "trade_class": "institutional_distribution",
+    "signature": {
+      "rule": "price_change_pct > 0 and delivery_pct < 25 and oi_change_pct <= -5 on T_rec (docs/agents/evals.md §2)",
+      "price_change_pct": 0.4699,
+      "delivery_pct": 21.45,
+      "oi_change_pct": -7.3772
+    },
+    "equity_file": {
+      "file": "sec_20220405.csv",
+      "url": "https://archives.nseindia.com/products/content/sec_bhavdata_full_05042022.csv",
+      "sha256": "2ffd2b4ac9c915912f869f1af5e055dcf4e959335be967e5f36f129c2abad3d9",
+      "date1": "05-Apr-2022",
+      "series": "EQ",
+      "prev_close": 1308.7,
+      "close": 1314.85,
+      "delivery_qty": 291054,
+      "traded_qty": 1357185
+    },
+    "derivatives_file": {
+      "file": "fo_20220405.zip",
+      "url": "https://archives.nseindia.com/content/historical/DERIVATIVES/2022/APR/fo05APR2022bhav.csv.zip",
+      "sha256": "5d8a7a3ae5633f6ed50e11a5fadfd64dcda954eda6e851f2877a2fea39b3a191",
+      "format": "legacy",
+      "contract": {
+        "expiry": "2022-04-28",
+        "close": 1314.9,
+        "open_interest": 1990000.0,
+        "change_in_oi": -158500.0
+      }
+    },
+    "delivery_window": {
+      "sessions": 20,
+      "ddof": 0,
+      "first": "2022-03-07",
+      "last": "2022-04-04"
+    },
+    "delivery_history": [
+      {
+        "session": "2022-03-07",
+        "delivery_pct": 36.07
+      },
+      {
+        "session": "2022-03-08",
+        "delivery_pct": 18.52
+      },
+      {
+        "session": "2022-03-09",
+        "delivery_pct": 18.21
+      },
+      {
+        "session": "2022-03-10",
+        "delivery_pct": 19.55
+      },
+      {
+        "session": "2022-03-11",
+        "delivery_pct": 10.59
+      },
+      {
+        "session": "2022-03-14",
+        "delivery_pct": 24.54
+      },
+      {
+        "session": "2022-03-15",
+        "delivery_pct": 13.34
+      },
+      {
+        "session": "2022-03-16",
+        "delivery_pct": 42.97
+      },
+      {
+        "session": "2022-03-17",
+        "delivery_pct": 34.6
+      },
+      {
+        "session": "2022-03-21",
+        "delivery_pct": 15.64
+      },
+      {
+        "session": "2022-03-22",
+        "delivery_pct": 24.08
+      },
+      {
+        "session": "2022-03-23",
+        "delivery_pct": 26.26
+      },
+      {
+        "session": "2022-03-24",
+        "delivery_pct": 20.0
+      },
+      {
+        "session": "2022-03-25",
+        "delivery_pct": 32.31
+      },
+      {
+        "session": "2022-03-28",
+        "delivery_pct": 26.24
+      },
+      {
+        "session": "2022-03-29",
+        "delivery_pct": 30.82
+      },
+      {
+        "session": "2022-03-30",
+        "delivery_pct": 49.07
+      },
+      {
+        "session": "2022-03-31",
+        "delivery_pct": 29.57
+      },
+      {
+        "session": "2022-04-01",
+        "delivery_pct": 41.46
+      },
+      {
+        "session": "2022-04-04",
+        "delivery_pct": 26.53
+      }
+    ],
+    "rules": "delivery_mean_20d/delivery_std_20d = population mean/stdev over the 20 EQ sessions strictly before T_rec (authoring.delivery_history); delivery_pct is T_rec's own DELIV_PER; price_change_pct = (close - prev_close)/prev_close*100; oi_change_pct = change_in_oi/(open_interest - change_in_oi)*100 on the nearest listed contract expiring after T_rec"
+  }
+}

@@ -337,13 +337,20 @@ def predicted_census(plan: dict, trades: list[dict]) -> dict[str, int]:
 
     A placed row contributes the exercises of its *new* rung (projected exactly as
     the re-recording will speak them); every other row contributes what it stands
-    for today. Nothing is asserted from the ladder's arithmetic: the number this
-    returns is the one `dataset_rule_census` will read after `--apply`.
+    for today. A class with no registered breaker grades no rule, so it contributes
+    no census key — the same guard `graded_trade_classes` walks with, so the
+    prediction and `dataset_rule_census` speak in the same keys. Nothing is
+    asserted from the ladder's arithmetic: the number this returns is the one
+    `dataset_rule_census` will read after `--apply`.
     """
     moved = {p["trade_id"]: p for p in plan["placed"]}
-    census: dict[str, set] = {t["trade_class"]: set() for t in trades}
+    graded_classes = {"clean_bullish", *run_evals.BREAKER_BY_CLASS}
+    census: dict[str, set] = {t["trade_class"]: set() for t in trades
+                              if t["trade_class"] in graded_classes}
     for trade in trades:
         cls = trade["trade_class"]
+        if cls not in graded_classes:
+            continue  # no registered breaker: out of the census, as in the gate
         placed = moved.get(trade["trade_id"])
         if placed is None:
             census[cls] |= run_evals.rule_exercises(cls, trade)

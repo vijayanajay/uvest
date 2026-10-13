@@ -1,0 +1,12 @@
+{
+  "symbol": "AUBANK",
+  "instrument_type": "FUT",
+  "raw_rr": 2.0,
+  "live_rr": 2.0,
+  "risk_inr": 7710.0,
+  "reward_inr": 15420.0,
+  "quantity": 750,
+  "outside_range_pct": 0.0,
+  "inverted_rr_flag": false,
+  "capital_allocation_pct": 1.542
+}

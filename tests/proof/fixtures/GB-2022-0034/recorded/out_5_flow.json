@@ -1,0 +1,11 @@
+{
+  "symbol": "RBLBANK",
+  "delivery_pct": 20.01,
+  "delivery_zscore": -0.19,
+  "oi_change_pct": -5.54,
+  "matrix_verdict": "SHORT_COVERING_TRAP",
+  "basis_annualized": 13.85,
+  "rollover_pct": null,
+  "waived": false,
+  "as_of": "2022-04-12"
+}

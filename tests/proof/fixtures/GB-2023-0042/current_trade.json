@@ -1,0 +1,18 @@
+{
+  "symbol": "ESCORTS",
+  "exchange": "NSE",
+  "instrument_type": "FUT",
+  "expiry": "2023-10-26",
+  "action": "BUY",
+  "entry_price": 3430.0,
+  "entry_range_min": 3426.57,
+  "entry_range_max": 3433.43,
+  "live_price": 3430.0,
+  "target": 3538.52,
+  "stoploss": 3375.74,
+  "lot_size": 150,
+  "margin": 514500.0,
+  "recommended_date": "2023-10-11",
+  "app_warning": "catalog scaffold",
+  "user_capital_inr": 500000.0
+}

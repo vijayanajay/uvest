@@ -1,0 +1,11 @@
+{
+  "symbol": "ESCORTS",
+  "delivery_pct": 24.35,
+  "delivery_zscore": -0.58,
+  "oi_change_pct": -5.85,
+  "matrix_verdict": "SHORT_COVERING_TRAP",
+  "basis_annualized": 3.65,
+  "rollover_pct": null,
+  "waived": false,
+  "as_of": "2023-10-11"
+}

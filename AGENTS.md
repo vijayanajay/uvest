@@ -60,7 +60,7 @@ Canonical five roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-fo
 Single-context glossary of Indian market mechanics & frozen ADRs. See [domain.md](file:///d:/Code/uvest/docs/agents/domain.md).
 
 ### Evaluations (Evals)
-Behavioral benchmark suite against 50 historical trades. See [evals.md](file:///d:/Code/uvest/docs/agents/evals.md).
+Behavioral benchmark suite against 52 historical trades. See [evals.md](file:///d:/Code/uvest/docs/agents/evals.md).
 
 ---
 
@@ -79,7 +79,7 @@ All skills live in [skills/](file:///d:/Code/uvest/skills) (and [.agents/skills/
 | **`/code-review`** | Audits code changes along two axes: Standards (Kailash Nadh simplicity) and Spec (functional match). |
 | **`/domain-modeling`** | Builds and sharpens the project's domain vocabulary, GLOSSARY, and Architecture Decision Records (ADRs). |
 | **`/diagnosing-bugs`** | Systematic root-cause diagnosis loop for quantitative errors, calculation bugs, and regressions. |
-| **`/evals`** | Runs behavioral evaluations against the 50-trade golden dataset (`tests/evals/golden_dataset.json`) to audit calibration, hallucination, and gate enforcement. |
+| **`/evals`** | Runs behavioral evaluations against the 52-trade golden dataset (`tests/evals/golden_dataset.json`) to audit calibration, hallucination, and gate enforcement. |
 | **`/html-visualizer`** | Generates standalone, zero-dependency, rich interactive HTML report cards (`reports/report_{symbol}_{date}.html`) for each analyzed recommendation. |
 | **`/daily-triage`** | Audits open tracked positions daily; enforces the 3-stage adverse movement protocol; strictly prohibits averaging down. |
 | **`/postmortem`** | Decomposes closed trade failures into root causes (volatility noise, regime shock, institutional distribution, event shock, slippage). |

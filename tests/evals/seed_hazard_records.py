@@ -368,8 +368,9 @@ def dataset_note(records: list[dict], blocked: list[str], seeded: int, expected:
         "invented filing (E4). GB-2023-0003's legacy pledge payload was retired "
         "into recorded stage-6 evidence (tests/evals/retire_quarantine_records.py, "
         "E5 meter 0), so the pledge class grades 5/5 and gate 2 has no abstention "
-        "left; institutional_distribution 0/10 remains unauthored. Authored by "
-        "tests/evals/seed_hazard_records.py."
+        "left; institutional_distribution 10/10 is seeded from NSE's own "
+        "delivery/OI archives by tests/evals/seed_distribution_records.py. "
+        "Authored by tests/evals/seed_hazard_records.py."
         + ((" Slot(s) left unauthored because the point-in-time tape contradicts "
             "the catalog's realized outcome under the frozen class geometry: "
             + ", ".join(blocked)

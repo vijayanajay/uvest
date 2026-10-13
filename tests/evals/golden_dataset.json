@@ -14,7 +14,6 @@
       "tight_stop": 5
     },
     "notes": [
-      "distribution_verified=false until all 52 records are present and class counts match class_counts_expected.",
       "GB-2022-0019 dropped: 6th evidence-tight row exceeded the frozen tight_stop quota (5); the five remaining rows all carry recorded is_tight_sl=true from stage-2 bundles.",
       "GB-2023-0003 references its stage 1/2/6 payloads from the proof root (tests/proof/fixtures/GB-2023-0003/) instead of embedding copies: stages 1-2 are recorded evidence, stage 6 was quarantined legacy debt, since retired into recorded stage-6 evidence by tests/evals/retire_quarantine_records.py (the register is empty and the E5 meter is 0, so this record's pledge breaker now grades from proven bytes).",
       "GB-2023-0003's forward outcome claims (forward min/max, resolution date/outcome, market MAE, actual direction) are now `$derive` references to its pinned proof-root forward tape; the legacy hand-typed block (268/325, 2023-03-09, 6.5% MAE) is retired. The cone envelopes and limit-entry MAE that the cone/MAE gates used to grade were hand-typed on four records with no engine behind them — they are retired to null, so those gates SKIP until stages 4/8 exist rather than grading unverifiable claims.",
@@ -28,8 +27,10 @@
       "input echo retired (2026-10-12): the hand-typed script_outputs['current_trade.json'] = {'type': 'FUT', 'instrument_type': 'FUT'} stub every one of the 31 seeded records carried is removed. It was redundant and contradictory, not evidence: the only reader was gate 1's option-instrument probe, which falls back to the record's own `instrument` field, while the stage-12 replay is fed the proof row's recorded_artifacts and its pinned replay_inputs.canonical_trade — and 36 of the proof root's 46 canonical fixtures state instrument_type CASH, so the stub asserted a value the recorded input contradicts. Retiring it restores the E1 rule it violated (a payload a gate reads must be a recording, never an extracted subset typed into the dataset), and tests/run_evals.py check_payload_coverage fails the run on any payload a record carries with no recorded artifact behind it. Curators must not write it back (tests/evals/curate.py, tests/evals/pin_legacy_records.py).",
       "GB-2023-0003 retired from the quarantine register (2026-10-12, quarantine-retirement/1): stage 6 records real evidence now — an authored, disclosed financials bundle inheriting each record's own hazard level — so the rows' declarations flip quarantined -> recorded, the dataset `$ref`s point at the recorded bytes, the hand-typed payloads are deleted, and the E5 meter drops to 0 (baseline re-frozen). The pledge class now grades 5 of 5 with no abstention, and every earlier note calling these payloads quarantined legacy debt is superseded by this one. Authored by tests/evals/retire_quarantine_records.py.",
       "Shape-ladder campaign (shape-ladder/1): 13 row(s) re-derived at declared rungs of their class's shape family and re-recorded from their own pinned ≤T_rec tape; 15 left at the frozen class shape (the plan walked each and found no admissible rung that added a rule exercise the class did not already stand for); 2 kept as their own published geometry. Families: clean_bullish 2.0xATR&2.2R, 1.0xATR&1.8R, 1.5xATR&2.0R, 2.5xATR&2.5R, 3.0xATR&3.0R, 1.0xATR&2.5R, 1.5xATR&1.8R, 2.0xATR&2.0R, 2.5xATR&1.8R, 3.0xATR&2.2R, 1.0xATR&3.0R, 1.5xATR&2.2R, 2.0xATR&2.5R, 2.5xATR&2.0R, 3.0xATR&1.8R; inverted_rr 1.2xATR&0.9R, 0.9xATR&0.75R, 1.6xATR&0.55R, 2.0xATR&0.35R, 2.0xATR&0.55R, 0.9xATR&0.9R, 1.2xATR&0.55R, 1.6xATR&0.35R, 2.0xATR&0.75R, 1.2xATR&0.35R, 2.0xATR&0.9R, 0.9xATR&0.55R, 1.6xATR&0.9R, 1.2xATR&0.75R, 0.9xATR&0.35R, 1.6xATR&0.75R; tight_stop 0.6xATR&2.5R, 0.35xATR&2.5R, 0.4xATR&2.5R, 0.45xATR&2.5R, 0.5xATR&2.5R, 0.55xATR&2.5R, 0.65xATR&2.5R, 0.7xATR&2.5R. A rung is authored only where the row's pinned tape realizes the class's documented outcome (docs/agents/evals.md §2) and only where it adds new rule coverage, so the census measures the classes' parameter coverage rather than their row counts; each placement, its refusals and the outcome it changed are frozen on its row under `authoring.reshape`. Authored by tests/evals/reshape_records.py.",
-      "42 of 52 records. The pledge (SCEN-007, SCEN-009, SCEN-011, SCEN-012) and earnings (SCEN-013, SCEN-014, SCEN-015, SCEN-016, SCEN-017, SCEN-062, SCEN-063) golden records are views of the frozen catalog's own hazard rows (business_test_cases.md §3) and carry recorded stage-6 evidence: real `6_fundamental_audit.py --record` stdout over an authored hazard bundle (tests/proof/fixtures/<id>/financials.json), so gate 2 grades both breakers (`promoter_pledging_gt_25pct`, `earnings_within_7d`) from proven bytes instead of abstaining. The hazard inputs are authored and disclosed per row (`authoring.hazard_evidence`, copied from the bundle, and `authoring.hazard_inputs` in the fixture): the catalog's documented level is used verbatim where it states one, and a disclosed value above the documented floor where it states only the inequality. The statement blocks are deliberately empty, so stage 6 emits null Piotroski/Altman/CFO-PAT metrics with `missing_inputs` naming every gap — absence, never an invented filing (E4). GB-2023-0003's legacy pledge payload was retired into recorded stage-6 evidence (tests/evals/retire_quarantine_records.py, E5 meter 0), so the pledge class grades 5/5 and gate 2 has no abstention left; institutional_distribution 0/10 remains unauthored. Authored by tests/evals/seed_hazard_records.py."
-    ]
+      "52 of 52 records: all six classes are seeded and every class count matches class_counts_expected (distribution_verified=true). The three geometry classes (clean_bullish 15/15, inverted_rr 10/10, tight_stop 5/5) carry recorded stage-1/2 evidence over their pinned <=T_rec tape; the two hazard classes (pledge_hazard 5/5, earnings_hazard 7/7) are views of the frozen catalog's own hazard rows (business_test_cases.md §3) with recorded stage-6 evidence over an authored, disclosed bundle — the catalog's documented level verbatim where it states one and a disclosed value above the stated floor where it states only the inequality, statement blocks deliberately empty so stage 6 reports null ratios with missing_inputs naming every gap (E4: absence, never an invented filing); GB-2023-0003's legacy pledge payload was retired into recorded stage-6 evidence (tests/evals/retire_quarantine_records.py), so the E5 meter is 0 and gate 2 has no abstention left. institutional_distribution 10/10 (GB-2022-0033, GB-2022-0034, GB-2022-0035, GB-2022-0036, GB-2022-0037, GB-2022-0038, GB-2023-0039, GB-2023-0040, GB-2023-0041, GB-2023-0042): scan-authored by tests/evals/seed_distribution_records.py from NSE's own daily files — sec_bhavdata_full delivery % (EQ series) and the F&O bhavcopy's front-month open interest on each T_rec — admitting only sessions the files measure as price up, delivery < 25% and OI <= -5% (the class signature of docs/agents/evals.md §2) whose pinned tape then resolves LOSS under the frozen crisis geometry (T_rec open, 0.5x ATR stop, 2.0R target); every fixture discloses its source files' sha256 and a 20-session delivery window, and stage 5 is recorded through `5_institutional_flow.py --record`, so the class invariant (SHORT_COVERING_TRAP matrix, delivery < 25%, OI <= -5%) grades from proven bytes. Authored by tests/evals/seed_distribution_records.py.",
+      "distribution_verified=true: all 52 records are present and every class count matches class_counts_expected (flipped by tests/evals/seed_distribution_records.py when the tenth institutional_distribution row was authored)."
+    ],
+    "distribution_verified": true
   },
   "trades": [
     {
@@ -865,6 +866,336 @@
       }
     },
     {
+      "trade_id": "GB-2022-0033",
+      "trade_class": "institutional_distribution",
+      "symbol": "AUBANK",
+      "instrument": "FUT",
+      "recommendation_date": "2022-04-05",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0033/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0033/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
+      "entry_price": 669.5,
+      "stop_loss": 659.22,
+      "target_price": 690.06,
+      "script_outputs": {
+        "out_1_math.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0033/recorded/out_1_math.json"
+        },
+        "out_2_market.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0033/recorded/out_2_market.json"
+        },
+        "out_5_flow.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0033/recorded/out_5_flow.json"
+        }
+      },
+      "forward_prices_22d": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0033/forward_tape.json",
+          "rule": "forward_min_max"
+        }
+      },
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0033/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0033/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      }
+    },
+    {
+      "trade_id": "GB-2022-0034",
+      "trade_class": "institutional_distribution",
+      "symbol": "RBLBANK",
+      "instrument": "FUT",
+      "recommendation_date": "2022-04-12",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0034/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0034/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
+      "entry_price": 131.25,
+      "stop_loss": 128.64,
+      "target_price": 136.47,
+      "script_outputs": {
+        "out_1_math.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0034/recorded/out_1_math.json"
+        },
+        "out_2_market.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0034/recorded/out_2_market.json"
+        },
+        "out_5_flow.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0034/recorded/out_5_flow.json"
+        }
+      },
+      "forward_prices_22d": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0034/forward_tape.json",
+          "rule": "forward_min_max"
+        }
+      },
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0034/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0034/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      }
+    },
+    {
+      "trade_id": "GB-2022-0035",
+      "trade_class": "institutional_distribution",
+      "symbol": "JKCEMENT",
+      "instrument": "FUT",
+      "recommendation_date": "2022-04-13",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0035/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0035/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
+      "entry_price": 2760.0,
+      "stop_loss": 2708.34,
+      "target_price": 2863.32,
+      "script_outputs": {
+        "out_1_math.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0035/recorded/out_1_math.json"
+        },
+        "out_2_market.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0035/recorded/out_2_market.json"
+        },
+        "out_5_flow.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0035/recorded/out_5_flow.json"
+        }
+      },
+      "forward_prices_22d": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0035/forward_tape.json",
+          "rule": "forward_min_max"
+        }
+      },
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0035/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0035/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      }
+    },
+    {
+      "trade_id": "GB-2022-0036",
+      "trade_class": "institutional_distribution",
+      "symbol": "IBULHSGFIN",
+      "instrument": "FUT",
+      "recommendation_date": "2022-04-21",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0036/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0036/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
+      "entry_price": 142.09,
+      "stop_loss": 138.99,
+      "target_price": 148.29,
+      "script_outputs": {
+        "out_1_math.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0036/recorded/out_1_math.json"
+        },
+        "out_2_market.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0036/recorded/out_2_market.json"
+        },
+        "out_5_flow.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0036/recorded/out_5_flow.json"
+        }
+      },
+      "forward_prices_22d": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0036/forward_tape.json",
+          "rule": "forward_min_max"
+        }
+      },
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0036/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0036/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      }
+    },
+    {
+      "trade_id": "GB-2022-0037",
+      "trade_class": "institutional_distribution",
+      "symbol": "SAIL",
+      "instrument": "FUT",
+      "recommendation_date": "2022-04-21",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0037/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0037/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
+      "entry_price": 102.35,
+      "stop_loss": 100.47,
+      "target_price": 106.11,
+      "script_outputs": {
+        "out_1_math.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0037/recorded/out_1_math.json"
+        },
+        "out_2_market.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0037/recorded/out_2_market.json"
+        },
+        "out_5_flow.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0037/recorded/out_5_flow.json"
+        }
+      },
+      "forward_prices_22d": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0037/forward_tape.json",
+          "rule": "forward_min_max"
+        }
+      },
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0037/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0037/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      }
+    },
+    {
+      "trade_id": "GB-2022-0038",
+      "trade_class": "institutional_distribution",
+      "symbol": "AMBUJACEM",
+      "instrument": "FUT",
+      "recommendation_date": "2022-09-20",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0038/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0038/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
+      "entry_price": 579.0,
+      "stop_loss": 565.51,
+      "target_price": 605.98,
+      "script_outputs": {
+        "out_1_math.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0038/recorded/out_1_math.json"
+        },
+        "out_2_market.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0038/recorded/out_2_market.json"
+        },
+        "out_5_flow.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0038/recorded/out_5_flow.json"
+        }
+      },
+      "forward_prices_22d": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0038/forward_tape.json",
+          "rule": "forward_min_max"
+        }
+      },
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0038/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2022-0038/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      }
+    },
+    {
       "trade_id": "GB-2023-0003",
       "trade_class": "pledge_hazard",
       "symbol": "VEDL",
@@ -1123,6 +1454,226 @@
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2023-0024/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      }
+    },
+    {
+      "trade_id": "GB-2023-0039",
+      "trade_class": "institutional_distribution",
+      "symbol": "MRF",
+      "instrument": "FUT",
+      "recommendation_date": "2023-03-02",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0039/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0039/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
+      "entry_price": 86480.0,
+      "stop_loss": 85746.05,
+      "target_price": 87947.9,
+      "script_outputs": {
+        "out_1_math.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0039/recorded/out_1_math.json"
+        },
+        "out_2_market.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0039/recorded/out_2_market.json"
+        },
+        "out_5_flow.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0039/recorded/out_5_flow.json"
+        }
+      },
+      "forward_prices_22d": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0039/forward_tape.json",
+          "rule": "forward_min_max"
+        }
+      },
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0039/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0039/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      }
+    },
+    {
+      "trade_id": "GB-2023-0040",
+      "trade_class": "institutional_distribution",
+      "symbol": "ADANIENT",
+      "instrument": "FUT",
+      "recommendation_date": "2023-03-06",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0040/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0040/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
+      "entry_price": 1966.7,
+      "stop_loss": 1878.0,
+      "target_price": 2144.1,
+      "script_outputs": {
+        "out_1_math.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0040/recorded/out_1_math.json"
+        },
+        "out_2_market.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0040/recorded/out_2_market.json"
+        },
+        "out_5_flow.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0040/recorded/out_5_flow.json"
+        }
+      },
+      "forward_prices_22d": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0040/forward_tape.json",
+          "rule": "forward_min_max"
+        }
+      },
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0040/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0040/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      }
+    },
+    {
+      "trade_id": "GB-2023-0041",
+      "trade_class": "institutional_distribution",
+      "symbol": "DIXON",
+      "instrument": "FUT",
+      "recommendation_date": "2023-03-06",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0041/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0041/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
+      "entry_price": 2995.0,
+      "stop_loss": 2951.92,
+      "target_price": 3081.16,
+      "script_outputs": {
+        "out_1_math.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0041/recorded/out_1_math.json"
+        },
+        "out_2_market.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0041/recorded/out_2_market.json"
+        },
+        "out_5_flow.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0041/recorded/out_5_flow.json"
+        }
+      },
+      "forward_prices_22d": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0041/forward_tape.json",
+          "rule": "forward_min_max"
+        }
+      },
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0041/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0041/forward_tape.json",
+          "rule": "realized_direction"
+        }
+      }
+    },
+    {
+      "trade_id": "GB-2023-0042",
+      "trade_class": "institutional_distribution",
+      "symbol": "ESCORTS",
+      "instrument": "FUT",
+      "recommendation_date": "2023-10-11",
+      "resolution_date": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0042/forward_tape.json",
+          "rule": "resolution_date"
+        }
+      },
+      "resolution_outcome": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0042/forward_tape.json",
+          "rule": "resolution_outcome"
+        }
+      },
+      "entry_price": 3430.0,
+      "stop_loss": 3375.74,
+      "target_price": 3538.52,
+      "script_outputs": {
+        "out_1_math.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0042/recorded/out_1_math.json"
+        },
+        "out_2_market.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0042/recorded/out_2_market.json"
+        },
+        "out_5_flow.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0042/recorded/out_5_flow.json"
+        }
+      },
+      "forward_prices_22d": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0042/forward_tape.json",
+          "rule": "forward_min_max"
+        }
+      },
+      "cone_p10": null,
+      "cone_p90": null,
+      "market_mae_pct": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0042/forward_tape.json",
+          "rule": "market_mae_pct"
+        }
+      },
+      "limit_mae_pct": null,
+      "predicted_direction": null,
+      "actual_direction": {
+        "$derive": {
+          "tape": "tests/proof/fixtures/GB-2023-0042/forward_tape.json",
           "rule": "realized_direction"
         }
       }

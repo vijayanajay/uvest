@@ -1,0 +1,15 @@
+{
+  "symbol": "JKCEMENT",
+  "atr_14": 103.325021,
+  "sl_atr_ratio": 0.49997570081040266,
+  "is_tight_sl": true,
+  "ema_20": 2619.54,
+  "above_50_ema": true,
+  "above_200_sma": false,
+  "trend_state": "MIXED",
+  "bollinger_upper": 2898.28,
+  "bollinger_lower": 2164.97,
+  "bollinger_bandwidth": 28.9661,
+  "waived": false,
+  "as_of": "2022-04-13"
+}

@@ -1,0 +1,18 @@
+{
+  "symbol": "RBLBANK",
+  "exchange": "NSE",
+  "instrument_type": "FUT",
+  "expiry": "2022-04-28",
+  "action": "BUY",
+  "entry_price": 131.25,
+  "entry_range_min": 130.25,
+  "entry_range_max": 132.25,
+  "live_price": 131.25,
+  "target": 136.47,
+  "stoploss": 128.64,
+  "lot_size": 3800,
+  "margin": 498750.0,
+  "recommended_date": "2022-04-12",
+  "app_warning": "catalog scaffold",
+  "user_capital_inr": 500000.0
+}

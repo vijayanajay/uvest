@@ -1,0 +1,12 @@
+{
+  "symbol": "RBLBANK",
+  "instrument_type": "FUT",
+  "raw_rr": 1.9999999999999891,
+  "live_rr": 1.9999999999999891,
+  "risk_inr": 9918.0,
+  "reward_inr": 19836.0,
+  "quantity": 3800,
+  "outside_range_pct": 0.0,
+  "inverted_rr_flag": false,
+  "capital_allocation_pct": 1.9836
+}

@@ -1,0 +1,12 @@
+{
+  "symbol": "ESCORTS",
+  "instrument_type": "FUT",
+  "raw_rr": 1.9999999999999916,
+  "live_rr": 1.9999999999999916,
+  "risk_inr": 8139.0,
+  "reward_inr": 16278.0,
+  "quantity": 150,
+  "outside_range_pct": 0.0,
+  "inverted_rr_flag": false,
+  "capital_allocation_pct": 1.6278
+}

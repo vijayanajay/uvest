@@ -65,6 +65,12 @@ ENGINE_CLAIM_STAGES = {
 RERUNNABLE = {
     1: "1_math_and_rr.py",
     2: "2_market_data.py",
+    # Stage 5 is offline-runnable through the row's committed bhavcopy bundle
+    # (`replay_inputs.bhavcopy_fixture`), so a recorded `out_5_flow.json` is
+    # byte-compared to a fresh run exactly like stages 1–2 — the distribution
+    # rows' class-defining numbers (delivery %, front-month OI change, the
+    # matrix verdict) are verified, not taken on trust.
+    5: "5_institutional_flow.py",
     # Stage 6 is offline-runnable through the row's authored financials bundle
     # (`replay_inputs.financials_fixture`), so a recorded `out_6_fundamental.json`
     # is byte-compared to a fresh run exactly like stages 1–2 — the hazard rows'
@@ -89,6 +95,8 @@ def fresh_stage_stdout(row: dict, artifact: dict) -> bytes | None:
            "--input", str(PROOF_ROOT / inputs["canonical_trade"])]
     if stage == 2:
         cmd += ["--ohlcv-fixture", str(PROOF_ROOT / inputs["truncated_fixtures"][0])]
+    if stage == 5:
+        cmd += ["--bhavcopy-fixture", str(PROOF_ROOT / inputs["bhavcopy_fixture"])]
     if stage == 6:
         cmd += ["--financials-fixture", str(PROOF_ROOT / inputs["financials_fixture"])]
     proc = subprocess.run(cmd, capture_output=True, check=False, cwd=REPO_ROOT)

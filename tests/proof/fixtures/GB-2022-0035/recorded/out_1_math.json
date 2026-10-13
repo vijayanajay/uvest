@@ -1,0 +1,12 @@
+{
+  "symbol": "JKCEMENT",
+  "instrument_type": "FUT",
+  "raw_rr": 2.000000000000009,
+  "live_rr": 2.000000000000009,
+  "risk_inr": 9040.5,
+  "reward_inr": 18081.0,
+  "quantity": 175,
+  "outside_range_pct": 0.0,
+  "inverted_rr_flag": false,
+  "capital_allocation_pct": 1.8081
+}

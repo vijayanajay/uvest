@@ -1,0 +1,15 @@
+{
+  "symbol": "IBULHSGFIN",
+  "atr_14": 6.195121,
+  "sl_atr_ratio": 0.500393743002846,
+  "is_tight_sl": true,
+  "ema_20": 146.47,
+  "above_50_ema": false,
+  "above_200_sma": false,
+  "trend_state": "BEARISH",
+  "bollinger_upper": 160.93,
+  "bollinger_lower": 132.58,
+  "bollinger_bandwidth": 19.3204,
+  "waived": false,
+  "as_of": "2022-04-21"
+}

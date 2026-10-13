@@ -1,0 +1,18 @@
+{
+  "symbol": "MRF",
+  "exchange": "NSE",
+  "instrument_type": "FUT",
+  "expiry": "2023-03-29",
+  "action": "BUY",
+  "entry_price": 86480.0,
+  "entry_range_min": 86393.52,
+  "entry_range_max": 86566.48,
+  "live_price": 86480.0,
+  "target": 87947.9,
+  "stoploss": 85746.05,
+  "lot_size": 25,
+  "margin": 2162000.0,
+  "recommended_date": "2023-03-02",
+  "app_warning": "catalog scaffold",
+  "user_capital_inr": 500000.0
+}

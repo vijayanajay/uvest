@@ -1,0 +1,15 @@
+{
+  "symbol": "SAIL",
+  "atr_14": 3.760714,
+  "sl_atr_ratio": 0.49990503323836544,
+  "is_tight_sl": true,
+  "ema_20": 104.1,
+  "above_50_ema": true,
+  "above_200_sma": false,
+  "trend_state": "MIXED",
+  "bollinger_upper": 112.23,
+  "bollinger_lower": 96.65,
+  "bollinger_bandwidth": 14.9255,
+  "waived": false,
+  "as_of": "2022-04-21"
+}

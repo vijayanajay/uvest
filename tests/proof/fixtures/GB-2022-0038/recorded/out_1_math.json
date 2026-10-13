@@ -1,0 +1,12 @@
+{
+  "symbol": "AMBUJACEM",
+  "instrument_type": "FUT",
+  "raw_rr": 2.0,
+  "live_rr": 2.0,
+  "risk_inr": 11803.75,
+  "reward_inr": 23607.5,
+  "quantity": 875,
+  "outside_range_pct": 0.0,
+  "inverted_rr_flag": false,
+  "capital_allocation_pct": 2.3608
+}

@@ -284,7 +284,7 @@ class TestGoldenDatasetContract(unittest.TestCase):
 
     def test_no_class_exceeds_its_quota(self):
         """Mid-curation the only quota invariant is 'never exceed'; the final
-        50/50 equality is lockable in by `distribution_verified` at curation's
+        52/52 equality is lockable in by `distribution_verified` at curation's
         end (see evals.md §5 lockable invariants)."""
         counted: dict[str, int] = {}
         for trade in self.trades:
@@ -979,13 +979,20 @@ class TestProofRootPayloadEvidence(unittest.TestCase):
         self.assertTrue(ok, f"{reason} {shortfalls}")
 
     def test_coverage_is_a_read_of_the_gate_not_a_second_opinion(self):
-        """A fully graded benchmark has no abstention clause to show."""
+        """Every record whose class has a registered breaker is graded; a class
+        without one is disclosed in coverage, never averaged in or dropped."""
         unbacked = run_evals.unbacked_payloads(self.trades, self.targets)
         gate = run_evals.gate_hard_breakers(
             self.trades, unbacked, self.raw["meta"]["class_counts_expected"])
         self.assertNotIn("abstained", gate.coverage, gate.coverage)
+        out_of_scope = [t for t in self.trades
+                        if t.get("trade_class") != "clean_bullish"
+                        and t.get("trade_class") not in run_evals.BREAKER_BY_CLASS]
         self.assertEqual(gate.detail.split(";")[0],
-                         f"{len(self.trades)} graded, 0 violation(s)")
+                         f"{len(self.trades) - len(out_of_scope)} graded, "
+                         "0 violation(s)")
+        for cls in sorted({t["trade_class"] for t in out_of_scope}):
+            self.assertIn(f"{cls} no registered breaker", gate.coverage)
 
     def test_a_recorded_payload_covers_the_record(self):
         """The negative case: coverage is a proof, not a permanent complaint.

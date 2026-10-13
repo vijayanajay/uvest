@@ -69,34 +69,31 @@ Output scorecard template:
 ======================================================================
               UVEST AGENT & QUANT EVALUATION SCORECARD
 ======================================================================
-  [PASS] Option Rejection Guardrail:       100.0% (5/5 rejected)
-  [PASS] Hard Circuit Breaker Accuracy:   100.0% (25/25 correctly blocked)
-         ↳ class coverage: clean_bullish 15/15 graded, 18 distinct rule exercise(s)
-           (7 of 15 repeat an exercise); inverted_rr 10/10 graded, 8 distinct rule
-           exercise(s) (6 of 10 repeat an exercise); institutional_distribution no
-           registered breaker (0 record(s), quota 10); pledge_hazard 5/5 graded,
-           5 distinct rule exercise(s); earnings_hazard 5/5 graded, 2 distinct rule
-           exercise(s) (3 of 5 repeat an exercise); tight_stop 5/5 graded,
-           5 distinct rule exercise(s)
-  [PASS] Zero Hallucination Audit:        100.0% (52 graded, 0 with discrepancies)
-  [PASS] Directional Brier Score:          0.142  (Threshold <= 0.180)
-  [PASS] Price Cone Range Coverage:        86.4%  (Threshold >= 80.0%)
-  [PASS] Optimal Limit Slippage Reduction: +1.42% net expectancy improvement
-  [PASS] HTML Visualizer Validation:       52/52 standalone files valid
-======================================================================
-  FINAL EVALUATION VERDICT: SUITE PASSED (Ready for Live Operation)
+  [SKIP] Option Rejection Guardrail             inputs incomplete — partial dataset
+         ↳ no option-instrument trades in the dataset yet
+  [PASS] Hard Circuit Breaker Accuracy          100.0%  (>= 100.0%)
+         ↳ class coverage: clean_bullish 15/15 graded, 18 distinct rule exercise(s) (7 of 15 repeat an exercise); inverted_rr 10/10 graded, 8 distinct rule exercise(s) (6 of 10 repeat an exercise); institutional_distribution no registered breaker (10 record(s), quota 10); pledge_hazard 5/5 graded, 5 distinct rule exercise(s); earnings_hazard 7/7 graded, 4 distinct rule exercise(s) (3 of 7 repeat an exercise); tight_stop 5/5 graded, 5 distinct rule exercise(s)
+  [PASS] Zero Hallucination Audit               100.0%  (>= 100.0%)
+  [SKIP] Directional Brier Score                inputs incomplete — partial dataset
+         ↳ no calibrated direction probabilities yet — hard labels in `predicted_direction` cannot stand in for a Brier score
+  [SKIP] Price Cone Range Coverage              inputs incomplete — partial dataset
+         ↳ no trades with an engine-produced cone envelope yet — stage 4 unimplemented
+  [SKIP] Optimal Limit Slippage Reduction       inputs incomplete — partial dataset
+         ↳ no market/limit MAE pairs with an engine-derived limit entry yet — stage 8 unimplemented
+  [PASS] HTML Visualizer Validation             100.0%  (>= 100.0%)
+----------------------------------------------------------------------
+  FINAL EVALUATION VERDICT: SUITE PASSED
 ======================================================================
 
   ── Evidence provenance (run records) ──
   Records read: 2
     ↳ reports/run_record.json (complete, exit 0) — stages ran: [12] · skipped: none · failed: none
-    ↳ tests/proof/scenario_manifest.json (complete, exit 0) — stages ran: [1, 2, 6] · skipped: none · failed: none
+    ↳ tests/proof/scenario_manifest.json (complete, exit 0) — stages ran: [1, 2, 5, 6] · skipped: [6] · failed: none
   Stage-12 reports proven: 52/52
   Gate payloads proven: 52/52
-  Evidence completeness: OK (52/52 record(s) carry proven stage-12 evidence;
-    52/52 record(s) carry proven gate payloads)
-  Rule coverage: OK (38 distinct rule exercise(s) across the graded classes;
-    frozen floor 38)
+  Evidence completeness: OK (52/52 record(s) carry proven stage-12 evidence; 52/52 record(s) carry gate payloads with no unregistered gap)
+  Dataset integrity: OK (52/52 seeded, distribution verified)
+  Rule coverage: OK (40 distinct rule exercise(s) across the graded classes; frozen floor 40)
 ```
 
 **Gate 2 discloses its class coverage.** Breaker accuracy is an average over the records the gate could grade, so a class whose records all abstained contributes nothing to it and a percentage over a smaller graded set reads exactly like one over the whole benchmark. The coverage line — printed whatever the verdict, including a `[PASS]` — therefore names every class with `graded/total`, the records it had to abstain on (`0/N graded, N abstained`, which is the case a bare 100.0% would hide), a `(quota N)` marker when the dataset is short of that class's frozen quota, and the classes with no breaker in the frozen registry at all (`run_evals.class_coverage`). It discloses, it does not re-weight: an abstention with a recorded reason is registered debt by design (§4.1), and the ones nobody declared already fail the run as unregistered gaps.

@@ -1,0 +1,12 @@
+{
+  "symbol": "MRF",
+  "instrument_type": "FUT",
+  "raw_rr": 2.0,
+  "live_rr": 2.0,
+  "risk_inr": 18348.75,
+  "reward_inr": 36697.5,
+  "quantity": 25,
+  "outside_range_pct": 0.0,
+  "inverted_rr_flag": false,
+  "capital_allocation_pct": 3.6697
+}

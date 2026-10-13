@@ -1,0 +1,11 @@
+{
+  "symbol": "IBULHSGFIN",
+  "delivery_pct": 13.81,
+  "delivery_zscore": -1.52,
+  "oi_change_pct": -7.37,
+  "matrix_verdict": "SHORT_COVERING_TRAP",
+  "basis_annualized": 17.68,
+  "rollover_pct": null,
+  "waived": false,
+  "as_of": "2022-04-21"
+}

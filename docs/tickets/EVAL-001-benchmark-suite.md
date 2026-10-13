@@ -1,4 +1,4 @@
-# EVAL-001: Behavioral Evals Benchmark Suite (50 Historical Trades)
+# EVAL-001: Behavioral Evals Benchmark Suite (52 Historical Trades)
 
 **Status:** FROZEN  
 **Priority:** P0  
@@ -6,7 +6,7 @@
 **Dataset:** `tests/evals/golden_dataset.json`  
 
 ### 1. Goal & Context
-Run automated behavioral benchmark evaluations against 50 historically resolved Univest recommendations to guarantee zero hallucination, 100% hard circuit breaker detection, calibrated Brier scores, and range coverage integrity.
+Run automated behavioral benchmark evaluations against 52 historically resolved Univest recommendations to guarantee zero hallucination, 100% hard circuit breaker detection, calibrated Brier scores, and range coverage integrity.
 
 ### 2. Frozen Specification Reference
 - `BRD.md Section 15`

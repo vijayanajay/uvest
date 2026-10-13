@@ -1,0 +1,15 @@
+{
+  "symbol": "AMBUJACEM",
+  "atr_14": 26.975,
+  "sl_atr_ratio": 0.5000926784059316,
+  "is_tight_sl": true,
+  "ema_20": 475.21,
+  "above_50_ema": true,
+  "above_200_sma": true,
+  "trend_state": "BULLISH",
+  "bollinger_upper": 571.0,
+  "bollinger_lower": 344.11,
+  "bollinger_bandwidth": 49.5878,
+  "waived": false,
+  "as_of": "2022-09-20"
+}

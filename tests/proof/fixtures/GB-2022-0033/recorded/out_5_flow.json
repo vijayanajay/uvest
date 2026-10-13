@@ -1,0 +1,11 @@
+{
+  "symbol": "AUBANK",
+  "delivery_pct": 21.45,
+  "delivery_zscore": -0.56,
+  "oi_change_pct": -7.38,
+  "matrix_verdict": "SHORT_COVERING_TRAP",
+  "basis_annualized": 0.06,
+  "rollover_pct": null,
+  "waived": false,
+  "as_of": "2022-04-05"
+}

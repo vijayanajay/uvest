@@ -234,7 +234,7 @@ data_cache/
 reports/report_*.html
 
 # ---------------------------------------------------------------------------
-# SPEC ARTIFACTS — these must stay committable. The 50-trade golden dataset
+# SPEC ARTIFACTS — these must stay committable. The 52-trade golden dataset
 # (tests/evals/), recorded OHLCV fixtures (tests/fixtures/), and the pinned
 # skills-lock.json are all required to reproduce a run, so they can never be
 # hidden by a broad ignore rule. Negations must follow every rule above.

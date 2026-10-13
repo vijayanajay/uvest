@@ -262,17 +262,17 @@
 - [x] Zero Hallucination Audit grade: 100% exact JSON match pass.
 - [x] Price Cone Range Coverage grade: $\ge 80\%$ pass.
 - [x] Optimal Limit Slippage Reduction grade: $\ge 75\%$ pass.
-- [x] Partial golden dataset seeded (40 of 50 trades in `tests/evals/golden_dataset.json`).
-- [ ] Complete remaining 10 trades in `tests/evals/golden_dataset.json` to reach full 50 trades ([docs/agents/evals.md §2](file:///d:/Code/uvest/docs/agents/evals.md#L11)):
+- [x] Golden dataset seeded to its frozen quotas (52 of 52 trades in `tests/evals/golden_dataset.json`).
+- [x] Complete the remaining 10 trades in `tests/evals/golden_dataset.json` to reach the full 52 trades ([docs/agents/evals.md §2](file:///d:/Code/uvest/docs/agents/evals.md#L11)):
   - [x] 4 remaining High Promoter Pledging Traps seeded (`pledge_hazard`: 5/5) — the catalog's own pledge rows (SCEN-007/009/011/012) with recorded stage-6 evidence, so gate 2 grades `promoter_pledging_gt_25pct` from proven bytes ([tests/evals/seed_hazard_records.py](file:///d:/Code/uvest/tests/evals/seed_hazard_records.py)).
-  - [x] 5 Impending Earnings Event Traps seeded (`earnings_hazard`: 5/5) — SCEN-013…017, the catalog's binary-event rows (its §5 roll-up counts SCEN-017's unscheduled board meeting as the fifth), each graded on `earnings_within_7d`; SCEN-016 needed the owner-commanded re-freeze R3 ([docs/agents/scenario-manifest-schema.md §10](file:///d:/Code/uvest/docs/agents/scenario-manifest-schema.md#L328)).
-  - 10 Institutional Distribution Traps (`institutional_distribution`: 0/10 currently seeded).
+  - [x] 7 Impending Earnings Event Traps seeded (`earnings_hazard`: 7/7) — SCEN-013…017, the catalog's binary-event rows (its §5 roll-up counts SCEN-017's unscheduled board meeting as the fifth), plus the two ADR-009 boundary probes SCEN-062/063 at 1 and 6 sessions, each graded on `earnings_within_7d`; SCEN-016 needed the owner-commanded re-freeze R3 ([docs/agents/scenario-manifest-schema.md §10](file:///d:/Code/uvest/docs/agents/scenario-manifest-schema.md#L328)).
+  - [x] 10 Institutional Distribution Traps seeded (`institutional_distribution`: 10/10) — scan-authored from NSE's own daily files (`sec_bhavdata_full` EQ delivery % + the F&O bhavcopy's front-month open interest), admitting only sessions the files measure as price up, delivery < 25% and OI <= -5% whose pinned tape then resolves LOSS under the frozen crisis geometry, with recorded stage-5 evidence over a disclosed bhavcopy fixture ([tests/evals/seed_distribution_records.py](file:///d:/Code/uvest/tests/evals/seed_distribution_records.py)).
   - The authored hazard bundles disclose what is authored (the catalog's documented pledge/earnings level) versus absent (the issuers' FY statements, so the ratio metrics stay null with `missing_inputs` naming every gap).
   - Both hazard classes grade from proven bytes with no abstention: the register's last quarantine (`GB-2023-0003`'s hand-typed stage-6 pledge payload) was retired into recorded stage-6 evidence, so the E5 meter is at 0 ([tests/evals/retire_quarantine_records.py](file:///d:/Code/uvest/tests/evals/retire_quarantine_records.py), [docs/agents/scenario-manifest-schema.md §8.3](file:///d:/Code/uvest/docs/agents/scenario-manifest-schema.md#L307)).
 - [ ] Seed Option-instrument test cases (e.g. 5 CE/PE recommendations) to unskip Option Rejection Guardrail eval ([docs/agents/evals.md §3 #3](file:///d:/Code/uvest/docs/agents/evals.md#L37)).
 - [ ] Enable Directional Brier Score eval once Stage 4 emits probabilities (Brier score $\le 0.180$; [docs/agents/evals.md §3 #4](file:///d:/Code/uvest/docs/agents/evals.md#L38)).
 - [ ] Connect HTML visualizer validation in `tests/run_evals.py` once Stage 12 is implemented ([docs/agents/evals.md §3 #7](file:///d:/Code/uvest/docs/agents/evals.md#L41)).
-- [ ] Set `distribution_verified: true` in `tests/evals/golden_dataset.json` upon completing all 50 trades.
+- [x] Set `distribution_verified: true` in `tests/evals/golden_dataset.json` — flipped when the dataset reached all 52 trades with every class count matched.
 
 ---
 

@@ -12,21 +12,23 @@ exists), but prices are real (yfinance daily bars, one fetch per symbol-month,
 cached under `tests/fixtures/history/`), ATR sizing derives from stage 2's own
 frozen convention, and forward outcomes come from the symbol's real closes.
 
-Class plan against the frozen quotas (meta.class_counts_expected, 50 total):
+Class plan against the frozen quotas (meta.class_counts_expected, 52 total):
   clean_bullish 15 · inverted_rr 10 · tight_stop 5   ← fillable from stages 0–2
-  pledge_hazard 5 · earnings_hazard 5  ← seeded from the frozen catalog's own
+  pledge_hazard 5 · earnings_hazard 7  ← seeded from the frozen catalog's own
       hazard rows with recorded stage-6 evidence (tests/evals/seed_hazard_records.py,
       which authors the fixtures, records `out_6_fundamental.json` and adds the
       records); nothing here hand-types a breaker value the runner would grade.
-  institutional_distribution 10  ← its class breaker is not in the runner's
-      registry, so the slots stay untouched (honest [SKIP] / mid-curation).
+  institutional_distribution 10  ← seeded from NSE's own delivery/OI archives by
+      tests/evals/seed_distribution_records.py (recorded stage-5 evidence over a
+      disclosed bhavcopy fixture); the class has no registered breaker, so gate 2
+      discloses it on the coverage line instead of grading it.
   Neither class's seeding touches the quarantine register, and the register's
   last entry (GB-2023-0003's legacy stage-6 payload) was retired into recorded
   evidence by its own tool — the E5 meter sits at 0.
 
 Existing records: 5 kept as committed (GB-2022-0001 … GB-2025-0005); the single
 hand-typed tight_stop record (GB-2025-0005) is REBASED onto recorded evidence
-below. Final dataset: 40/50 records.
+below. Final dataset: 52/52 records.
 
 Outcome conventions frozen here (derived from data, never asserted by fiat):
   Resolution: the frozen order-aware rule (`dataset_refs.resolution_of`, the
@@ -419,14 +421,15 @@ def main() -> int:
     notes = [n for n in notes
              if not re.match(r"^\d+ of \d+ records", n.strip())]
     notes.append(
-        "42 of 52 records: five of the six classes are seeded and their breakers "
-        "grade from recorded stage-1/2/6 bundles (tests/fixtures/history/ and "
-        "tests/proof/fixtures/). This curator fills the three stage-0..2 classes "
+        "52 of 52 records: all six classes are seeded and every payload a gate "
+        "reads comes from recorded stage-1/2/5/6 bundles (tests/fixtures/history/ "
+        "and tests/proof/fixtures/). This curator fills the three stage-0..2 classes "
         "(clean_bullish 15/15, inverted_rr 10/10, tight_stop 5/5); the two hazard "
         "classes (pledge_hazard 5/5, earnings_hazard 7/7) are seeded from the "
         "frozen catalog's own hazard rows by tests/evals/seed_hazard_records.py, "
-        "with an authored, disclosed stage-6 bundle per row. "
-        "institutional_distribution 0/10 remains unauthored; every pre-proof "
+        "with an authored, disclosed stage-6 bundle per row; and "
+        "institutional_distribution 10/10 is seeded from NSE's own delivery/OI "
+        "archives by tests/evals/seed_distribution_records.py. Every pre-proof "
         "record's legacy stage-6 payload is retired to absence (`waived`, the "
         "proof rows' declarations), and GB-2023-0003's — the register's last "
         "quarantined row — was retired into recorded stage-6 evidence, so the E5 "
