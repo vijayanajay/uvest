@@ -4,6 +4,24 @@
   "manifest_sha256": "06b487d4dc7ad3c57df3dc4b90e7b66a92f749d6aa78706eb348879b3eebe246",
   "quarantined_count": 0,
   "quarantine_register_sha256": "440b46cb3f9865af6a2a672c2f3e62a0d25744a5bfef1d4b44a6bd910e0c4929",
+  "probe_rosters": {
+    "option_probes": 5,
+    "refusal_probes": 5
+  },
+  "probe_roster_ids": {
+    "option_probes": {      "OPT-001": "de1fc24911a25e3171e70b2f89be848a83bfa53b486782a238bbab3d7b721334",
+      "OPT-002": "9d277f980f20bfcc9ff06689b7fee19d415909b4b7ddb3746774bdcda1199f55",
+      "OPT-003": "b25ad6df8668457735926f5312fdb18fd69aad8300c059280a68d557a7158836",
+      "OPT-004": "2599378c0f7eb2bc283855c3d2c545bbd2a9eda508fb49964411c888581b7989",
+      "OPT-005": "1e9985118f28bfe8157643b9c43d038ef0c7ada028c6d1dbc43c9a9b58d41623"
+    },
+    "refusal_probes": {      "REF-001": "918990a43a7304f21806c03bc356050a171399e6c2b43cc3de084a37fe7aff09",
+      "REF-002": "f896d20f3e0345099b0150e6faf5abfac7ce0aa7d11169c15c07d9084dc3b81f",
+      "REF-003": "a8e042a80fa863aea8e2d140548bbbb1b8b940898029c694cf2cd6a5374c1f08",
+      "REF-004": "b1c12fe514e283b24a2a9addda03725e78f0546381347cbe1b351f33cd5b6ce1",
+      "REF-005": "0481b6137d9a6051111ce432dd0c9f5f601faff5cad84eea688b98205208d3da"
+    }
+  },
   "rule_exercises": {
     "clean_bullish": 18,
     "earnings_hazard": 4,

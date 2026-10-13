@@ -6,7 +6,16 @@ Parses a raw Univest recommendation paste into the canonical `current_trade.json
 runs (BRD §3.3):
 
 1. Options prohibition (ADR-001): CE/PE/OPT terminate instantly, exit 2,
-   stderr `ERR_OPTIONS_PROHIBITED`.
+   stderr `ERR_OPTIONS_PROHIBITED`. The fatal token is detected wherever a
+   paste can declare an instrument (`Type:` and `Symbol:`) after Unicode
+   look-alikes are folded and invisible characters stripped, so a cash label
+   over an option-shaped payload is refused too (fail closed).
+   The instrument domain is **closed** (ADR-001: "only equities and futures
+   are permitted"): anything the gate cannot recognize as `CASH` or `FUT`
+   leaves with `ERR_INSTRUMENT_UNRECOGNIZED`, exit 2 — a homoglyph option
+   written with Cyrillic letters is not the token `CE`, so it must not be
+   admitted as an unknown instrument that downstream stages would treat as
+   cash.
 2. NSE F&O MWPL ban check for Futures — mock list offline (BRD Tier-1/scrape
    fills it in production; the fixture contract keeps the seam deterministic).
 3. SEBI ASM/GSM Stage 2+ surveillance flag — same offline-mock policy.
@@ -23,6 +32,7 @@ import argparse
 import json
 import re
 import sys
+import unicodedata
 from pathlib import Path
 
 # Shared --record/--replay bundle helper lives next door; importable because
@@ -32,10 +42,49 @@ from _recorder import add_record_arg, record_artifact, resolve_bundle_dir  # noq
 
 # Frozen error codes (BRD §3.3, TICK-001 §3)
 ERR_OPTIONS_PROHIBITED = "ERR_OPTIONS_PROHIBITED"
+ERR_INSTRUMENT_UNRECOGNIZED = "ERR_INSTRUMENT_UNRECOGNIZED"
 ERR_PARSE = "ERR_PARSE"
+
+# BRD ADR-001 (docs/agents/domain.md): "only Equities and Futures are
+# permitted" — so the instrument domain is *closed* and its vocabulary is the
+# one downstream stages actually implement (`CASH` and `FUT`; stages 1/5/9 key
+# off `FUT` alone). `FUTURES` is deliberately not an alias: accepting the long
+# form would hand those stages a futures trade they read as cash. An
+# instrument the gate cannot recognize — an invented label, or an option
+# written with look-alike letters (`СЕ`) that is not the ASCII token — is
+# refused rather than assumed to be an equity.
+RECOGNIZED_INSTRUMENTS = ("CASH", "FUT")
 
 # BRD ADR-001 — instant hard reject at ingestion.
 OPTIONS_TYPES = {"CE", "PE", "OPT", "OPTION", "CALL", "PUT"}
+
+# Invisible format characters (zero-width space/joiner, word joiner, BOM, soft
+# hyphen) are deleted before parsing: `C\u200bE` is the string "CE" to anyone
+# reading the pasted card, and ADR-001 must see what the human sees.
+_INVISIBLE = dict.fromkeys(ord(ch) for ch in "\u200b\u200c\u200d\u2060\ufeff\u00ad")
+
+# A paste declares its instrument in `Type:` (the canonical `instrument_type`)
+# and, when the instrument is an option, in `Symbol:` too ("NIFTY 25000 CE").
+# Tokens split on every non-alphanumeric character, so `CE`, `(CE)` and
+# `CASH (CE)` all carry the token `CE`, while `CENTURYPLY` carries none.
+_TOKEN_RE = re.compile(r"[A-Z0-9]+")
+
+
+def normalize_paste(raw: str) -> str:
+    """Fold Unicode look-alikes and drop invisibles before any field parsing.
+
+    NFKC turns fullwidth punctuation and letters (`Type：ＣＥ`) into their ASCII
+    form, so a paste cannot smuggle a fatal token past the parser with a
+    look-alike separator, and `_INVISIBLE` removes the zero-width characters
+    that could hide one inside the letters of a token.
+    """
+    return unicodedata.normalize("NFKC", raw).translate(_INVISIBLE)
+
+
+def instrument_tokens(text: str) -> set[str]:
+    """The instrument tokens a paste's declaration site carries."""
+    return set(_TOKEN_RE.findall(text.upper()))
+
 
 # Mock MWPL ban / surveillance lists (deterministic offline seam; production
 # fills these from the NSE Bhavcopy fo_bhav.csv + SEBI ASM/GSM scrapes).
@@ -132,7 +181,9 @@ def parse_plain_text(raw: str) -> dict:
 def gatekeeper_checks(payload: dict) -> dict:
     """BRD §3.3 gates 2+3: F&O ban and ASM/GSM flags (offline mock lists)."""
     symbol = payload["symbol"]
-    is_futures = payload["instrument_type"] in ("FUT", "FUTURES")
+    # The closed domain above leaves exactly two possibilities here, so this is
+    # an equality rather than a vocabulary list that could drift from it.
+    is_futures = payload["instrument_type"] == "FUT"
 
     # Stage 0 never rejects on ban/ASM; it *flags* for the decision engine
     # (the score-0 gate enforcement belongs to stage 9, per BRD §10.2).
@@ -159,15 +210,40 @@ def main() -> int:
     add_record_arg(parser)  # shared --record flag, from scripts/_recorder.py
     args = parser.parse_args()
 
-    raw = Path(args.input).read_text(encoding="utf-8").strip()
+    raw = normalize_paste(Path(args.input).read_text(encoding="utf-8")).strip()
     if not raw:
         die(ERR_PARSE, 1, "input file is empty")
 
     payload = parse_plain_text(raw)
 
-    # ADR-001 gate 1 — hard reject BEFORE any downstream stage exists.
-    if payload["instrument_type"] in OPTIONS_TYPES:
-        die(ERR_OPTIONS_PROHIBITED, 2, f"instrument_type={payload['instrument_type']}")
+    # ADR-001 gate 1 — hard reject BEFORE any downstream stage exists. The
+    # declaration sites are the `Type:` value and the `Symbol:` value: a card
+    # that labels itself `CASH` while its symbol reads "NIFTY 25000 CE" is an
+    # option recommendation wearing a cash label, and a safety gate fails
+    # closed on that ambiguity instead of trusting the label. Token comparison
+    # (not string equality) is what makes `CASH (CE)` fatal too.
+    fatal = (instrument_tokens(payload["instrument_type"])
+             | instrument_tokens(str(payload.get("symbol") or ""))) & OPTIONS_TYPES
+    if fatal:
+        die(ERR_OPTIONS_PROHIBITED, 2,
+            f"option token(s) {', '.join(sorted(fatal))} declared in "
+            f"instrument_type={payload['instrument_type']!r} / "
+            f"symbol={payload['symbol']!r}")
+
+    # ADR-001's other half — the domain is closed. Checked *after* the option
+    # tokens so an actual CE/PE/OPT paste is always reported as what it is,
+    # never as merely "unrecognized": the distinction is the difference between
+    # a policy refusal and a paste the parser could not classify.
+    if payload["instrument_type"] not in RECOGNIZED_INSTRUMENTS:
+        # ASCII only: this line is written to whatever stderr the console
+        # gives the stage (a legacy Windows codepage included), and a
+        # non-ASCII glyph here would either be mangled to mojibake or, worse,
+        # raise while formatting the refusal. The value is rendered with `!r`
+        # for the same reason — a Cyrillic `Type:` escapes to ASCII.
+        die(ERR_INSTRUMENT_UNRECOGNIZED, 2,
+            f"instrument_type={payload['instrument_type']!r} is not one of "
+            f"{', '.join(RECOGNIZED_INSTRUMENTS)}; ADR-001 permits equities "
+            f"and futures only")
 
     payload["gatekeeper"] = gatekeeper_checks(payload)
 

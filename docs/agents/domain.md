@@ -43,6 +43,7 @@
 - **Status:** APPROVED & FROZEN
 - **Context:** Univest occasionally offers options tips. Option buying suffers from severe time decay (Theta) and IV collapse; option selling carries asymmetric tail risk.
 - **Decision:** Reject any option contract at ingestion. Only Equities and Futures are permitted.
+- **Enforcement (2026-10-13):** "Only Equities and Futures are permitted" is enforced as a **closed domain**, not as a blacklist. Stage 0 accepts exactly `CASH` and `FUT` and refuses anything else with `ERR_INSTRUMENT_UNRECOGNIZED` (exit 2, no canonical payload), because a value the gate cannot classify is a value downstream stages *will* classify — as cash. This is what stops an option written with look-alike letters (`Type: СЕ`, Cyrillic) from entering the pipeline as an "unknown instrument": it is not the ASCII token `CE`, so the token gate cannot name it, and before the closed domain it was scored as an equity. `FUTURES` is deliberately not an alias: stages 1/5/9 key off `FUT` alone, so accepting the long form would hand them a futures trade they read as cash. The rejection is reported with its own code, never as `ERR_OPTIONS_PROHIBITED` — a paste that is not a classified option must not inflate the options rejection rate.
 
 ### ADR-002: Local-First Zero-Cloud Architecture
 - **Status:** APPROVED & FROZEN

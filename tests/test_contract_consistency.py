@@ -49,6 +49,11 @@ HARNESS_ROW_RE = re.compile(
 )
 PIPELINE_CALL_RE = re.compile(r"python\s+(scripts/[0-9a-z_]+\.py)")
 SCRIPT_MENTION_RE = re.compile(r"scripts/([0-9a-z_]+\.py)")
+# Non-stage scripts the contract docs may name: the eval harness and the 0 → 12
+# orchestrator. Both are real entry points that are deliberately *not* BRD §9.1
+# stage rows — run_pipeline executes those rows and run_evals grades them — so
+# naming one is a reference, not an invented script.
+NON_STAGE_SCRIPTS = frozenset({"scripts/run_evals.py", "scripts/run_pipeline.py"})
 FENCED_BLOCK_RE = re.compile(r"```[a-zA-Z]*\n(.*?)```", re.DOTALL)
 
 INDEX_ROW_RE = re.compile(
@@ -285,7 +290,7 @@ class TestContractConsistency(unittest.TestCase):
 
     def test_every_script_mention_in_docs_is_canonical(self):
         """Catches invented or stale script names anywhere in the contract docs."""
-        allowed = set(self.scripts) | {"scripts/run_evals.py"}
+        allowed = set(self.scripts) | NON_STAGE_SCRIPTS
         for path in self.contract_docs():
             text = read_normalized(path)
             for mention in set(SCRIPT_MENTION_RE.findall(text)):

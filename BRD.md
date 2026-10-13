@@ -119,7 +119,7 @@ All downstream scripts consume this single source of truth:
 
 ### 3.3 Preliminary Gatekeeper Validations
 Before invoking quantitative scripts, `scripts/0_ingest_reco.py` enforces three structural rules:
-1. **No Options Allowed:** If `instrument_type` is `CE`, `PE`, or `OPT`, terminate immediately with code `ERR_OPTIONS_PROHIBITED`.
+1. **No Options Allowed:** If `instrument_type` is `CE`, `PE`, or `OPT`, terminate immediately with code `ERR_OPTIONS_PROHIBITED`. The instrument domain is closed (ADR-001: "only Equities and Futures are permitted"): the parser accepts exactly `CASH` and `FUT` and terminates on anything else with `ERR_INSTRUMENT_UNRECOGNIZED` (exit 2), so an option written with look-alike letters (`Type: СЕ`) or an invented instrument label can never be admitted and scored as cash downstream. Fatal-token detection is by token, not string equality, and runs over the `Type:` and `Symbol:` declaration sites after Unicode look-alikes are folded and invisible characters stripped.
 2. **F&O Ban List Check (For Futures):** Checks if the stock is currently placed under the NSE MWPL (Market Wide Position Limit > 95%) ban period. If banned, new positions cannot be created.
 3. **SEBI Surveillance Measures:** Validates that the stock is not listed under ASM (Additional Surveillance Measure) Stage 2+ or GSM (Graded Surveillance Measure), where margin penalties or circuit restrictions paralyze liquidity.
 

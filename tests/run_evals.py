@@ -18,6 +18,55 @@ machine does, a report absent at grading time is disclosed in the gate's
 detail (never a silent [SKIP]), and a replay that cannot run fails the run
 (exit 1) rather than quietly shrinking the graded set.
 
+**Gate 1 replays stage 0 (evals.md §3 #3).** The option prohibition is a
+property of *this commit's parser*, not of a stored exit code, so the gate
+re-runs each seeded option paste (`option_probes`) through the real stage-0 CLI
+(`python scripts/0_ingest_reco.py --input <paste>`) and grades the live result:
+exit 2, `ERR_OPTIONS_PROHIBITED` on stderr, and no canonical payload on stdout. The
+probes live beside the 52-trade roster rather than inside it, because an option can
+never *be* one of its trades — stage 0 rejects the paste before a canonical
+`current_trade.json` exists, and the proof root's scenarios pin no option
+instrument. The roster is governed by `meta.option_probes_expected`, so adding a
+probe is a deliberate act and losing one fails the run.
+
+**Gate 1c grades the closed instrument domain (evals.md §2.1/§3 #3).** ADR-001 permits
+equities and futures only, so stage 0 refuses anything it cannot recognize as
+`CASH`/`FUT` — with `ERR_INSTRUMENT_UNRECOGNIZED`, never `ERR_OPTIONS_PROHIBITED`.
+The `refusal_probes` roster holds the two shapes the option-token scan cannot name:
+an option written with look-alike letters (`Type: СЕ`, Cyrillic; `ϹΕ`, Greek; mixed
+Latin/Cyrillic) and an invented or un-aliased label (`NFO`, `FUTURES`). Each is
+replayed live through stage 0 exactly as gate 1 replays the option probes, and the
+families are *counted* separately for a reason: a paste the gate never classified as
+an option must not be able to inflate the option rejection rate. The roster is
+governed by `meta.refusal_probes_expected`, and its integrity check refuses an ASCII
+option token filed here (that is an option probe, declaring a code stage 0 can never
+return for it) or a `declared_instrument` that does not actually appear in the paste.
+
+**Gate 1b grades the orchestrator's half (evals.md §3 #3).** A user invokes
+`scripts/run_pipeline.py`, not stage 0, so one named probe **per refusal family**
+is replayed through the whole 0 → 12 chain — an option paste against
+`ERR_OPTIONS_PROHIBITED`, and a paste the token scan cannot name against
+`ERR_INSTRUMENT_UNRECOGNIZED` — and the *stop* is graded as a whole for each: the
+propagated exit 2, the family's own code on stderr, no downstream artifact, no
+report rendered from a rejected trade, and a `run_record.json` naming stage 0
+`failed` with that code while every later stage is `not_reached`. Two
+deterministic replays, both named on the scorecard (the runner's stop does not
+branch on *why* stage 0 refused; per-paste coverage is gates 1/1c's, and the
+stage-0 seams replay every probe through the orchestrator) — because a runner
+that logged the refusal and walked on would leave both rejection rates at
+100.0%, and because an option stop is no evidence for a homoglyph one.
+
+**Rosters may not shrink (evals.md §4).** Both probe rosters are graded sets
+whose *size* and *members* are part of the claim, so `baseline_scorecard.json`
+freezes both — `probe_rosters` (the counts) and `probe_roster_ids` (the
+SHA-256 of each probe's paste, keyed by `probe_id`) — exactly as
+`rule_exercises` freezes the rule census (`check_probe_roster_floor`):
+growing a roster is free, shrinking one, editing a frozen paste, or swapping a
+probe for a different paste — the case a count-only floor cannot see — is a
+named shortfall and exit 1 until the probes come back or a deliberate
+re-freeze (`scaffold_catalog.re_freeze_baseline`, which banks both floors)
+accepts the new size.
+
 **Provenance (evals.md §4.1).** Bytes on disk are not evidence by themselves:
 a leftover or hand-edited report reads exactly like one a stage produced. So the
 artifact-graded gates grade only bytes a **run record** proves — the ledger
@@ -74,8 +123,14 @@ tape's own bars at load and prints every derivation on the scorecard.
 Exit codes:
     0 → no gate FAILED and dataset integrity OK (SKIP is allowed, per "tests that
         can't run yet stay SKIP" rather than being graded 0 on absent inputs),
-    1 → at least one gate FAILED, class distribution ≠ expected counts, a
-        stage-12 report could not be regenerated before grading, a run record
+    1 → at least one gate FAILED, class distribution ≠ expected counts, the
+        option-probe roster is short of `meta.option_probes_expected` (or a probe
+        cannot be replayed),        the refusal-probe roster is short of
+        `meta.refusal_probes_expected` (or a refusal probe declares a contract
+        stage 0 cannot return for it), a seeded stage-0 probe roster shrank
+        below its frozen floor or carries a paste that is not the one the
+        baseline froze (`probe_rosters` / `probe_roster_ids`), a stage-12 report could not be regenerated
+        before grading, a run record
         contradicts the artifacts on disk, or a record's stage-12 evidence or one
         of the gate payloads it carries has an *unregistered* gap — typed inline
         in the dataset, undeclared by the proof root, or recorded bytes that no
@@ -87,9 +142,12 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 for _stream in (sys.stdout, sys.stderr):
@@ -127,6 +185,8 @@ BREAKER_ARTIFACT: dict[str, str] = {
 
 # evals.md §3 pass thresholds — frozen before any implementation code exists.
 OPTION_REJ_MIN = 100.0
+REFUSAL_MIN = 100.0
+CHAIN_ABORT_MIN = 100.0
 BREAKER_MIN = 100.0
 HALLUCINATION_MIN = 100.0
 BRIER_MAX = 0.18
@@ -612,30 +672,569 @@ def check_rule_coverage(census: dict[str, int],
     return True, reason, []
 
 
+def probe_identity(probe: dict) -> str:
+    """The frozen identity of one probe: the SHA-256 of the paste it replays.
+
+    `raw_text` is the only input stage 0 ever sees, so it is the only thing a
+    probe's identity can honestly be made of — the declared family, contract
+    and instrument are checks *on* that paste, not the evidence the gate
+    grades. A count is not an identity either: swapping one probe for another
+    preserves a count, which is why the baseline banks this hash per
+    `probe_id` (`probe_roster_ids`) beside the roster size (`probe_rosters`).
+    """
+    raw = str(probe.get("raw_text") or "")
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def probe_roster_ids(rosters: dict[str, list[dict]]) -> dict[str, dict[str, str]]:
+    """`{roster: {probe_id: identity}}` for the seeded rosters, one walk."""
+    return {name: {str(probe.get("probe_id") or "<no probe_id>"): probe_identity(probe)
+                   for probe in probes or []}
+            for name, probes in rosters.items()}
+
+
+def _duplicated_probe_ids(probes: list[dict]) -> list[str]:
+    """Probe ids appearing more than once in a roster: two pastes under one id
+    cannot both be the member the baseline froze."""
+    seen: set[str] = set()
+    duplicates: list[str] = []
+    for probe in probes:
+        probe_id = str(probe.get("probe_id") or "<no probe_id>")
+        if probe_id in seen and probe_id not in duplicates:
+            duplicates.append(probe_id)
+        seen.add(probe_id)
+    return sorted(duplicates)
+
+
+def check_probe_roster_floor(rosters: dict[str, list[dict]],
+                             baseline: dict | None,
+                             ) -> tuple[bool, str, list[str]]:
+    """The probe rosters may not shrink, swap or mutate: the baseline freezes
+    their sizes *and* their members.
+
+    The twin of `check_rule_coverage` for the graded sets outside `trades`,
+    one step stricter — a count is not an identity. `baseline_scorecard.json`
+    freezes both (`probe_rosters`, how many; `probe_roster_ids`, the SHA-256
+    of each probe's paste keyed by `probe_id`), so:
+
+      * a deleted probe is a size shortfall, named by roster and delta — a
+        smaller graded set can never keep the same green percentage;
+      * a probe swapped for a *different* paste is an identity shortfall even
+        when the count holds, which is the case a size-only floor cannot see:
+        replacing a homoglyph with a plain `CE` would otherwise sail through;
+      * an edited paste is the same identity shortfall at the same id;
+      * a duplicated `probe_id` is named, since two pastes cannot both be the
+        frozen member;
+      * and adding a probe — or a whole roster — stays free until a deliberate
+        re-freeze banks it (`scaffold_catalog.re_freeze_baseline` writes both
+        floors), exactly as growing past the rule census is.
+
+    Returns `(ok, reason, shortfalls)`.
+    """
+    frozen = (baseline or {}).get("probe_rosters")
+    if not isinstance(frozen, dict):
+        return True, "no frozen probe-roster floor yet; run skipped", []
+    counts = {name: len(probes or []) for name, probes in rosters.items()}
+    shortfalls = [
+        f"{name}: {counts.get(name, 0)} seeded probe(s) < frozen {floor}"
+        for name, floor in sorted(frozen.items())
+        if isinstance(floor, int) and counts.get(name, 0) < floor
+    ]
+    frozen_ids = (baseline or {}).get("probe_roster_ids")
+    members_frozen = (sum(len(m) for m in frozen_ids.values()
+                          if isinstance(m, dict))
+                      if isinstance(frozen_ids, dict) else 0)
+    if isinstance(frozen_ids, dict):
+        seeded_ids = probe_roster_ids(rosters)
+        for name, members in sorted(frozen_ids.items()):
+            if not isinstance(members, dict):
+                continue
+            for probe_id in _duplicated_probe_ids(rosters.get(name) or []):
+                shortfalls.append(f"{name}/{probe_id}: duplicated probe_id — "
+                                  "two pastes cannot both be the frozen member")
+            present = seeded_ids.get(name) or {}
+            for probe_id, identity in sorted(members.items()):
+                if probe_id not in present:
+                    shortfalls.append(f"{name}/{probe_id}: frozen probe is not "
+                                      "seeded — deleting one, or replacing it "
+                                      "with a different paste, is a deliberate "
+                                      "re-freeze")
+                elif present[probe_id] != identity:
+                    shortfalls.append(f"{name}/{probe_id}: paste edited since "
+                                      "the last re-freeze — identity "
+                                      f"{present[probe_id][:12]}… ≠ frozen "
+                                      f"{identity[:12]}…")
+    total = sum(counts.values())
+    floor_total = sum(f for f in frozen.values() if isinstance(f, int))
+    reason = (f"{total} seeded stage-0 probe(s) across {len(frozen)} roster(s); "
+              f"frozen floor {floor_total}"
+              + (f", {members_frozen} member hash(es) frozen"
+                 if members_frozen else ""))
+    if shortfalls:
+        return False, reason + f"; {len(shortfalls)} floor violation(s)", shortfalls
+    return True, reason, []
+
+
+def dataset_probe_roster_counts(path: Path | None = None) -> dict[str, int]:
+    """How many probes each roster holds in a committed dataset, the way the
+    floor measures it (`scaffold_catalog.re_freeze_baseline` banks this).
+
+    Counted from the *raw* file: the rosters are authored pastes, never `$ref`
+    payloads, so materialization cannot change their size — and reading the
+    same file the gates read keeps the banked number and the measured number on
+    one walk.
+    """
+    raw = load_benchmark(path or DEFAULT_BENCHMARK)
+    return {name: len(raw.get(name) or []) for name in PROBE_ROSTERS}
+
+
+def dataset_probe_roster_ids(path: Path | None = None) -> dict[str, dict[str, str]]:
+    """Each roster's members the way the identity floor measures them
+    (`{roster: {probe_id: identity}}`, banked by `scaffold_catalog.re_freeze_baseline` as `probe_roster_ids`).
+
+    Read from the *raw* file for the same reason `dataset_probe_roster_counts`
+    is: the rosters are authored pastes, never `$ref` payloads, so
+    materialization cannot change what a probe *is* — and reading the same
+    file the gates read keeps the banked identities and the measured ones on
+    one walk.
+    """
+    raw = load_benchmark(path or DEFAULT_BENCHMARK)
+    return probe_roster_ids({name: raw.get(name) or [] for name in PROBE_ROSTERS})
+
+
 # --------------------------------------------------------------------------
 # Gate 1: Option Rejection Invariance (evals.md §3 #3)
 # --------------------------------------------------------------------------
-def gate_option_rejection(trades: list[dict]) -> Gate:
-    """Options (CE/PE) recommendations must exit 2 (ADR-001 hard prohibition)."""
-    g = Gate("Option Rejection Guardrail", OPTION_REJ_MIN, higher_is_pass=True)
-    options = [
-        t for t in trades
-        if (
-            t.get("script_outputs", {}).get("current_trade.json", {}).get("instrument_type")
-            or t.get("script_outputs", {}).get("current_trade.json", {}).get("type")
-            or t.get("instrument")
-        ) in ("CE", "PE", "OPT", "OPTION", "CALL", "PUT")
-    ]
 
-    if not options:
+# BRD ADR-001 / TICK-001 §3 — the option token vocabulary that is fatal at
+# ingestion. Deliberately NOT read from stage 0 at import: the gate grades a
+# *live* run of that script, and reading its constants here would let a widened
+# vocabulary (or a deleted gate) look like a passing replay. Equality with
+# `scripts/0_ingest_reco.py:OPTIONS_TYPES` is asserted by the gate's own seam
+# (`tests/test_run_evals.TestOptionRejectionGate`), so the two can only drift
+# loudly.
+OPTION_TOKENS = ("CE", "PE", "OPT", "OPTION", "CALL", "PUT")
+
+# The frozen rejection contract: exit 2 *and* the family's code on stderr *and*
+# no canonical payload. Two of the three is not a rejection — argparse itself
+# exits 2 on a usage error, and a parser that rejects while still emitting a
+# canonical trade has not rejected it. The exit code is shared by every
+# ingestion refusal; the *code string* is what names which gate fired.
+PROBE_EXIT = 2
+OPTION_PROBE_EXIT = PROBE_EXIT
+REFUSAL_PROBE_EXIT = PROBE_EXIT
+OPTION_PROBE_ERROR = "ERR_OPTIONS_PROHIBITED"
+REFUSAL_PROBE_ERROR = "ERR_INSTRUMENT_UNRECOGNIZED"
+
+# The two shapes the option-token scan cannot name, so the closed instrument
+# domain (ADR-001: "only equities and futures are permitted") is what refuses
+# them: an option written with look-alike letters, and a label that is not
+# CASH/FUT at all.
+REFUSAL_PROBE_FAMILIES = ("homoglyph_option", "unrecognized_instrument")
+
+# Which rosters the baseline's frozen probe floor (`probe_rosters`) governs.
+# Both are the only graded sets outside `trades`, both are authored stage-0
+# input, and neither may enter the class census or `distribution_verified` — a
+# probe is a parser test case, never a trade.
+PROBE_ROSTERS = ("option_probes", "refusal_probes")
+REFUSAL_FAMILY_LABEL = {
+    "homoglyph_option": "homoglyph option token(s)",
+    "unrecognized_instrument": "unrecognized instrument label(s)",
+}
+
+# Every probe must declare itself authored. A probe is *input* to stage 0, so it
+# cannot be a sourced recommendation or a measured hazard; requiring the field
+# keeps that disclosure a property of the roster rather than of a note.
+OPTION_PROBE_ORIGIN = "authored_test_input"
+
+
+def replay_ingestion_probe(probe: dict, error_code: str) -> dict:
+    """Replay one probe's raw paste through stage 0's real CLI contract.
+
+    The stage is *invoked*, never imported (`python scripts/0_ingest_reco.py
+    --input <paste>`) — the contract stage 0's own docstring states — so the
+    gate grades the entry point a human paste would actually hit, and the
+    refusal it measures is this commit's parser's rather than a stored verdict's.
+    `error_code` is the refusal the family must produce: the option gate and the
+    closed-domain gate share the exit code and the no-payload rule, and are
+    told apart by the code, which is exactly why the caller names it.
+    """
+    script = REPO_ROOT / "scripts" / "0_ingest_reco.py"
+    with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False,
+                                     encoding="utf-8") as handle:
+        handle.write(str(probe.get("raw_text") or ""))
+        input_path = Path(handle.name)
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(script), "--input", str(input_path)],
+            capture_output=True, check=False, cwd=REPO_ROOT,
+            text=True, encoding="utf-8", errors="replace",
+        )
+    finally:
+        input_path.unlink(missing_ok=True)
+    stdout_text, stderr_text = proc.stdout or "", proc.stderr or ""
+    return {
+        "exit_code": proc.returncode,
+        "stderr": stderr_text.strip(),
+        "emitted_payload": bool(stdout_text.strip()),
+        "rejected": (proc.returncode == PROBE_EXIT
+                     and error_code in stderr_text
+                     and not stdout_text.strip()),
+    }
+
+
+def replay_option_probe(probe: dict) -> dict:
+    """Gate 1's replay: the paste must die as an option."""
+    return replay_ingestion_probe(probe, OPTION_PROBE_ERROR)
+
+
+def replay_refusal_probe(probe: dict) -> dict:
+    """Gate 1c's replay: the paste must die as an unrecognized instrument."""
+    return replay_ingestion_probe(probe, REFUSAL_PROBE_ERROR)
+
+
+def gate_option_rejection(probes: list[dict]) -> Gate:
+    """Options (CE/PE/OPT/CALL/PUT) must exit 2 with no canonical payload.
+
+    Graded over the benchmark's option-probe roster (evals.md §2.1), not over
+    `trades`: an option can never *be* a trade — stage 0 rejects the paste before
+    a canonical `current_trade.json` exists and the proof root pins no option
+    scenario — so the roster sits beside the 52-trade quota rather than inside
+    it. Each probe is replayed live through the real CLI above; a recorded exit
+    code would only ever prove the code that ran when it was recorded.
+    """
+    g = Gate("Option Rejection Guardrail", OPTION_REJ_MIN, higher_is_pass=True)
+    if not probes:
         g.skipped = True
-        g.detail = "no option-instrument trades in the dataset yet"
+        g.detail = "no option-instrument probes seeded in the benchmark yet"
         return g
-    # The dataset has no replay of 0_ingest_reco.py, so no verdict signal exists.
-    # Honesty: mark SKIP with an explicit diagnostic rather than invent 100%.
-    g.skipped = True
-    g.detail = (f"{len(options)} option trade(s) present but no stage-0 replay "
-                f"signal to grade rejection against")
+    rejected, failures = 0, []
+    for probe in probes:
+        probe_id = str(probe.get("probe_id") or "<no probe_id>")
+        outcome = replay_option_probe(probe)
+        if outcome["rejected"]:
+            rejected += 1
+        else:
+            failures.append(
+                f"{probe_id}: exit {outcome['exit_code']}, "
+                f"stderr={outcome['stderr'][:60]!r}, "
+                f"payload emitted={outcome['emitted_payload']}")
+    g.value = 100.0 * rejected / len(probes)
+    g.coverage = (f"{rejected}/{len(probes)} option probe(s) replayed live through "
+                  f"stage 0 (scripts/0_ingest_reco.py) — exit "
+                  f"{OPTION_PROBE_EXIT} + {OPTION_PROBE_ERROR} and no canonical "
+                  f"payload")
+    if failures:
+        g.detail = "; ".join(failures[:3]) + (
+            f" (+{len(failures) - 3} more)" if len(failures) > 3 else "")
+    return g
+
+
+def check_option_probe_roster(data: dict) -> tuple[bool, str]:
+    """The option-probe roster is complete and every probe is replayable.
+
+    The probes are the benchmark's stage-0 test cases (evals.md §2.1): each is an
+    authored Univest-style paste that declares itself as such (`origin`; also
+    restated in `meta.notes` — parser input, never a sourced recommendation and
+    never a hazard measurement), carries an option token stage 0 makes fatal, and
+    states the rejection contract it must reproduce. A probe missing any of that is not evidence for the invariant, so
+    it fails the run rather than shrinking the graded set silently.
+    """
+    meta = data.get("meta", {})
+    probes = data.get("option_probes") or []
+    expected = meta.get("option_probes_expected")
+    problems: list[str] = []
+    if not isinstance(expected, int):
+        problems.append("meta.option_probes_expected missing")
+    elif len(probes) != expected:
+        problems.append(f"{len(probes)} probe(s) present, expected {expected}")
+    for probe in probes:
+        label = str(probe.get("probe_id") or "<no probe_id>")
+        if not str(probe.get("raw_text") or "").strip():
+            problems.append(f"{label}: no raw_text to replay")
+        if str(probe.get("instrument_type") or "").upper() not in OPTION_TOKENS:
+            problems.append(f"{label}: instrument_type={probe.get('instrument_type')!r} "
+                            f"is not one of {', '.join(OPTION_TOKENS)}")
+        if probe.get("origin") != OPTION_PROBE_ORIGIN:
+            problems.append(f"{label}: origin must be {OPTION_PROBE_ORIGIN!r} — a "
+                            "probe is an authored parser input and is disclosed as "
+                            "one, never passed off as a sourced recommendation")
+        contract = probe.get("expected") or {}
+        if (contract.get("exit_code") != OPTION_PROBE_EXIT
+                or contract.get("error_code") != OPTION_PROBE_ERROR):
+            problems.append(f"{label}: expected must state exit_code "
+                            f"{OPTION_PROBE_EXIT} / {OPTION_PROBE_ERROR} "
+                            f"(ADR-001, TICK-001 §3)")
+    if problems:
+        return False, "; ".join(problems[:3]) + (
+            f" (+{len(problems) - 3} more)" if len(problems) > 3 else "")
+    return True, (f"{len(probes)}/{expected} option probe(s) seeded beside the "
+                  f"{meta.get('total_trades_expected')}-trade roster (an option can "
+                  f"never be a trade — ADR-001)")
+
+
+# --------------------------------------------------------------------------
+# Gate 1c: Ingestion Refusal Invariance — the closed instrument domain
+# (ADR-001: "only equities and futures are permitted"). Gate 1's sibling,
+# graded the same way over its own authored roster (evals.md §2.1).
+# --------------------------------------------------------------------------
+def gate_refusal_rejection(probes: list[dict]) -> Gate:
+    """Unrecognized instruments and option homoglyphs must die at ingestion.
+
+    The half of ADR-001 the option-token scan cannot name. A paste whose
+    `Type:` is `СЕ` (Cyrillic) is not the ASCII token `CE`, so the option gate
+    has nothing to say about it; the closed domain does. Each probe is replayed
+    live through the real CLI, exactly as gate 1 replays the option roster, and
+    is told apart from it by the code it must produce — a paste the gate never
+    classified as an option must not be able to inflate the option rejection
+    rate, so these are their own line rather than extra cases in gate 1's.
+    """
+    g = Gate("Unrecognized Instrument Guardrail", REFUSAL_MIN, higher_is_pass=True)
+    if not probes:
+        g.skipped = True
+        g.detail = "no ingestion-refusal probes seeded in the benchmark yet"
+        return g
+    refused, failures = 0, []
+    families: dict[str, int] = {}
+    for probe in probes:
+        probe_id = str(probe.get("probe_id") or "<no probe_id>")
+        family = str(probe.get("family") or "unstated")
+        families[family] = families.get(family, 0) + 1
+        outcome = replay_refusal_probe(probe)
+        if outcome["rejected"]:
+            refused += 1
+        else:
+            failures.append(
+                f"{probe_id}: exit {outcome['exit_code']}, "
+                f"stderr={outcome['stderr'][:60]!r}, "
+                f"payload emitted={outcome['emitted_payload']}")
+    g.value = 100.0 * refused / len(probes)
+    breakdown = ", ".join(
+        f"{count} {REFUSAL_FAMILY_LABEL.get(family, family)}"
+        for family, count in sorted(families.items()))
+    g.coverage = (f"{refused}/{len(probes)} refusal probe(s) replayed live through "
+                  f"stage 0 (scripts/0_ingest_reco.py) — exit {REFUSAL_PROBE_EXIT} "
+                  f"+ {REFUSAL_PROBE_ERROR} and no canonical payload ({breakdown})")
+    if failures:
+        g.detail = "; ".join(failures[:3]) + (
+            f" (+{len(failures) - 3} more)" if len(failures) > 3 else "")
+    return g
+
+
+def check_refusal_probe_roster(data: dict) -> tuple[bool, str]:
+    """The refusal roster is complete and every probe is a true refusal case.
+
+    Same governance as the option roster (authored origin, a declared contract,
+    `meta.refusal_probes_expected`), plus the checks only this family needs:
+    the declared instrument must actually appear in the paste it is supposed to
+    refuse, and it must be one the **token** gate cannot name — an ASCII option
+    token here would be an option probe filed in the wrong roster, declaring a
+    code stage 0 can never return for it.
+    """
+    meta = data.get("meta", {})
+    probes = data.get("refusal_probes") or []
+    expected = meta.get("refusal_probes_expected")
+    problems: list[str] = []
+    if not isinstance(expected, int):
+        problems.append("meta.refusal_probes_expected missing")
+    elif len(probes) != expected:
+        problems.append(f"{len(probes)} probe(s) present, expected {expected}")
+    for probe in probes:
+        label = str(probe.get("probe_id") or "<no probe_id>")
+        declared = str(probe.get("declared_instrument") or "")
+        raw = str(probe.get("raw_text") or "")
+        if not raw.strip():
+            problems.append(f"{label}: no raw_text to replay")
+        if not declared.strip():
+            problems.append(f"{label}: no declared_instrument to refuse")
+        elif declared not in raw:
+            problems.append(f"{label}: declared_instrument {declared!r} does not "
+                            "appear in the paste it must refuse")
+        if probe.get("origin") != OPTION_PROBE_ORIGIN:
+            problems.append(f"{label}: origin must be {OPTION_PROBE_ORIGIN!r} — a "
+                            "probe is an authored parser input, never passed off "
+                            "as a sourced recommendation")
+        if probe.get("family") not in REFUSAL_PROBE_FAMILIES:
+            problems.append(f"{label}: family={probe.get('family')!r} is not one of "
+                            f"{', '.join(REFUSAL_PROBE_FAMILIES)}")
+        contract = probe.get("expected") or {}
+        if (contract.get("exit_code") != REFUSAL_PROBE_EXIT
+                or contract.get("error_code") != REFUSAL_PROBE_ERROR):
+            problems.append(f"{label}: expected must state exit_code "
+                            f"{REFUSAL_PROBE_EXIT} / {REFUSAL_PROBE_ERROR} "
+                            f"(ADR-001 closed instrument domain)")
+        if set(re.findall(r"[A-Z0-9]+", declared.upper())) & set(OPTION_TOKENS):
+            problems.append(f"{label}: declared_instrument {declared!r} carries an "
+                            "ASCII option token — that is an option probe, and its "
+                            "declared code would be unreachable")
+    if problems:
+        return False, "; ".join(problems[:3]) + (
+            f" (+{len(problems) - 3} more)" if len(problems) > 3 else "")
+    families = {str(probe.get("family")) for probe in probes}
+    return True, (f"{len(probes)}/{expected} refusal probe(s) seeded beside the "
+                  f"{meta.get('total_trades_expected')}-trade roster "
+                  f"({', '.join(sorted(families))}; an unrecognized instrument is "
+                  f"never a trade — ADR-001)")
+
+
+# --------------------------------------------------------------------------
+# Gate 1b: Chain Abort Invariance (evals.md §3 #3, the orchestrator's half)
+# --------------------------------------------------------------------------
+# The artifacts a stage-0 rejection must never leave behind: stage 1's payload
+# and the decision engine's are the two the chain would have to fabricate a
+# trade to produce, and the report directory is what a user would read.
+DOWNSTREAM_ARTIFACTS = ("out_1_math.json", "out_9_decision.json")
+
+
+def chain_abort_failures(exit_code: int | None, stderr_text: str, workdir: Path,
+                         record: dict | None,
+                         error_code: str = OPTION_PROBE_ERROR) -> list[str]:
+    """Every way a chain run failed to stop at the ingestion gate.
+
+    Empty means it stopped. Split out as a pure function because the negative
+    cases are what matter — a swallowed exit code, a payload written anyway, a
+    record that claims later stages ran — and they are cheaper and safer to
+    forge here than to produce by sabotaging the runner on disk.
+
+    `error_code` is the refusal the family under test must put on stderr: the
+    two families share exit 2 and are told apart by the code alone, so an
+    option stop can never stand in for a homoglyph one and vice versa.
+    """
+    problems: list[str] = []
+    if exit_code != OPTION_PROBE_EXIT:
+        problems.append(f"exit {exit_code}, expected {OPTION_PROBE_EXIT}")
+    if error_code not in stderr_text:
+        problems.append(f"no {error_code} on stderr")
+    for name in DOWNSTREAM_ARTIFACTS:
+        if (workdir / name).exists():
+            problems.append(f"downstream artifact written: {name}")
+    if (workdir / "reports").exists():
+        problems.append("report directory rendered from a rejected trade")
+    record = record or {}
+    if not record:
+        problems.append("no run_record.json to account for the run")
+        return problems
+    if record.get("outcome") != "aborted":
+        problems.append(f"outcome={record.get('outcome')!r}, expected 'aborted'")
+    if record.get("failed_stage") != 0:
+        problems.append(f"failed_stage={record.get('failed_stage')!r}, expected 0")
+    if record.get("exit_code") != OPTION_PROBE_EXIT:
+        problems.append(f"record exit_code={record.get('exit_code')!r}, expected "
+                        f"{OPTION_PROBE_EXIT}")
+    if record.get("report") is not None:
+        problems.append(f"record claims a report: {record.get('report')!r}")
+    rows = {row.get("stage"): row for row in record.get("stages") or []
+            if isinstance(row, dict)}
+    failed = rows.get(0) or {}
+    if failed.get("status") != "failed" or failed.get("exit_code") != OPTION_PROBE_EXIT:
+        problems.append(f"stage 0 row is {failed.get('status')!r}/"
+                        f"{failed.get('exit_code')!r}, expected 'failed'/{OPTION_PROBE_EXIT}")
+    walked_on = [stage for stage in range(1, 13)
+                 if (rows.get(stage) or {}).get("status") != "not_reached"]
+    if walked_on:
+        problems.append(f"later stage(s) not recorded as not_reached: {walked_on}")
+    return problems
+
+
+def replay_probe_through_runner(probe: dict,
+                                error_code: str = OPTION_PROBE_ERROR) -> dict:
+    """Replay one probe through the real 0 → 12 chain, the way a user runs it.
+
+    Gate 1/1c prove stage 0 refuses the paste; they say nothing about the
+    orchestrator, which is what a user actually invokes. `run_pipeline.py`
+    forwards each stage's stdout into its artifact and an orchestrator that
+    swallowed a non-zero exit code would carry the rejected paste into stages
+    1 … 12 while stage 0 printed its refusal. So the whole chain is invoked here
+    (`--input <paste> --workdir <tmp>`) and graded on the stop as a whole: the
+    propagated code, the family's *own* code on stderr (`error_code`), no
+    downstream artifact, no report, and a run record that names stage 0
+    `failed` with that code while every later stage is `not_reached`.
+    """
+    runner = REPO_ROOT / "scripts" / "run_pipeline.py"
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        paste = root / "paste.txt"
+        paste.write_text(str(probe.get("raw_text") or ""), encoding="utf-8")
+        workdir = root / "work"
+        proc = subprocess.run(
+            [sys.executable, str(runner), "--input", str(paste),
+             "--workdir", str(workdir)],
+            capture_output=True, check=False, cwd=REPO_ROOT,
+            text=True, encoding="utf-8", errors="replace",
+        )
+        record: dict | None = None
+        record_path = workdir / "run_record.json"
+        if record_path.exists():
+            try:
+                record = json.loads(record_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                record = None
+        problems = chain_abort_failures(proc.returncode, proc.stderr or "",
+                                       workdir, record, error_code)
+    return {"stopped": not problems, "exit_code": proc.returncode,
+            "problems": problems}
+
+
+def gate_chain_abort(probes: list[dict],
+                     refusal_probes: list[dict] | None = None) -> Gate:
+    """A paste stage 0 refuses must not enter the 0 → 12 chain at all.
+
+    The orchestrator's half of ADR-001 — *both* halves of it. Kept as its own
+    gate rather than folded into the rejection rates because the failure it
+    catches is a different one: stage 0 refusing correctly while the chain
+    walks on regardless — which two 100.0% rejection rates would happily
+    report as green.
+
+    **One named replay per refusal family.** The runner's stop does not branch
+    on *why* stage 0 refused — it propagates whatever stage 0 returns — so
+    replaying a whole roster through the chain would multiply the evidence's
+    cost without adding a claim (per-paste coverage is gates 1/1c's, and the
+    stage-0 seams replay every probe through the orchestrator
+    (`tests/test_run_evals.TestChainAbortGate`)). What each replay does add is
+    the *family's* code: the chain has to stop on `ERR_OPTIONS_PROHIBITED` for
+    the option paste and on `ERR_INSTRUMENT_UNRECOGNIZED` for a paste the token
+    scan cannot name — the same exit 2, but not the same stop, and one is no
+    evidence for the other. Both probes are printed next to the number, so two
+    replays can read as neither one roster's nor as roster-wide.
+    """
+    g = Gate("Ingestion Chain Abort", CHAIN_ABORT_MIN, higher_is_pass=True)
+    replays: list[tuple[str, dict, str]] = []
+    unseeded: list[str] = []
+    if probes:
+        replays.append((str(probes[0].get("probe_id") or "<no probe_id>"),
+                        probes[0], OPTION_PROBE_ERROR))
+    else:
+        unseeded.append("option_probes")
+    if refusal_probes:
+        replays.append((str(refusal_probes[0].get("probe_id") or "<no probe_id>"),
+                        refusal_probes[0], REFUSAL_PROBE_ERROR))
+    else:
+        unseeded.append("refusal_probes")
+    if not replays:
+        g.skipped = True
+        g.detail = ("no stage-0 probe rosters seeded in the benchmark yet "
+                    f"({', '.join(PROBE_ROSTERS)})")
+        return g
+    stopped, failures = 0, []
+    for probe_id, probe, error_code in replays:
+        outcome = replay_probe_through_runner(probe, error_code)
+        if outcome["stopped"]:
+            stopped += 1
+        else:
+            failures.append(f"{probe_id}: exit {outcome['exit_code']} — "
+                            f"{'; '.join(outcome['problems'][:3])}")
+    g.value = 100.0 * stopped / len(replays)
+    named = ", ".join(f"{probe_id} with {error_code}"
+                      for probe_id, _probe, error_code in replays)
+    g.coverage = (f"{len(replays)}/{len(replays)} chain replays through the full "
+                  f"0 → 12 chain (scripts/run_pipeline.py) — stage 0 failed with "
+                  f"exit {OPTION_PROBE_EXIT} and its own code, no downstream "
+                  f"artifact, later stages not_reached ({named})"
+                  + (f"; roster(s) not seeded, half ungraded: "
+                     f"{', '.join(unseeded)}" if unseeded else ""))
+    if failures:
+        g.detail = "; ".join(failures[:3]) + (
+            f" (+{len(failures) - 3} more)" if len(failures) > 3 else "")
     return g
 
 
@@ -1343,6 +1942,8 @@ def main(argv: list[str] | None = None) -> int:
               file=sys.stderr)
         sys.exit(2)
     trades = data.get("trades", [])
+    option_probes = data.get("option_probes") or []
+    refusal_probes = data.get("refusal_probes") or []
     if not trades:
         print("❌ Benchmark dataset contains no trades.", file=sys.stderr)
         sys.exit(2)
@@ -1388,7 +1989,18 @@ def main(argv: list[str] | None = None) -> int:
 
     unbacked = unbacked_payloads(trades, payload_targets)
     gates = [
-        gate_option_rejection(trades),
+        # Gate 1 grades a live replay of the seeded option pastes, not the
+        # trade roster: an option never becomes a trade (ADR-001).
+        gate_option_rejection(option_probes),
+        # Gate 1c grades the other authored stage-0 family the same way — the
+        # closed instrument domain (homoglyph option tokens, invented or
+        # un-aliased labels) — against its own code, counted beside gate 1
+        # rather than inside it (evals.md §2.1).
+        gate_refusal_rejection(refusal_probes),
+        # ...and the orchestrator's half: one named probe replayed through the
+        # whole 0 → 12 chain, so a swallowed exit code cannot ride on gate 1's
+        # green rejection rate (evals.md §3 #3).
+        gate_chain_abort(option_probes, refusal_probes),
         # The frozen class roster is handed in so the gate can disclose a class
         # the dataset is short of, not only one whose records abstained.
         gate_hard_breakers(trades, unbacked,
@@ -1400,6 +2012,10 @@ def main(argv: list[str] | None = None) -> int:
         gate_html_validity(trades, proof=proof),
     ]
     dist_ok, dist_reason = check_class_distribution(data)
+    # The option probes are the one roster outside `trades`, so their own
+    # expected count is checked the same way the class quotas are.
+    probes_ok, probes_reason = check_option_probe_roster(data)
+    refusals_ok, refusals_reason = check_refusal_probe_roster(data)
     # Rule coverage is the other half of the frozen regression reference: the
     # class roster says *which* classes were graded, the census says how many
     # distinct rules they probed, and the baseline says how few is too few.
@@ -1407,6 +2023,13 @@ def main(argv: list[str] | None = None) -> int:
     coverage_floor = load_baseline()
     rules_ok, rules_reason, rule_shortfalls = check_rule_coverage(
         class_gate.census, coverage_floor)
+    # The probe rosters get the same regression floor the rule census has:
+    # growing one is free, but shrinking one — or losing it entirely — is a
+    # named shortfall and a red run, so a smaller graded set can never keep
+    # the same green percentage without a deliberate re-freeze.
+    roster_seeded = {name: data.get(name) or [] for name in PROBE_ROSTERS}
+    rosters_ok, rosters_reason, roster_shortfalls = check_probe_roster_floor(
+        roster_seeded, coverage_floor)
 
     failed = [g.name for g in gates if not g.skipped and g.value is not None
               and ((g.value >= g.threshold) if g.higher_is_pass
@@ -1419,8 +2042,9 @@ def main(argv: list[str] | None = None) -> int:
     coverage_ok, coverage_reason, unproven, payload_excluded = check_evidence_coverage(
         trades, reports_dir, proof, payload_coverage=payload_coverage,
         targets=payload_targets)
-    verdict_ok = ((not failed) and dist_ok and not regen_failures and not integrity
-                  and coverage_ok and rules_ok)
+    verdict_ok = ((not failed) and dist_ok and probes_ok and refusals_ok
+                  and not regen_failures and not integrity and coverage_ok
+                  and rules_ok and rosters_ok)
 
     print(render_scorecard(gates, verdict_ok))
     for line in render_provenance(proof, report_coverage[0], len(trades),
@@ -1439,9 +2063,16 @@ def main(argv: list[str] | None = None) -> int:
         if len(unproven) > 5:
             print(f"    ✗ (+{len(unproven) - 5} more)")
     print(f"  Dataset integrity: {'OK' if dist_ok else 'MISMATCH'} ({dist_reason})")
+    print(f"  Option probes: {'OK' if probes_ok else 'MISMATCH'} ({probes_reason})")
+    print(f"  Refusal probes: {'OK' if refusals_ok else 'MISMATCH'} ({refusals_reason})")
     print(f"  Rule coverage: {'OK' if rules_ok else 'REGRESSION'} ({rules_reason})")
     for shortfall in rule_shortfalls:
         print(f"    ✗ {shortfall} — more distinct evidence or a deliberate re-freeze "
+              "(scaffold_catalog.re_freeze_baseline)")
+    print(f"  Probe roster floor: {'OK' if rosters_ok else 'REGRESSION'} "
+          f"({rosters_reason})")
+    for shortfall in roster_shortfalls:
+        print(f"    ✗ {shortfall} — restore the probe(s) or a deliberate re-freeze "
               "(scaffold_catalog.re_freeze_baseline)")
     if ref_notes or derive_notes:
         quarantined = sum(1 for note in ref_notes if note.endswith("(quarantined)"))

@@ -94,12 +94,19 @@ def load_payload(path: str) -> dict:
 
 
 def load_history(path: str | None) -> list[dict] | None:
-    """Load the recorded close-only fixture; None → waiver path."""
+    """Load the recorded close-only fixture; None → waiver path.
+
+    Tri-state waiver, as stage 2 and stages 5/6 freeze it: omitted, missing,
+    unreadable, malformed or too short all mean the history evidence is absent —
+    disclosed `waived: true`, never a traceback that aborts the chain.
+    """
     if not path:
         return None
     try:
         raw = json.loads(Path(path).read_text(encoding="utf-8"))
-    except FileNotFoundError:
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    if not isinstance(raw, dict):
         return None
     sessions = raw.get("sessions") or []
     if len(sessions) < MIN_HISTORY:

@@ -505,10 +505,13 @@ def re_freeze_baseline() -> None:
     """V12: a deliberate re-freeze, in the same change as the new rows.
 
     Banks the rule-coverage census as well (`run_evals.check_rule_coverage`'s
-    floor): re-freezing is the moment the current distinct-rule count is
-    accepted, so it is recorded here rather than left to drift stale against a
-    runner that measures it every run. The import is deferred because the runner
-    is a sibling that imports the modules this tool shares.
+    floor) and the probe rosters (`run_evals.check_probe_roster_floor`'s:
+    `probe_rosters` sizes and `probe_roster_ids` paste hashes):
+    re-freezing is the moment the current distinct-rule count and the current
+    roster contents are accepted, so they are recorded here rather than left to
+    drift stale against a runner that measures them every run. The import is
+    deferred because the runner is a sibling that imports the modules this tool
+    shares.
     """
     baseline = read_json(PROOF_ROOT / BASELINE_FILE)
     baseline["scenario_manifest_sha256"] = hashlib.sha256(
@@ -522,6 +525,15 @@ def re_freeze_baseline() -> None:
         sys.path.insert(0, runner_dir)
     import run_evals  # noqa: PLC0415 (deferred: sibling runner, see docstring)
     baseline["rule_exercises"] = run_evals.dataset_rule_census()
+    # The probe rosters get the same treatment: their sizes *and* their
+    # members are part of the graded claim (`run_evals.check_probe_roster_floor`),
+    # so re-freezing is also the moment a probe's addition, retirement or
+    # edited paste is accepted — recorded here rather than left to drift stale
+    # against a runner that measures both every run. The identities are the
+    # SHA-256 of each probe's paste, keyed by probe_id: a count cannot see a
+    # swap, a hash can.
+    baseline["probe_rosters"] = run_evals.dataset_probe_roster_counts()
+    baseline["probe_roster_ids"] = run_evals.dataset_probe_roster_ids()
     write_json(PROOF_ROOT / BASELINE_FILE, baseline)
 
 

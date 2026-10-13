@@ -23,6 +23,34 @@ pipeline. What is frozen here is the *contract around* the runner:
    one the proof root declares `waived` or `quarantined`, or that the dataset
    carries inline, is a hole in the graded set and the run fails on it instead of
    passing with a disclosure (evals.md §4.1).
+6. Gate 1 grades a **live** replay of the seeded option pastes through stage 0's
+   real CLI (`python scripts/0_ingest_reco.py --input <paste>`), not a stored exit
+   code: a stored verdict could only prove the code that ran when it was recorded,
+   and the fatal-token vocabulary is asserted equal to the parser's own
+   (evals.md §2.1, §3 #3).
+7. Gate 1b grades the orchestrator's half of the same invariant: one named
+   probe **per refusal family** is replayed through the **full 0 → 12 chain**
+   (`python scripts/run_pipeline.py --input <paste> --workdir <tmp>`), so a
+   runner that swallowed stage 0's exit code and walked on cannot ride on
+   gates 1/1c's green rejection rates. The stop is graded whole per replay —
+   propagated exit code, the family's *own* code on stderr (an option stop is
+   no evidence for a homoglyph one), no downstream artifact, no report, and a
+   run record naming stage 0 `failed` with every later stage `not_reached` —
+   and both replays are named on the scorecard.
+8. Gate 1c grades the same *kind* of case for the other half of ADR-001: the
+   closed instrument domain. Its `refusal_probes` roster holds a homoglyph option
+   token (`Type: СЕ` is not the ASCII token `CE`, so the option gate cannot name
+   it) and an invented or un-aliased label, each replayed live through stage 0
+   against its own code (`ERR_INSTRUMENT_UNRECOGNIZED`). The families are counted
+   beside gate 1, never inside it: a paste the gate never classified as an option
+   must not inflate the option rejection rate, and the roster refuses a probe
+   that could only ever reproduce that other verdict.
+9. The probe rosters are sized like the rule census is: `baseline_scorecard.json`
+   freezes their counts (`probe_rosters`, banked by
+   `scaffold_catalog.re_freeze_baseline`), the runner recomputes them each run
+   (`check_probe_roster_floor`), and a roster that shrinks — or vanishes entirely
+   — fails the run by roster and by delta until a deliberate re-freeze accepts
+   the new size. Growing past the floor is free.
 """
 
 from __future__ import annotations
@@ -92,7 +120,6 @@ class TestEvalRunnerContract(unittest.TestCase):
         """Partial coverage is honest, not fake green: gated gates stay [SKIP]
         until their inputs exist, and every [SKIP] names its blocking reason."""
         scorecard = "\n".join(stdout_lines(run_run_evals(DATASET_FILE)))
-        self.assertIn("[SKIP] Option Rejection Guardrail", scorecard)
         self.assertIn("[SKIP] Directional Brier Score", scorecard)
         # Missing stage-12 artifacts are replayed from the proof root before
         # grading (run_evals.ensure_reports), so both artifact-graded gates
@@ -101,6 +128,33 @@ class TestEvalRunnerContract(unittest.TestCase):
         self.assertIn("[PASS] Zero Hallucination Audit", scorecard)
         self.assertIn("[PASS] HTML Visualizer Validation", scorecard)
         self.assertIn("[PASS] Hard Circuit Breaker Accuracy", scorecard)
+        # Both halves of ADR-001 are graded: the parser's refusal and the
+        # orchestrator's stop (gate 1b — a swallowed exit code must be visible).
+        self.assertIn("[PASS] Option Rejection Guardrail", scorecard)
+        self.assertIn("[PASS] Ingestion Chain Abort", scorecard)
+        self.assertIn("0 → 12 chain", scorecard)
+        # Gate 1b replays both refusal families and prints the code each replay
+        # was graded against — a homoglyph stop is not an option stop.
+        self.assertIn("2/2 chain replays", scorecard)
+        self.assertIn("with ERR_INSTRUMENT_UNRECOGNIZED", scorecard)
+        # ...and both rosters are sized against the frozen baseline floor, so a
+        # quietly deleted probe cannot keep the same green percentage.
+        self.assertIn("Probe roster floor: OK", scorecard)
+        self.assertIn("10 seeded stage-0 probe(s)", scorecard)
+        # Stage 0's *other* refusal family is graded live too, on its own line:
+        # the closed instrument domain (gate 1c) counts homoglyph option tokens
+        # and unrecognized labels beside the option rate, never inside it — a
+        # paste the option gate cannot name must not touch that percentage.
+        self.assertIn("[PASS] Unrecognized Instrument Guardrail", scorecard)
+        self.assertIn("ERR_INSTRUMENT_UNRECOGNIZED", scorecard)
+        # ...and it discloses both families by name, so 5/5 refused cannot read
+        # the same when the homoglyph half silently stops being seeded.
+        self.assertIn("homoglyph option token(s)", scorecard)
+        self.assertIn("unrecognized instrument label(s)", scorecard)
+        # Both rosters print their integrity beside the dataset's, so a shrunken
+        # refusal roster is a named mismatch rather than a smaller graded set.
+        self.assertIn("Option probes: OK", scorecard)
+        self.assertIn("Refusal probes: OK", scorecard)
         self.assertLess(scorecard.count("[SKIP]"), 7,
                         "runner hardcoded a full-skip beat instead of grading")
         self.assertEqual(scorecard.count("[FAIL]"), 0)
@@ -214,7 +268,619 @@ class TestEvalRunnerContract(unittest.TestCase):
         self.assertIn(str(trade["trade_id"]), out)
 
 
-import tempfile  # noqa: E402  (kept next to its only consumer)
+import tempfile  # noqa: E402  (kept next to its consumers)
+
+
+class TestOptionRejectionGate(unittest.TestCase):
+    """Gate 1 grades a live stage-0 replay of the seeded option pastes.
+
+    The roster deliberately sits outside `trades`: an option never becomes a
+    trade, so the invariant cannot be graded over the 52-record quota (evals.md
+    §2.1). What is frozen here is that the roster exists, that every paste is
+    actually refused by *this commit's* parser, and that losing the roster or
+    letting a paste through fails the run instead of quietly shrinking the gate.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.dataset = json.loads(DATASET_FILE.read_text(encoding="utf-8"))
+        cls.probes = cls.dataset.get("option_probes") or []
+        if not cls.probes:
+            raise AssertionError(
+                "the option-probe roster is empty — gate 1 would [SKIP] and the "
+                "rejection invariant would go ungraded")
+
+    def run_with_dataset(self, dataset: dict) -> subprocess.CompletedProcess:
+        tmp = self.enterContext(
+            tempfile.NamedTemporaryFile(
+                mode="w", suffix=".json", delete=False, encoding="utf-8"))
+        json.dump(dataset, tmp, indent=2)
+        tmp.close()
+        return run_run_evals(Path(tmp.name))
+
+    def test_the_fatal_token_vocabulary_is_stage_0s_own(self):
+        """A widened or narrowed gate vocabulary may not drift from the parser's."""
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "uvest_stage0_vocabulary", REPO_ROOT / "scripts" / "0_ingest_reco.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        self.assertEqual(set(run_evals.OPTION_TOKENS), set(module.OPTIONS_TYPES))
+
+    def test_every_seeded_probe_is_refused_by_the_live_parser(self):
+        """Exit 2 *and* the frozen error code *and* no canonical payload."""
+        for probe in self.probes:
+            outcome = run_evals.replay_option_probe(probe)
+            self.assertTrue(outcome["rejected"],
+                            f"{probe['probe_id']}: not rejected — {outcome}")
+            self.assertEqual(outcome["exit_code"], run_evals.OPTION_PROBE_EXIT)
+            self.assertIn(run_evals.OPTION_PROBE_ERROR, outcome["stderr"])
+            self.assertFalse(outcome["emitted_payload"],
+                             f"{probe['probe_id']}: rejected but still emitted a trade")
+
+    def test_the_gate_grades_the_roster_and_does_not_skip(self):
+        gate = run_evals.gate_option_rejection(self.probes)
+        self.assertFalse(gate.skipped)
+        self.assertEqual(gate.value, 100.0)
+        self.assertIn(f"{len(self.probes)}/{len(self.probes)} option probe",
+                      gate.coverage)
+
+    def test_a_paste_the_parser_stops_refusing_fails_the_gate(self):
+        """The gate bites: one option paste that reaches stdout is a red run."""
+        admitted = dict(self.probes[0], raw_text=(
+            "Symbol: RELIANCE\nType: CASH\nEntry Range: 2500.00-2510.00\n"
+            "Live Price: 2505.00\nStoploss: 2400.00\nTarget: 2700.00\n"))
+        gate = run_evals.gate_option_rejection([admitted, *self.probes[1:]])
+        self.assertLess(gate.value, 100.0)
+        self.assertTrue(gate.detail, "a failed probe must name itself")
+
+    def test_the_roster_is_governed_by_its_expected_count(self):
+        ok, reason = run_evals.check_option_probe_roster(self.dataset)
+        self.assertTrue(ok, reason)
+        short = json.loads(json.dumps(self.dataset))
+        short["option_probes"] = short["option_probes"][:-1]
+        ok, reason = run_evals.check_option_probe_roster(short)
+        self.assertFalse(ok, "losing a probe must not pass as a smaller graded set")
+        self.assertIn("expected", reason)
+
+    def test_a_probe_without_the_frozen_contract_is_not_evidence(self):
+        broken = json.loads(json.dumps(self.dataset))
+        broken["option_probes"][0]["expected"] = {"exit_code": 0}
+        ok, reason = run_evals.check_option_probe_roster(broken)
+        self.assertFalse(ok)
+        self.assertIn(run_evals.OPTION_PROBE_ERROR, reason)
+
+    def test_a_probe_may_not_pretend_to_be_sourced(self):
+        """A probe is authored input; the roster has to say so itself."""
+        undeclared = json.loads(json.dumps(self.dataset))
+        undeclared["option_probes"][0]["origin"] = "sourced_recommendation"
+        ok, reason = run_evals.check_option_probe_roster(undeclared)
+        self.assertFalse(ok)
+        self.assertIn(run_evals.OPTION_PROBE_ORIGIN, reason)
+
+    def test_an_emptied_roster_fails_the_run_not_the_gate(self):
+        """Dropping the roster is exit 1 with a named mismatch, never a [SKIP]."""
+        dataset = json.loads(DATASET_FILE.read_text(encoding="utf-8"))
+        dataset["option_probes"] = []
+        proc = self.run_with_dataset(dataset)
+        out = "\n".join(stdout_lines(proc))
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("Option probes: MISMATCH", out)
+        self.assertIn("0 probe(s) present, expected 5", out)
+
+
+class TestRefusalProbeGate(unittest.TestCase):
+    """Gate 1c: the closed instrument domain, graded live beside gate 1.
+
+    ADR-001 permits equities and futures only, so a paste stage 0 cannot
+    recognize as `CASH`/`FUT` must leave with `ERR_INSTRUMENT_UNRECOGNIZED` and
+    no canonical payload. The family exists because the option-token scan
+    cannot name a homoglyph (`Type: СЕ`), and it is graded separately from gate
+    1 because a paste the gate never classified as an option must not be
+    counted as one.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.dataset = json.loads(DATASET_FILE.read_text(encoding="utf-8"))
+        cls.probes = cls.dataset.get("refusal_probes") or []
+        if not cls.probes:
+            raise AssertionError(
+                "the refusal-probe roster is empty — gate 1c would [SKIP] and the "
+                "closed-domain invariant would go ungraded")
+
+    def run_with_dataset(self, dataset: dict) -> subprocess.CompletedProcess:
+        tmp = self.enterContext(
+            tempfile.NamedTemporaryFile(
+                mode="w", suffix=".json", delete=False, encoding="utf-8"))
+        json.dump(dataset, tmp, indent=2, ensure_ascii=False)
+        tmp.close()
+        return run_run_evals(Path(tmp.name))
+
+    def test_every_seeded_refusal_probe_is_refused_by_the_live_parser(self):
+        """Each probe is replayed, and the code it declares is the code it gets."""
+        for probe in self.probes:
+            with self.subTest(probe=probe.get("probe_id")):
+                outcome = run_evals.replay_refusal_probe(probe)
+                self.assertTrue(outcome["rejected"],
+                                f"{probe['probe_id']}: admitted — {outcome}")
+                self.assertEqual(outcome["exit_code"], run_evals.REFUSAL_PROBE_EXIT)
+                self.assertIn(run_evals.REFUSAL_PROBE_ERROR, outcome["stderr"])
+                self.assertNotIn(run_evals.OPTION_PROBE_ERROR, outcome["stderr"],
+                                 "an unclassified paste must not borrow the option verdict")
+                self.assertFalse(outcome["emitted_payload"])
+
+    def test_both_families_are_seeded_and_graded(self):
+        """Homoglyph tokens and invented labels — both, not one twice."""
+        families = {str(probe.get("family")) for probe in self.probes}
+        self.assertEqual(families, set(run_evals.REFUSAL_PROBE_FAMILIES))
+
+        gate = run_evals.gate_refusal_rejection(self.probes)
+        self.assertFalse(gate.skipped)
+        self.assertEqual(gate.value, 100.0, gate.detail)
+        self.assertIn(f"{len(self.probes)}/{len(self.probes)} refusal probe",
+                      gate.coverage)
+        for family in run_evals.REFUSAL_PROBE_FAMILIES:
+            self.assertIn(run_evals.REFUSAL_FAMILY_LABEL[family], gate.coverage)
+
+    def test_a_paste_the_parser_admits_fails_the_gate(self):
+        """The gate bites: one admitted paste is a red run, naming the probe."""
+        admitted = dict(self.probes[0], raw_text=(
+            "Symbol: RELIANCE\nType: CASH\nEntry Range: 2500.00-2510.00\n"
+            "Live Price: 2505.00\nStoploss: 2400.00\nTarget: 2700.00\n"))
+        gate = run_evals.gate_refusal_rejection([admitted])
+        self.assertEqual(gate.value, 0.0)
+        self.assertIn(self.probes[0]["probe_id"], gate.detail)
+
+    def test_the_roster_is_governed_by_its_expected_count(self):
+        ok, reason = run_evals.check_refusal_probe_roster(self.dataset)
+        self.assertTrue(ok, reason)
+        short = json.loads(json.dumps(self.dataset))
+        short["refusal_probes"] = short["refusal_probes"][:-1]
+        ok, reason = run_evals.check_refusal_probe_roster(short)
+        self.assertFalse(ok, "losing a probe must not pass as a smaller graded set")
+        self.assertIn("expected", reason)
+
+    def test_a_probe_may_not_declare_the_option_verdict(self):
+        """The two codes are the whole point of the two gates: no borrowing."""
+        misfiled = json.loads(json.dumps(self.dataset))
+        misfiled["refusal_probes"][0]["expected"] = {
+            "exit_code": run_evals.REFUSAL_PROBE_EXIT,
+            "error_code": run_evals.OPTION_PROBE_ERROR}
+        ok, reason = run_evals.check_refusal_probe_roster(misfiled)
+        self.assertFalse(ok)
+        self.assertIn(run_evals.REFUSAL_PROBE_ERROR, reason)
+
+    def test_an_ascii_option_token_here_is_a_misfiling(self):
+        """A probe the *token* gate names belongs to gate 1's roster: filed here
+        it would declare a code stage 0 can never return for it."""
+        misfiled = json.loads(json.dumps(self.dataset))
+        probe = misfiled["refusal_probes"][0]
+        probe["declared_instrument"] = "CE"
+        probe["raw_text"] = probe["raw_text"].replace("\u0421\u0415", "CE")
+        ok, reason = run_evals.check_refusal_probe_roster(misfiled)
+        self.assertFalse(ok)
+        self.assertIn("option probe", reason)
+
+    def test_a_probe_whose_paste_never_declares_it_is_not_evidence(self):
+        undeclared = json.loads(json.dumps(self.dataset))
+        undeclared["refusal_probes"][0]["declared_instrument"] = "\u0416\u0416"
+        ok, reason = run_evals.check_refusal_probe_roster(undeclared)
+        self.assertFalse(ok)
+        self.assertIn("does not appear in the paste", reason)
+
+    def test_a_probe_may_not_pretend_to_be_sourced(self):
+        undeclared = json.loads(json.dumps(self.dataset))
+        undeclared["refusal_probes"][0]["origin"] = "sourced_recommendation"
+        ok, reason = run_evals.check_refusal_probe_roster(undeclared)
+        self.assertFalse(ok)
+        self.assertIn(run_evals.OPTION_PROBE_ORIGIN, reason)
+
+    def test_an_emptied_roster_fails_the_run_not_the_gate(self):
+        """Dropping the roster is exit 1 with a named mismatch, never a [SKIP]."""
+        dataset = json.loads(DATASET_FILE.read_text(encoding="utf-8"))
+        dataset["refusal_probes"] = []
+        proc = self.run_with_dataset(dataset)
+        out = "\n".join(stdout_lines(proc))
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("Refusal probes: MISMATCH", out)
+        self.assertIn("0 probe(s) present, expected 5", out)
+
+
+class TestChainAbortGate(unittest.TestCase):
+    """Gate 1b: the rejection must survive the 0 → 12 orchestrator.
+
+    Stage 0 refusing (gates 1/1c) is only half of ADR-001 — a user invokes
+    `run_pipeline.py`, so what has to hold is that the chain stops: the code is
+    propagated, nothing downstream is written, and the run record says which
+    stages never ran. A runner that logged the refusal and walked on would keep
+    both rejection rates green, which is why this is graded separately — once
+    per refusal family, because the two families share exit 2 and are told apart
+    by the code alone, so one family's stop is no evidence for the other's.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.dataset = json.loads(DATASET_FILE.read_text(encoding="utf-8"))
+        cls.probes = cls.dataset.get("option_probes") or []
+        cls.refusal_probes = cls.dataset.get("refusal_probes") or []
+        if not cls.probes or not cls.refusal_probes:
+            raise AssertionError(
+                "a stage-0 probe roster is empty — gate 1b would grade half the "
+                "chain-abort invariant, and the missing family would go ungraded")
+
+    def aborted_record(self, **overrides) -> dict:
+        """A run record shaped like a real stage-0 abort (the reference case)."""
+        record = {
+            "schema": "uvest-run-record/1",
+            "outcome": "aborted",
+            "exit_code": 2,
+            "failed_stage": 0,
+            "report": None,
+            "stages": [{"stage": 0, "status": "failed", "exit_code": 2},
+                       *[{"stage": stage, "status": "not_reached"}
+                         for stage in range(1, 13)]],
+        }
+        record.update(overrides)
+        return record
+
+    def test_every_seeded_probe_stops_the_live_chain_for_its_own_family(self):
+        """The real orchestrator, invoked the way a user invokes it — and the
+        stop measured against the code *that family* is owed, not any exit 2."""
+        families = ((self.probes, run_evals.OPTION_PROBE_ERROR),
+                    (self.refusal_probes, run_evals.REFUSAL_PROBE_ERROR))
+        for roster, error_code in families:
+            for probe in roster:
+                with self.subTest(probe=probe.get("probe_id"), code=error_code):
+                    outcome = run_evals.replay_probe_through_runner(probe, error_code)
+                    self.assertTrue(outcome["stopped"],
+                                    f"{probe.get('probe_id')}: {outcome['problems']}")
+                    self.assertEqual(outcome["exit_code"], run_evals.PROBE_EXIT)
+
+    def test_the_gate_replays_one_named_probe_per_family_and_does_not_skip(self):
+        """One replay per family is enough — but the scorecard must say *which*
+        two, and the code each was graded against, so neither replay can read
+        as roster-wide and an option stop cannot stand in for a homoglyph one."""
+        gate = run_evals.gate_chain_abort(self.probes, self.refusal_probes)
+        self.assertFalse(gate.skipped)
+        self.assertEqual(gate.value, 100.0, gate.detail)
+        coverage = gate.coverage
+        self.assertIn("2/2 chain replays", coverage)
+        self.assertIn(f"{self.probes[0]['probe_id']} with "
+                      f"{run_evals.OPTION_PROBE_ERROR}", coverage)
+        self.assertIn(f"{self.refusal_probes[0]['probe_id']} with "
+                      f"{run_evals.REFUSAL_PROBE_ERROR}", coverage)
+        self.assertIn("0 → 12 chain", coverage)
+        self.assertNotIn("not seeded", coverage,
+                         "both rosters are seeded here — nothing to disclose")
+
+    def test_a_chain_that_carries_the_paste_on_fails_the_gate(self):
+        """The gate bites: one walked-on probe is a red run, naming the probe."""
+        from unittest import mock
+        carried = dict(self.probes[0], probe_id="OPT-CARRIED")
+        with mock.patch.object(
+                run_evals, "replay_probe_through_runner",
+                return_value={"stopped": False, "exit_code": 0,
+                              "problems": ["exit 0, expected 2"]}):
+            gate = run_evals.gate_chain_abort([carried, *self.probes[1:]],
+                                              self.refusal_probes)
+        self.assertEqual(gate.value, 0.0)
+        self.assertIn("OPT-CARRIED", gate.coverage)
+        self.assertIn("OPT-CARRIED", gate.detail)
+        self.assertIn("exit 0, expected 2", gate.detail)
+
+    def test_a_chain_that_carries_a_refusal_on_fails_the_gate_alone(self):
+        """The half the token scan cannot name is graded on its own legs.
+
+        The option replay stops cleanly while the homoglyph one walks on: a
+        half-green gate naming the refusal probe, not a green one that averaged
+        the two families together.
+        """
+        from unittest import mock
+        real = run_evals.replay_probe_through_runner
+        carried = dict(self.refusal_probes[0], probe_id="REF-CARRIED")
+
+        def fake(probe, error_code=run_evals.OPTION_PROBE_ERROR):
+            if error_code == run_evals.REFUSAL_PROBE_ERROR:
+                return {"stopped": False, "exit_code": 0,
+                        "problems": ["exit 0, expected 2",
+                                     f"no {run_evals.REFUSAL_PROBE_ERROR} on stderr"]}
+            return real(probe, error_code)
+
+        with mock.patch.object(run_evals, "replay_probe_through_runner",
+                               side_effect=fake):
+            gate = run_evals.gate_chain_abort(self.probes,
+                                              [carried, *self.refusal_probes[1:]])
+        self.assertEqual(gate.value, 50.0, gate.detail)
+        self.assertIn("REF-CARRIED", gate.detail)
+        self.assertIn("exit 0, expected 2", gate.detail)
+
+    def test_an_unseeded_roster_is_disclosed_not_silently_dropped(self):
+        """A roster that vanished is a disclosed half-grade here (and a failed
+        run at the roster checks and the baseline floor), never a full green
+        measured over the one family left."""
+        gate = run_evals.gate_chain_abort(self.probes, [])
+        self.assertFalse(gate.skipped)
+        self.assertEqual(gate.value, 100.0)
+        self.assertIn("not seeded", gate.coverage)
+        self.assertIn("refusal_probes", gate.coverage)
+        self.assertTrue(run_evals.gate_chain_abort([], []).skipped)
+
+    def test_the_stop_verdict_is_negative_sensitive(self):
+        """Every way a stopped chain can be faked is a named problem.
+
+        Forged here rather than by sabotaging the runner on disk: the negative
+        cases are the whole point of the gate, and they have to be provably
+        detected, not merely unobserved.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            workdir = Path(tmp)
+            clean = run_evals.chain_abort_failures(
+                2, "ERR_OPTIONS_PROHIBITED: instrument_type='CE'", workdir,
+                self.aborted_record())
+            self.assertEqual(clean, [], "a real stop must not be flagged")
+
+            swallowed = run_evals.chain_abort_failures(
+                0, "", workdir, self.aborted_record(exit_code=0, failed_stage=None))
+            self.assertTrue(any("exit 0" in problem for problem in swallowed), swallowed)
+            self.assertTrue(any("no ERR_OPTIONS_PROHIBITED" in problem
+                                for problem in swallowed), swallowed)
+
+            (workdir / "out_1_math.json").write_text("{}", encoding="utf-8")
+            carried = run_evals.chain_abort_failures(
+                2, run_evals.OPTION_PROBE_ERROR, workdir, self.aborted_record())
+            self.assertTrue(any("out_1_math.json" in problem for problem in carried), carried)
+
+            walked_on = self.aborted_record()
+            walked_on["stages"][1]["status"] = "ran"
+            problems = run_evals.chain_abort_failures(
+                2, run_evals.OPTION_PROBE_ERROR, Path(tmp) / "empty", walked_on)
+            self.assertTrue(any("not_reached" in problem for problem in problems), problems)
+
+            unrecorded = run_evals.chain_abort_failures(
+                2, run_evals.OPTION_PROBE_ERROR, Path(tmp) / "empty", None)
+            self.assertIn("no run_record.json to account for the run", unrecorded)
+
+            # The two families share exit 2, so the code alone tells them apart:
+            # an option stop must not grade as a homoglyph stop, and vice versa.
+            wrong_family = run_evals.chain_abort_failures(
+                2, run_evals.OPTION_PROBE_ERROR, Path(tmp) / "empty",
+                self.aborted_record(), run_evals.REFUSAL_PROBE_ERROR)
+            self.assertTrue(any(
+                f"no {run_evals.REFUSAL_PROBE_ERROR} on stderr" in problem
+                for problem in wrong_family), wrong_family)
+
+            refusal_stop = run_evals.chain_abort_failures(
+                2, run_evals.REFUSAL_PROBE_ERROR, Path(tmp) / "empty",
+                self.aborted_record(), run_evals.REFUSAL_PROBE_ERROR)
+            self.assertEqual(refusal_stop, [],
+                             "a homoglyph stop is a stop of its own")
+
+
+class TestProbeRosterFloor(unittest.TestCase):
+    """The roster contents are a frozen regression reference, not a comment.
+
+    `baseline_scorecard.json` freezes both floors banked by
+    `scaffold_catalog.re_freeze_baseline`: `probe_rosters` (the sizes) and
+    `probe_roster_ids` (each probe's paste hash, keyed by `probe_id`). Growing
+    a roster is free; shrinking one, editing a frozen paste, or swapping a
+    probe for a different one — the case a size-only floor cannot see — is a
+    named shortfall and a red run.
+    """
+
+    FLOOR = {"option_probes": 5, "refusal_probes": 5}
+
+    @staticmethod
+    def roster(prefix: str, count: int, start: int = 1) -> list[dict]:
+        """Synthetic probes whose paste derives from their id, so identity is
+        controlled without copying a real paste."""
+        return [{"probe_id": f"{prefix}-{i:03d}",
+                 "raw_text": f"paste for {prefix}-{i:03d}"}
+                for i in range(start, start + count)]
+
+    @staticmethod
+    def baseline_for(rosters: dict[str, list[dict]]) -> dict:
+        """A baseline that froze exactly these rosters — sizes *and* hashes."""
+        return {"probe_rosters": {name: len(p) for name, p in rosters.items()},
+                "probe_roster_ids": run_evals.probe_roster_ids(rosters)}
+
+    def test_no_floor_yet_is_disclosed_not_enforced(self):
+        """Before any re-freeze has banked a size, the check says so and passes.
+        """
+        ok, reason, shortfalls = run_evals.check_probe_roster_floor(
+            {"option_probes": self.roster("OPT", 3)}, {})
+        self.assertTrue(ok)
+        self.assertEqual(shortfalls, [])
+        self.assertIn("no frozen probe-roster floor", reason)
+
+    def test_growth_past_the_floor_is_free(self):
+        """More probes than frozen is the census's growth case: free."""
+        frozen = self.roster("OPT", 5)
+        baseline = self.baseline_for({"option_probes": frozen,
+                                      "refusal_probes": self.roster("REF", 5)})
+        grown = {"option_probes": [*frozen, *self.roster("OPT", 2, start=6)],
+                 "refusal_probes": self.roster("REF", 6)}
+        ok, reason, shortfalls = run_evals.check_probe_roster_floor(grown, baseline)
+        self.assertTrue(ok, shortfalls)
+        self.assertIn("13 seeded stage-0 probe(s)", reason)
+
+    def test_a_shrunken_roster_fails_by_name_and_delta(self):
+        baseline = self.baseline_for({"option_probes": self.roster("OPT", 5),
+                                      "refusal_probes": self.roster("REF", 5)})
+        shrunken = {"option_probes": self.roster("OPT", 5),
+                    "refusal_probes": self.roster("REF", 4)}
+        ok, reason, shortfalls = run_evals.check_probe_roster_floor(shrunken, baseline)
+        self.assertFalse(ok)
+        self.assertIn("refusal_probes: 4 seeded probe(s) < frozen 5", shortfalls)
+        # the missing member is named too: a count says how many went, not which
+        self.assertTrue(any("refusal_probes/REF-005: frozen probe is not seeded"
+                            in s for s in shortfalls), shortfalls)
+        self.assertIn("2 floor violation(s)", reason)
+
+    def test_a_roster_that_vanished_is_a_shrink_to_zero(self):
+        """No roster at all is not 'no rosters to check' — it is both floors
+        unmet: one size shortfall per roster and one naming shortfall per
+        frozen member."""
+        baseline = self.baseline_for({"option_probes": self.roster("OPT", 5),
+                                      "refusal_probes": self.roster("REF", 5)})
+        ok, _reason, shortfalls = run_evals.check_probe_roster_floor({}, baseline)
+        self.assertFalse(ok)
+        self.assertEqual(len(shortfalls), 2 + 10)
+
+    def test_a_swapped_probe_cannot_preserve_the_count(self):
+        """THE case a size-only floor cannot see: same roster size, same shape
+        of claim, a different paste under a new id. The frozen member is gone
+        and the floor says which one — swapping is only a re-freeze."""
+        frozen = {"option_probes": self.roster("OPT", 5),
+                  "refusal_probes": self.roster("REF", 5)}
+        baseline = self.baseline_for(frozen)
+        swapped = {"option_probes": frozen["option_probes"],
+                   "refusal_probes": [*self.roster("REF", 4),
+                                      {"probe_id": "REF-999",
+                                       "raw_text": "paste for REF-999"}]}
+        ok, _reason, shortfalls = run_evals.check_probe_roster_floor(swapped, baseline)
+        self.assertFalse(ok,
+                         "a same-size roster with a swapped member passed the floor")
+        self.assertTrue(any("refusal_probes/REF-005: frozen probe is not seeded"
+                            in s for s in shortfalls), shortfalls)
+        self.assertFalse(any("seeded probe(s) < frozen" in s for s in shortfalls),
+                         "the count is intact — only the identity check sees this")
+
+    def test_an_edited_paste_fails_even_when_the_id_holds(self):
+        frozen = {"option_probes": self.roster("OPT", 5),
+                  "refusal_probes": self.roster("REF", 5)}
+        baseline = self.baseline_for(frozen)
+        edited = {"option_probes": frozen["option_probes"],
+                  "refusal_probes": [*self.roster("REF", 4),
+                                     {"probe_id": "REF-005",
+                                      "raw_text": "paste for REF-005 tweaked"}]}
+        ok, _reason, shortfalls = run_evals.check_probe_roster_floor(edited, baseline)
+        self.assertFalse(ok)
+        self.assertTrue(any("refusal_probes/REF-005: paste edited since the last"
+                            in s for s in shortfalls), shortfalls)
+
+    def test_a_duplicated_probe_id_is_named(self):
+        baseline = self.baseline_for({"option_probes": self.roster("OPT", 5),
+                                      "refusal_probes": self.roster("REF", 5)})
+        duped = {"option_probes": self.roster("OPT", 5),
+                 "refusal_probes": [*self.roster("REF", 4),
+                                    {"probe_id": "REF-001",
+                                     "raw_text": "paste for REF-001"}]}
+        ok, _reason, shortfalls = run_evals.check_probe_roster_floor(duped, baseline)
+        self.assertFalse(ok)
+        self.assertTrue(any("refusal_probes/REF-001: duplicated probe_id" in s
+                            for s in shortfalls), shortfalls)
+
+    def test_a_roster_added_since_the_freeze_is_not_checked(self):
+        """Growth is free until the new members are banked, exactly as for the
+        rule census — a new roster must not fail a run that grew on purpose."""
+        baseline = self.baseline_for({"option_probes": self.roster("OPT", 5),
+                                      "refusal_probes": self.roster("REF", 5)})
+        grown = {"option_probes": self.roster("OPT", 5),
+                 "refusal_probes": self.roster("REF", 5),
+                 "image_probes": self.roster("IMG", 2)}
+        ok, _reason, shortfalls = run_evals.check_probe_roster_floor(grown, baseline)
+        self.assertTrue(ok, shortfalls)
+
+    def test_the_committed_baseline_banks_the_dataset_s_own_rosters(self):
+        """The floor on disk and the rosters in the dataset are one claim; if
+        they ever disagree, the frozen floor is what the run is measured
+        against — so this seam makes the disagreement visible first."""
+        counts = run_evals.dataset_probe_roster_counts()
+        ids = run_evals.dataset_probe_roster_ids()
+        frozen = run_evals.load_baseline() or {}
+        self.assertEqual(
+            frozen.get("probe_rosters"), counts,
+            "baseline_scorecard.json's probe_rosters is stale against the "
+            "dataset — re-freeze deliberately (scaffold_catalog)")
+        self.assertEqual(
+            frozen.get("probe_roster_ids"), ids,
+            "baseline_scorecard.json's probe_roster_ids is stale — a probe's "
+            "paste changed without a re-freeze")
+        self.assertEqual(counts, self.FLOOR)
+        self.assertEqual({name: len(m) for name, m in ids.items()}, self.FLOOR)
+
+    def test_re_freeze_banks_both_floors(self):
+        """`re_freeze_baseline` writes both floors the runner measures against —
+        exercised against a scratch proof root, so the real one is never
+        touched by a test."""
+        import shutil
+        from unittest import mock
+        import scaffold_catalog as sc
+        scratch = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        for name in (sc.BASELINE_FILE, sc.MANIFEST_FILE, sc.HASH_FILE):
+            shutil.copy2(PROOF_DIR / name, scratch / name)
+        before = json.loads((scratch / sc.BASELINE_FILE).read_text(encoding="utf-8"))
+        with mock.patch.object(sc, "PROOF_ROOT", scratch):
+            sc.re_freeze_baseline()
+        after = json.loads((scratch / sc.BASELINE_FILE).read_text(encoding="utf-8"))
+        self.assertEqual(after["probe_rosters"],
+                         run_evals.dataset_probe_roster_counts())
+        self.assertEqual(after["probe_roster_ids"],
+                         run_evals.dataset_probe_roster_ids(),
+                         "a re-freeze must bank the members, not only the count")
+        self.assertEqual(after["rule_exercises"], before["rule_exercises"],
+                         "a re-freeze must not silently drop the census floor")
+        self.assertEqual(after["manifest_sha256"], before["manifest_sha256"],
+                         "same bytes in, same hash out — a re-freeze is not a "
+                         "rewrite of the proof root")
+
+    def test_the_runner_fails_the_run_when_a_roster_shrinks(self):
+        """End to end: one probe deleted is exit 1, naming the roster and the
+        frozen size next to the roster check that already refuses to grade it."""
+        dataset = json.loads(DATASET_FILE.read_text(encoding="utf-8"))
+        dataset["refusal_probes"] = dataset["refusal_probes"][:-1]
+        tmp = self.enterContext(tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False, encoding="utf-8"))
+        json.dump(dataset, tmp, indent=2, ensure_ascii=False)
+        tmp.close()
+        proc = run_run_evals(Path(tmp.name))
+        out = "\n".join(stdout_lines(proc))
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("Probe roster floor: REGRESSION", out)
+        self.assertIn("refusal_probes: 4 seeded probe(s) < frozen 5", out)
+        # ...and the member that went is named: a count says how many, not which.
+        gone = json.loads(DATASET_FILE.read_text(
+            encoding="utf-8"))["refusal_probes"][-1]["probe_id"]
+        self.assertIn(f"{gone}: frozen probe is not seeded", out)
+
+    def test_the_runner_catches_a_swapped_probe_a_count_cannot(self):
+        """End to end on the *real* roster: replace the last refusal probe with
+        a new one — same count, same family, same frozen contract, still
+        refused live by stage 0 — so every count-based check passes and only
+        the identity floor can go red."""
+        dataset = json.loads(DATASET_FILE.read_text(encoding="utf-8"))
+        replaced = dataset["refusal_probes"][-1]["probe_id"]
+        template = dataset["refusal_probes"][-1]
+        dataset["refusal_probes"] = [
+            *dataset["refusal_probes"][:-1],
+            {**template, "probe_id": "REF-SWAP",
+             "declared_instrument": "FUTURES",
+             "raw_text": "Symbol: RELIANCE\nType: FUTURES\n"
+                         "Entry Range: 2500.00-2510.00\nLive Price: 2505.00\n"
+                         "Stoploss: 2400.00\nTarget: 2700.00\n"}]
+        tmp = self.enterContext(tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False, encoding="utf-8"))
+        json.dump(dataset, tmp, indent=2, ensure_ascii=False)
+        tmp.close()
+        proc = run_run_evals(Path(tmp.name))
+        out = "\n".join(stdout_lines(proc))
+        self.assertEqual(proc.returncode, 1,
+                         "a swapped probe kept the run green")
+        self.assertIn("Probe roster floor: REGRESSION", out)
+        self.assertIn(f"refusal_probes/{replaced}: frozen probe is not seeded",
+                      out)
+        # Everything count-based stayed green — this is precisely the gap the
+        # identity floor exists to close.
+        self.assertIn("Refusal probes: OK (5/5", out)
+        self.assertIn("[PASS] Unrecognized Instrument Guardrail      100.0%", out)
+
+    def test_the_scorecard_states_the_floor_it_is_measured_against(self):
+        """The floor is printed whatever the verdict — a reader sees the size
+        behind the percentage next to the percentage itself."""
+        out = "\n".join(stdout_lines(run_run_evals(DATASET_FILE)))
+        self.assertIn("Probe roster floor: OK", out)
+        self.assertIn("10 seeded stage-0 probe(s)", out)
 
 
 class TestGoldenDatasetContract(unittest.TestCase):

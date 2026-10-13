@@ -234,6 +234,26 @@ class TestWaiverPath(unittest.TestCase):
                     "analog_confidence", "dtw_distance", "as_of"):
             self.assertIsNone(out[key], f"{key} must be null under waiver")
 
+    def test_malformed_history_fixture_is_waived_not_a_traceback(self):
+        """A corrupt fixture is absent evidence, not a reason to crash.
+
+        Same tri-state waiver stage 2 freezes: unreadable or malformed means the
+        history evidence is absent, disclosed as `waived: true`. Letting the
+        `JSONDecodeError` escape would abort the whole chain with a traceback.
+        """
+        broken = TESTS_DIR / "fixtures" / "_scratch_corrupt_history.json"
+        broken.write_text("{this is not json", encoding="utf-8")
+        try:
+            module, _ = import_mode(3)
+            with temp_input(make_input(), ".json") as inp:
+                out, code, err = call_imported_main(
+                    module, ["--input", inp, "--history-fixture", str(broken)])
+            self.assertEqual(code, 0, f"a corrupt fixture crashed the stage: {err}")
+            self.assertIs(out["waived"], True)
+            self.assertIsNone(out["dtw_win_rate_22d"])
+        finally:
+            broken.unlink(missing_ok=True)
+
     def test_short_history_is_waived_not_guessed(self):
         """History shorter than the sweep floor cannot produce analog metrics."""
         rows = json.loads(FIXTURE_HIST.read_text(encoding="utf-8"))["sessions"][:60]

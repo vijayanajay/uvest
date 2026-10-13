@@ -160,6 +160,27 @@ class TestWaiverPath(unittest.TestCase):
                     "bollinger_upper", "bollinger_lower", "bollinger_bandwidth", "as_of"):
             self.assertIsNone(out[key], f"{key} must be null under waiver")
 
+    def test_malformed_ohlcv_fixture_is_waived_not_a_traceback(self):
+        """A corrupt fixture is absent evidence, not a reason to crash.
+
+        The tri-state waiver is the fixture convention stages 5 and 6 freeze:
+        unreadable or malformed means *this evidence is absent*. An uncaught
+        `json.JSONDecodeError` here would abort the whole chain with a traceback
+        instead of disclosing the gap — and it did, until this seam existed.
+        """
+        broken = TESTS_DIR / "fixtures" / "_scratch_corrupt_ohlcv.json"
+        broken.write_text("{this is not json", encoding="utf-8")
+        try:
+            module, _ = import_mode(2)
+            with temp_input(make_input(), ".json") as path:
+                out, code, err = call_imported_main(
+                    module, ["--input", path, "--ohlcv-fixture", str(broken)])
+            self.assertEqual(code, 0, f"a corrupt fixture crashed the stage: {err}")
+            self.assertIs(out["waived"], True)
+            self.assertIsNone(out["atr_14"])
+        finally:
+            broken.unlink(missing_ok=True)
+
     def test_short_history_yields_waived(self):
         """< 200 sessions required; the stage must refuse to guess."""
         short = json.loads(FIXTURE_OHLCV.read_text(encoding="utf-8"))

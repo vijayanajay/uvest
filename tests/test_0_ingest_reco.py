@@ -150,3 +150,294 @@ class TestCliContract(unittest.TestCase):
         import json as _json
         payload = _json.loads(proc.stdout)  # stdout must be pure JSON
         self.assertEqual(payload["symbol"], "RELIANCE")
+
+
+# --------------------------------------------------------------------------
+# ADR-001 property coverage: the rejection invariant holds around the five
+# seeded probes, not only on them (evals.md §2.1).
+# --------------------------------------------------------------------------
+# ADR-001's fatal vocabulary, asserted equal to the parser's own below.
+FATAL_TOKENS = ("CE", "PE", "OPT", "OPTION", "CALL", "PUT")
+# ADR-001's other half (docs/agents/domain.md): "only Equities and Futures are
+# permitted", so the instrument domain is closed. A value the gate cannot
+# recognize leaves with its own code — the failure mode this stops is an
+# unrecognized instrument being *assumed* to be cash and scored as one.
+RECOGNIZED_INSTRUMENTS = ("CASH", "FUT")
+# Option tokens written with look-alike letters: a human reads "CE", the parser
+# reads a two-letter string that is not the ASCII token. The closed domain is
+# what stops these — refused as unrecognized, never admitted as an unknown
+# instrument (and never reported as an option rejection, which they are not).
+HOMOGLYPH_OPTION_TOKENS = {
+    "cyrillic-CE": "\u0421\u0415",
+    "cyrillic-PE": "\u0420\u0415",
+    "greek-CE": "\u03f9\u0395",
+    "mixed-latin-cyrillic-CE": "C\u0415",
+}
+# Values that are simply not in the closed domain.
+UNRECOGNIZED_INSTRUMENTS = ("NFO", "EQ", "EQUITY", "FUTURE", "FUTURES",
+                            "CASH EQUITY", "FO", "CASHFUT", "OPTIONS")
+ZERO_WIDTH = "\u200b"          # a Cf character: invisible, not whitespace
+FULLWIDTH_COLON = "\uff1a"    # NFKC folds it to ":"
+# Colon look-alikes NFKC folds to ":" — the field parses, so the frozen
+# options code is reachable and required. (U+FE55 small colon, U+FE13
+# presentation-form vertical colon.)
+FOLDED_COLONS = ("\ufe55", "\ufe13")
+# Colon look-alikes NFKC does *not* fold: the field cannot parse at all, so
+# the paste is refused without ever reaching the options gate. ADR-001 only
+# requires that it never becomes a trade.
+UNFOLDED_COLONS = ("\u2236", "\u02d0", "\u05c3", "\ua789")
+BENIGN_BODY = ("Entry Range: 100.00-102.00\nLive Price: 101.00\n"
+               "Stoploss: 95.00\nTarget: 115.00\n")
+
+
+def _fullwidth(text: str) -> str:
+    """Render ASCII letters/punctuation with their fullwidth look-alikes."""
+    return "".join(chr(ord(ch) + 0xFEE0) if "!" <= ch <= "~" else ch for ch in text)
+
+
+def _zero_width_inside(token: str) -> str:
+    """`CE` → `C\u200bE`: one invisible character between every letter."""
+    return ZERO_WIDTH.join(token)
+
+
+def _near_miss_pastes() -> list[tuple[str, str, str]]:
+    """(label, paste, expectation) triples — the fuzz space around the probes.
+
+    Two directions, both required: a **fatal** family that declares an option
+    token somewhere a paste can declare an instrument (the `Type:` field or the
+    `Symbol:` field) under case, padding, token punctuation, Unicode
+    look-alikes and invisible characters, and a **benign** family whose text
+    merely resembles one (a ticker that *contains* the letters, a prose warning
+    that mentions options) and which must still be accepted — a parser that
+    refused everything would pass a one-sided property and fail this half.
+    """
+    cases: list[tuple[str, str, str]] = []
+
+    def add(label: str, paste: str, expectation: str) -> None:
+        cases.append((label, paste, expectation))
+
+    token_forms = {
+        "plain": lambda t: t,
+        "lower": lambda t: t.lower(),
+        "title": lambda t: t.title(),
+        "padded": lambda t: f" {t} ",
+        "parenthesised": lambda t: f"({t})",
+        "fullwidth": _fullwidth,
+        "zero-width": _zero_width_inside,
+    }
+    field_forms = {
+        "canonical": ("Type", ": "),
+        "lower-key": ("type", ": "),
+        "upper-key": ("TYPE", ": "),
+        "spaced-colon": ("Type", " : "),
+        "fullwidth-colon": ("Type", FULLWIDTH_COLON),
+        "small-colon": ("Type", FOLDED_COLONS[0]),
+        "vertical-colon": ("Type", FOLDED_COLONS[1]),
+        "invisible-key": (f"Ty{ZERO_WIDTH}pe", ": "),
+    }
+
+    # 1. The fatal token in the instrument field, in every near-miss shape.
+    for token in FATAL_TOKENS:
+        for form, render in token_forms.items():
+            for field, (key, sep) in field_forms.items():
+                add(f"Type/{token}/{form}/{field}",
+                    f"Symbol: RELIANCE\n{key}{sep}{render(token)}\n" + BENIGN_BODY,
+                    "reject")
+
+    # 2. A cash label over an option-shaped payload: the token in the symbol.
+    for token in FATAL_TOKENS:
+        for form, render in token_forms.items():
+            add(f"Symbol/{token}/{form}",
+                f"Symbol: NIFTY 25000 {render(token)}\nType: CASH\n" + BENIGN_BODY,
+                "reject")
+        add(f"Type-annotated/{token}",
+            f"Symbol: NIFTY\nType: CASH ({token})\n" + BENIGN_BODY, "reject")
+        add(f"Type-annotated/fullwidth/{token}",
+            f"Symbol: NIFTY\nType: {FULLWIDTH_COLON}{_fullwidth(f'CASH ({token})')}\n"
+            + BENIGN_BODY, "reject")
+
+    # 2b. Separator look-alikes normalization does not fold: the instrument
+    # field never parses, so the paste is refused for a different reason — the
+    # invariant that must hold is the weaker, honest one (no canonical payload).
+    for separator in UNFOLDED_COLONS:
+        for token in ("CE", "PE", "OPT"):
+            add(f"unfolded-colon/U+{ord(separator):04X}/{token}",
+                f"Symbol: RELIANCE\nType{separator}{token}\n" + BENIGN_BODY,
+                "refuse")
+
+    # 2c. Option tokens written with look-alike letters: not the ASCII token,
+    # so the *closed domain* is what refuses them.
+    for label, value in HOMOGLYPH_OPTION_TOKENS.items():
+        add(f"homoglyph/{label}",
+            f"Symbol: RELIANCE\nType: {value}\n" + BENIGN_BODY, "unrecognized")
+
+    # 2d. The closed domain itself (ADR-001): everything that is not CASH/FUT.
+    for value in UNRECOGNIZED_INSTRUMENTS:
+        add(f"unrecognized/{value}",
+            f"Symbol: SBIN\nType: {value}\n" + BENIGN_BODY, "unrecognized")
+
+    # 3. Benign near-misses: same letters, no declared option instrument.
+    benign_symbols = ("CENTURYPLY", "PEPSICO", "OPTIMUS", "CALLISTO",
+                      f"CENT{ZERO_WIDTH}URYPLY", "NIFTY 25000")
+    for symbol in benign_symbols:
+        for kind in ("CASH", "FUT"):
+            add(f"benign/{symbol}/{kind}",
+                f"Symbol: {symbol}\nType: {kind}\n" + BENIGN_BODY, "accept")
+    add("benign/prose-warning",
+        "Symbol: SBIN\nType: CASH\n"
+        "App Warning: options, calls and puts are for experts\n" + BENIGN_BODY,
+        "accept")
+    add("benign/fullwidth-colon",
+        f"Symbol: SBIN\nType{FULLWIDTH_COLON}CASH\n" + BENIGN_BODY, "accept")
+    add("benign/lower-case-key",
+        "symbol: SBIN\ntype: cash\n" + BENIGN_BODY, "accept")
+    add("benign/futures-expiry",
+        "Symbol: RELIANCE\nType: FUT\nLot Size: 250\nExpiry: 2026-10-29\n"
+        + BENIGN_BODY, "accept")
+    # 3b. Recognized spellings: the closed domain must not be brittle. Case,
+    # padding, NFKC look-alikes and invisible characters are all folded by the
+    # parser, so these are the same two instruments, not three.
+    for value, label in (("cash", "lower-case-cash"),
+                         ("Fut", "title-case-fut"),
+                         ("  FUT  ", "padded-fut"),
+                         ("\uff23\uff21\uff33\uff28", "fullwidth-cash"),
+                         (f"CA{ZERO_WIDTH}SH", "zero-width-cash")):
+        add(f"benign/type-{label}",
+            f"Symbol: SBIN\nType: {value}\n" + BENIGN_BODY, "accept")
+    return cases
+
+
+class TestOptionRejectionPropertyCoverage(unittest.TestCase):
+    """The invariant is a property of the paste space, not of five samples.
+
+    Stage 0 kills an option paste before a canonical trade exists (ADR-001), so
+    the five seeded probes are five test cases, never the whole class. This
+    suite enumerates near-miss transforms deterministically (no dependency, no
+    sampling) and asserts both directions of the invariant, including the
+    disguised shapes a `CASH` label can wear — the shapes a field-equality
+    check (`instrument_type in OPTIONS_TYPES`) would wave through.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cases = _near_miss_pastes()
+
+    def test_the_fuzz_alphabet_is_the_parsers_own_vocabulary(self):
+        """Both vocabularies are the parser's own; widening one, not the fuzz,
+        must fail here — that is the whole point of asserting the parity."""
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "uvest_stage0_property_vocabulary", SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        self.assertEqual(set(FATAL_TOKENS), set(module.OPTIONS_TYPES))
+        self.assertEqual(set(RECOGNIZED_INSTRUMENTS),
+                         set(module.RECOGNIZED_INSTRUMENTS))
+
+    def test_unrecognized_instruments_are_refused_with_their_own_code(self):
+        """A closed domain (ADR-001): anything that is not CASH/FUT leaves.
+
+        The distinct code matters — an unrecognized instrument is not an
+        options rejection and must not borrow that verdict, or the scorecard's
+        option rate would count pastes the gate never classified as options.
+        """
+        unrecognized = [(label, paste) for label, paste, want in self.cases
+                        if want == "unrecognized"]
+        self.assertGreaterEqual(len(unrecognized), 12,
+                                "the unrecognized family collapsed")
+        for label, paste in unrecognized:
+            with self.subTest(variant=label):
+                payload, code, err = run_stage0_text(paste)
+                self.assertEqual(code, 2, f"{label}: exit {code}, stderr={err.strip()!r}")
+                self.assertIn("ERR_INSTRUMENT_UNRECOGNIZED", err, label)
+                self.assertNotIn("ERR_OPTIONS_PROHIBITED", err,
+                                 f"{label}: borrowed the option verdict")
+                self.assertIsNone(payload, f"{label}: emitted a canonical payload")
+
+    def test_an_option_homoglyph_cannot_pose_as_an_unknown_instrument(self):
+        """The gap this closes: `Type: СЕ` (Cyrillic) read as CE by a human.
+
+        It is not the ASCII token, so the option gate cannot name it — before
+        the closed domain it was admitted and downstream stages scored it as
+        cash. Now the choice is between a policy refusal and a mislabelled
+        trade, and the refusal wins; the contrasting ASCII paste proves the
+        option verdict still belongs to the token it names.
+        """
+        for label, value in HOMOGLYPH_OPTION_TOKENS.items():
+            with self.subTest(homoglyph=label):
+                payload, code, err = run_stage0_text(
+                    f"Symbol: RELIANCE\nType: {value}\n" + BENIGN_BODY)
+                self.assertEqual(code, 2, f"{label}: admitted — {err.strip()!r}")
+                self.assertIn("ERR_INSTRUMENT_UNRECOGNIZED", err)
+                self.assertIsNone(payload)
+        for token in ("CE", "PE", "OPT"):
+            with self.subTest(ascii_token=token):
+                payload, code, err = run_stage0_text(
+                    f"Symbol: RELIANCE\nType: {token}\n" + BENIGN_BODY)
+                self.assertEqual(code, 2)
+                self.assertIn("ERR_OPTIONS_PROHIBITED", err)
+                self.assertNotIn("ERR_INSTRUMENT_UNRECOGNIZED", err,
+                                 "an option paste is an option, not an unknown type")
+                self.assertIsNone(payload)
+
+    def test_every_fatal_variant_is_refused_with_the_frozen_contract(self):
+        """Exit 2 *and* the frozen code *and* no canonical payload."""
+        fatal = [(label, paste) for label, paste, want in self.cases if want == "reject"]
+        self.assertGreaterEqual(len(fatal), 60, "the fuzz space collapsed")
+        for label, paste in fatal:
+            with self.subTest(variant=label):
+                payload, code, err = run_stage0_text(paste)
+                self.assertEqual(code, 2,
+                                 f"{label}: exit {code}, stderr={err.strip()!r}")
+                self.assertIn("ERR_OPTIONS_PROHIBITED", err, label)
+                self.assertIsNone(payload, f"{label}: rejected but still emitted a trade")
+
+    def test_unfolded_separators_are_refused_without_a_payload(self):
+        """Separator look-alikes that never parse must still refuse the option.
+
+        `Type∶CE` (U+2236) is not `Type: CE` to any parser, so the frozen
+        `ERR_OPTIONS_PROHIBITED` code is unreachable — but an option
+        recommendation must not become a trade either way, so these are graded
+        on the invariant that does apply: a non-zero exit with the refusal on
+        stderr and no canonical payload. Grading them on the frozen code would
+        assert something the parser cannot deliver; grading them not at all is
+        how a look-alike separator becomes a bypass.
+        """
+        unfolded = [(label, paste) for label, paste, want in self.cases
+                    if want == "refuse"]
+        self.assertGreaterEqual(len(unfolded), 8, "the separator family collapsed")
+        for label, paste in unfolded:
+            with self.subTest(variant=label):
+                payload, code, err = run_stage0_text(paste)
+                self.assertNotEqual(code, 0, f"{label}: admitted a refused paste")
+                self.assertIsNone(payload, f"{label}: emitted a canonical payload")
+                self.assertTrue("ERR_OPTIONS_PROHIBITED" in err or "ERR_PARSE" in err,
+                                f"{label}: unnamed refusal — {err.strip()!r}")
+
+    def test_benign_lookalikes_are_still_accepted(self):
+        """The other side of the property: fail closed, not fail everything."""
+        benign = [(label, paste) for label, paste, want in self.cases if want == "accept"]
+        self.assertGreaterEqual(len(benign), 8, "the benign control set collapsed")
+        for label, paste in benign:
+            with self.subTest(variant=label):
+                payload, code, err = run_stage0_text(paste)
+                self.assertEqual(code, 0, f"{label}: refused a legitimate paste — {err}")
+                self.assertIn(payload["instrument_type"], ("CASH", "FUT"))
+
+    def test_the_near_misses_are_near_misses(self):
+        """The fatal family must not be plain `Type: CE` ten times over.
+
+        Each shape family has to be present, or the coverage would only repeat
+        what the seeded probes already establish: a declared option, plainly.
+        """
+        labels = [label for label, _, want in self.cases if want == "reject"]
+        for family in ("/zero-width", "/fullwidth", "/small-colon",
+                       "/vertical-colon", "/lower", "/padded",
+                       "/parenthesised", "Symbol/", "Type-annotated/"):
+            self.assertTrue(any(family in label for label in labels),
+                            f"no {family} variant was generated")
+        unrecognized = [label for label, _, want in self.cases
+                        if want == "unrecognized"]
+        for family in ("homoglyph/", "unrecognized/"):
+            self.assertTrue(any(family in label for label in unrecognized),
+                            f"no {family} variant was generated")

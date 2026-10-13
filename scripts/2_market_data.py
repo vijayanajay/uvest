@@ -70,12 +70,21 @@ def load_payload(path: str) -> dict:
 
 
 def load_ohlcv(path: str | None) -> list[dict] | None:
-    """Load the recorded daily-OHLCV fixture, or None on absence (waiver)."""
+    """Load the recorded daily-OHLCV fixture, or None when it cannot be used.
+
+    Tri-state waiver (the convention stages 5 and 6 freeze): an omitted path, a
+    missing file, an unreadable or malformed one, or too few sessions all mean
+    *this evidence is absent* — the payload is emitted `waived: true` and the
+    decision engine redistributes the module weight. A corrupt fixture is a
+    data gap to disclose, never a reason to abort the chain with a traceback.
+    """
     if not path:
         return None
     try:
         raw = json.loads(Path(path).read_text(encoding="utf-8"))
-    except FileNotFoundError:
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    if not isinstance(raw, dict):
         return None
     sessions = raw.get("sessions") or []
     if len(sessions) < MIN_SESSIONS:

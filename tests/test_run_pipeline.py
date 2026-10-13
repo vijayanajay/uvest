@@ -4,8 +4,12 @@ Frozen here:
 
 1. **One invocation, canonical order.** The runner executes the ascending
    stage chain, forwarding each stage's stdout into its BRD §9.1 artifact, and
-   aborts at the first failing stage while propagating its exit code — stage
-   0's options gate (`ERR_OPTIONS_PROHIBITED`, exit 2) must survive the chain.
+   aborts at the first failing stage while propagating its exit code. That
+   contract is proved **for every chain stage**, not only stage 0: real
+   end-to-end failures for the stages that have one (0's options gate at exit 2,
+   1's contradictory stoploss, 2's and 3's malformed fixtures), and an injected
+   exit code per stage for the rest, so "propagates *that stage's own* code" is
+   never satisfied by a runner that hardcodes 1 (see `TestChainAbortByStage`).
 2. **Absence is disclosed, never fatal.** Stages whose script does not exist
    yet print `[SKIP]` and their evidence stays waived downstream (BRD §10.4);
    stage 11 is disclosed as the conditional stage that never runs in the
@@ -53,6 +57,44 @@ OPTION_INPUT = (
     "Lot Size: 250\nRecommended Date: 2026-10-09\n"
 )
 
+# An option written with look-alike letters: a human reads `CE`, the parser
+# reads a two-letter string that is not the ASCII token. The closed instrument
+# domain (ADR-001) is what stops it, and it must stop *here* — downstream
+# stages have no notion of an unknown instrument and would score it as cash.
+HOMOGLYPH_OPTION_INPUT = (
+    "Symbol: RELIANCE\nType: \u0421\u0415\nEntry Range: 2975.00-2985.00\n"
+    "Live Price: 2988.20\nStoploss: 2910.00\nTarget: 3120.00\n"
+    "Recommended Date: 2026-10-09\n"
+)
+
+# Stage 0 accepts this paste (CASH, well-formed numbers) and stage 1 then
+# refuses it: the stoploss sits above the entry band's midpoint, so the trade
+# has negative raw risk. The cheapest *real* mid-chain failure the pipeline has,
+# and the one the eval scorecard replays live.
+CONTRADICTORY_SL_INPUT = (
+    "Symbol: SBIN\nType: CASH\nEntry Range: 100.00-102.00\n"
+    "Live Price: 101.00\nStoploss: 103.00\nTarget: 115.00\n"
+    "Recommended Date: 2026-10-09\n"
+)
+
+# A fixture file that is not JSON: stages 2 and 3 refuse it (ERR_PARSE, exit 1)
+# rather than waiving it, while 5 and 6 treat a malformed fixture as absent.
+BAD_FIXTURE_BODY = "{this is not json"
+
+# Injected-error harness: one fake stage script per chain stage, all of them
+# recording the stage they stand for and exiting with the injected code when
+# they are the target. Written into the test's temp dir, never into scripts/.
+FAKE_STAGE_SCRIPT = '''\
+import json
+import sys
+from pathlib import Path
+
+Path({log!r}).open("a", encoding="utf-8").write("{stage}\\n")
+if {stage} == {target}:
+    sys.exit({code})
+sys.stdout.write(json.dumps({{"stage": {stage}, "ran": True}}) + "\\n")
+'''
+
 STAGE9_CONTRACT_KEYS = {
     "final_score", "max_possible_score", "effective_score_pct",
     "decision", "verdict", "p_win", "expectancy",
@@ -61,10 +103,12 @@ STAGE9_CONTRACT_KEYS = {
 }
 
 
-def run_runner(workdir: Path, input_path: Path) -> subprocess.CompletedProcess:
+def run_runner(workdir: Path, input_path: Path,
+               *extra_args: str) -> subprocess.CompletedProcess:
+    """Spawn the real runner, optionally with extra flags (e.g. bad fixtures)."""
     return subprocess.run(
         [sys.executable, str(RUNNER), "--input", str(input_path),
-         "--workdir", str(workdir)],
+         "--workdir", str(workdir), *extra_args],
         capture_output=True, text=True, encoding="utf-8",
         check=False, cwd=str(REPO_ROOT),
     )
@@ -215,6 +259,12 @@ class TestRunRecord(unittest.TestCase):
                 self.assertIsNone(row["exit_code"])
                 self.assertIsNone(row["artifact_path"])
                 self.assertIsNone(row["artifact_sha256"])
+                if row["stage"] != 11:
+                    # A chain stage with no script today is disclosed as exactly
+                    # that, never as a silent no-op: it is the same set the
+                    # injected abort harness stands in for. Stage 11 is the
+                    # conditional stage and is skipped for its own reason.
+                    self.assertIn("not implemented", row["skip_reason"])
             stage11 = [r for r in rows if r["stage"] == 11][0]
             self.assertIn("conditional", stage11["skip_reason"])
 
@@ -270,6 +320,219 @@ class TestRunRecord(unittest.TestCase):
             self.assertIn("aborted at stage 0", rows[1]["skip_reason"])
             self.assertFalse([r for r in rows if r["artifact_path"]],
                              "a rejected trade produces no artifact to claim")
+
+
+class TestChainAbortByStage(unittest.TestCase):
+    """A non-zero exit from **any** chain stage aborts the 0 → 12 walk.
+
+    Two layers, because they prove different halves of one contract:
+
+    * **Real failures** (stages 0 and 1): a spawned `run_pipeline.py` with the
+      real stage scripts, so the stop is observed end to end — exit code,
+      artifacts, run record. Those are the two stages the pipeline can be made
+      to reject a *well-formed* input at today: 0's options gate and 1's
+      contradictory stoploss. The fixture-fed stages have no such failure by
+      design — a missing, malformed or too-short fixture is *absent evidence*
+      (disclosed `waived: true`), never a rejection — and
+      `test_absent_evidence_is_disclosed_not_an_abort` pins that boundary, so a
+      future stage cannot start treating a corrupt fixture as fatal or, worse,
+      as a crash.
+    * **Injected codes** (every chain stage): fake stage scripts let each stage
+      fail with a *distinct* code, so "propagates that stage's own code" cannot
+      be satisfied by a runner that always returns 1 — and a stage with no
+      natural failure (4, 7, 8, 9, 10, 12 today) is covered all the same.
+
+    Stage 11 is outside both, by contract: it is the conditional stage, always
+    disclosed as skipped in this chain, so it can never contribute a non-zero
+    exit here. The harness asserts it was never invoked rather than injecting
+    into it.
+    """
+
+    REAL_CASES = (
+        # label, paste (None → the standard fixture), extra runner flag,
+        # failing stage, its own exit code, the stage's own diagnosis.
+        ("stage 0 options gate", OPTION_INPUT, None, 0, 2, "ERR_OPTIONS_PROHIBITED"),
+        ("stage 0 unrecognized instrument (homoglyph CE)", HOMOGLYPH_OPTION_INPUT,
+         None, 0, 2, "ERR_INSTRUMENT_UNRECOGNIZED"),
+        ("stage 1 contradictory stoploss", CONTRADICTORY_SL_INPUT, None, 1, 1, "ERR_PARSE"),
+    )
+
+    @classmethod
+    def setUpClass(cls):
+        if not RUNNER.exists():
+            raise AssertionError(f"runner missing: {RUNNER}")
+        cls.module, cls.import_stdout, cls.import_stderr = load_runner_module()
+
+    def assert_chain_stopped(self, stdout_text: str, stderr_text: str,
+                             workdir: Path, stage: int, code: int,
+                             marker: str | None, implemented: set[int]) -> dict:
+        """The shared assertion: the walk stopped at `stage` and said so.
+
+        Grades the four claims separately — the propagated code, the stages that
+        never ran, the record's account of both, and the absence of artifacts a
+        stopped chain must not leave — so a failure names the claim that broke.
+        """
+        combined = stdout_text + stderr_text
+        if marker is not None:
+            self.assertIn(marker, combined,
+                          f"stage {stage}: the stage's own diagnosis is missing")
+        # The runner prints its abort diagnosis on stderr (the stage's own
+        # message reaches the same place), so the disclosure is looked for in
+        # both streams; the walk log below is stdout-only.
+        self.assertIn(f"[FAIL] stage {stage} exited {code}", combined,
+                      f"stage {stage}: the runner did not disclose the abort")
+        # `[RUN]` is printed for every stage the walk *attempts*, including the
+        # one that fails: the attempted set must be every chain stage up to and
+        # including the target — skipped stages print `[SKIP]`, never `[RUN]`.
+        ran = [int(s) for s in re.findall(r"\[RUN\] stage (\d+)", stdout_text)]
+        self.assertEqual(ran, [s for s in self.module.CHAIN if s <= stage],
+                         f"stage {stage}: chain order/stop is wrong — {ran}")
+
+        record = json.loads((workdir / "run_record.json").read_text(encoding="utf-8"))
+        rows = {row["stage"]: row for row in record["stages"]}
+        self.assertEqual(record["outcome"], "aborted")
+        self.assertEqual(record["failed_stage"], stage)
+        self.assertEqual(record["exit_code"], code,
+                         "the stage's own code must reach the record")
+        self.assertIsNone(record["report"])
+
+        failed = rows[stage]
+        self.assertEqual(failed["status"], "failed")
+        self.assertEqual(failed["exit_code"], code)
+        self.assertIsNone(failed["artifact_path"],
+                          "a failed stage produced no bytes to claim")
+        self.assertIsNone(failed["artifact_sha256"])
+
+        for later in range(stage + 1, 13):
+            row = rows[later]
+            self.assertEqual(row["status"], "not_reached",
+                             f"stage {later} ran after stage {stage} failed")
+            self.assertIn(f"stage {stage}", row["skip_reason"])
+            artifact = self.module.ARTIFACTS.get(later)
+            if artifact:
+                self.assertFalse((workdir / artifact).exists(),
+                                 f"aborted chain left {artifact} behind")
+        self.assertFalse((workdir / "reports").exists(),
+                         "no report may be rendered by an aborted chain")
+
+        for earlier in [s for s in self.module.CHAIN if s < stage]:
+            row = rows[earlier]
+            if earlier not in implemented:
+                self.assertEqual(row["status"], "skipped")
+                continue
+            self.assertEqual(row["status"], "ran",
+                             f"stage {earlier} should have run before stage {stage}")
+            if row["artifact"] is None:
+                continue
+            path = Path(row["artifact_path"])
+            self.assertTrue(path.exists(), f"stage {earlier} claims a missing artifact")
+            self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(),
+                             row["artifact_sha256"])
+        return record
+
+    def test_a_real_stage_failure_aborts_and_propagates_its_own_code(self):
+        """Real scripts, real subprocess, real artifacts — stages 0 through 3."""
+        implemented = {stage for stage in self.module.CHAIN
+                       if self.module.script_for(stage) is not None}
+        for label, paste, flag, stage, code, marker in self.REAL_CASES:
+            with self.subTest(case=label):
+                with tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp)
+                    workdir = root / "work"
+                    input_path = root / "input.txt"
+                    input_path.write_text(
+                        paste if paste is not None
+                        else INPUT_FIXTURE.read_text(encoding="utf-8"),
+                        encoding="utf-8")
+                    extra: list[str] = []
+                    if flag is not None:
+                        bad = root / "bad_fixture.json"
+                        bad.write_text(BAD_FIXTURE_BODY, encoding="utf-8")
+                        extra = [flag, str(bad)]
+                    proc = run_runner(workdir, input_path, *extra)
+                    record = self.assert_chain_stopped(
+                        proc.stdout, proc.stderr, workdir, stage, code, marker,
+                        implemented)
+            # The failed stage's own row is the one that names the cause.
+            self.assertTrue(record["stages"][stage]["skip_reason"])
+
+    def test_absent_evidence_is_disclosed_not_an_abort(self):
+        """The boundary of the abort contract: a data gap is not a failure.
+
+        A corrupt fixture must not abort the chain (that is what the malformed
+        fixture regression did before stages 2/3 honoured their own waiver) and
+        must not crash it either — the stage emits `waived: true`, the run
+        completes, and the waiver is named in the payload the decision engine
+        reads.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            workdir = root / "work"
+            bad = root / "bad_fixture.json"
+            bad.write_text(BAD_FIXTURE_BODY, encoding="utf-8")
+            proc = run_runner(workdir, INPUT_FIXTURE, "--ohlcv-fixture", str(bad),
+                              "--history-fixture", str(bad))
+            combined = proc.stdout + proc.stderr
+            self.assertEqual(proc.returncode, 0, combined)
+            self.assertNotIn("Traceback", combined,
+                             "a corrupt fixture must waive, not crash the stage")
+            for artifact in ("out_2_market.json", "out_3_dtw.json"):
+                payload = json.loads((workdir / artifact).read_text(encoding="utf-8"))
+                self.assertTrue(payload["waived"], f"{artifact} did not disclose the gap")
+            record = json.loads((workdir / "run_record.json").read_text(encoding="utf-8"))
+            self.assertEqual(record["outcome"], "complete")
+            self.assertIsNone(record["failed_stage"])
+            self.assertFalse([row for row in record["stages"]
+                              if row["status"] == "failed"])
+
+    def test_a_non_zero_exit_from_any_chain_stage_aborts_with_that_code(self):
+        """Injected per-stage codes: the runner must propagate each one.
+
+        Distinct codes are the point. A runner that returned a constant 1 — or
+        that mapped every failure to the first stage's code — would pass a
+        single-code test and fail this one, stage by stage.
+        """
+        module = self.module
+        injected = set(module.CHAIN)
+        for target in module.CHAIN:
+            code = 40 + target
+            with self.subTest(stage=target, injected_code=code):
+                with tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp)
+                    workdir = root / "work"
+                    log = root / "stages.log"
+                    fakes = {}
+                    for stage in module.ORDER:
+                        path = root / f"{stage}_fake.py"
+                        path.write_text(FAKE_STAGE_SCRIPT.format(
+                            log=str(log), stage=stage, target=target, code=code),
+                            encoding="utf-8")
+                        fakes[stage] = path
+                    original = module.script_for
+                    module.script_for = lambda stage, _fakes=fakes: _fakes[stage]
+                    # Both streams are captured: the runner prints the abort
+                    # diagnosis on stderr, the walk log on stdout.
+                    captured_out, captured_err = io.StringIO(), io.StringIO()
+                    try:
+                        with contextlib.redirect_stdout(captured_out), \
+                                contextlib.redirect_stderr(captured_err):
+                            rc = module.main(["--input", str(INPUT_FIXTURE),
+                                              "--workdir", str(workdir)])
+                    finally:
+                        module.script_for = original
+
+                    self.assertEqual(rc, code,
+                                     f"stage {target}: returned {rc}, expected {code}")
+                    invoked = [int(line) for line in
+                               log.read_text(encoding="utf-8").split()]
+                    self.assertEqual(invoked, [s for s in module.CHAIN if s <= target],
+                                     f"stage {target}: walk order wrong — {invoked}")
+                    # The conditional stage is skipped by contract, never injected
+                    # into and never logged as executed.
+                    self.assertNotIn(11, invoked)
+                    self.assert_chain_stopped(captured_out.getvalue(),
+                                              captured_err.getvalue(), workdir,
+                                              target, code, None, injected)
 
 
 class TestRunnerArgvAndFrozenNames(unittest.TestCase):
