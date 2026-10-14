@@ -76,6 +76,11 @@ RERUNNABLE = {
     # is byte-compared to a fresh run exactly like stages 1–2 — the hazard rows'
     # breaker evidence is verified, not taken on trust.
     6: "6_fundamental_audit.py",
+    # Stage 7 is offline-runnable through the row's authored market-context
+    # bundle (`replay_inputs.regime_fixture`), so a recorded `out_7_regime.json`
+    # is byte-compared to a fresh run exactly like stages 1–2 — the regime row's
+    # panic-breaker evidence is verified, not taken on trust.
+    7: "7_sector_macro_regime.py",
 }
 
 
@@ -99,6 +104,8 @@ def fresh_stage_stdout(row: dict, artifact: dict) -> bytes | None:
         cmd += ["--bhavcopy-fixture", str(PROOF_ROOT / inputs["bhavcopy_fixture"])]
     if stage == 6:
         cmd += ["--financials-fixture", str(PROOF_ROOT / inputs["financials_fixture"])]
+    if stage == 7:
+        cmd += ["--regime-fixture", str(PROOF_ROOT / inputs["regime_fixture"])]
     proc = subprocess.run(cmd, capture_output=True, check=False, cwd=REPO_ROOT)
     return proc.stdout if proc.returncode == 0 else None
 

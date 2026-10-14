@@ -167,12 +167,14 @@ def _replay_paths(row: dict) -> list[str]:
     """Every file a replayed row *reads*: inputs, plus the evidence it declares.
 
     `financials_fixture` is stage 6's input bundle (the authored hazard block a
-    pledge/earnings row is graded on) and `bhavcopy_fixture` is stage 5's (the
-    sourced delivery/OI block a distribution row is measured on). Both are
-    inputs like the truncated prefix, so each is path-checked (V3), hash-frozen
-    (V4/V5) and — because a bundle that carried a `date`-keyed bar would be
-    look-ahead — included in V7's scan, which reads only bar-shaped records and
-    so sees none of its governance/earnings/delivery fields.
+    pledge/earnings row is graded on), `bhavcopy_fixture` is stage 5's (the
+    sourced delivery/OI block a distribution row is measured on) and
+    `regime_fixture` is stage 7's (the authored market-context block a regime
+    row's panic breaker is graded on). All are inputs like the truncated prefix,
+    so each is path-checked (V3), hash-frozen (V4/V5) and — because a bundle that
+    carried a `date`-keyed bar would be look-ahead — included in V7's scan, which
+    reads only bar-shaped records and so sees none of its governance/earnings/
+    delivery fields.
     """
     inputs = row.get("replay_inputs") or {}
     paths: list[str] = []
@@ -183,6 +185,7 @@ def _replay_paths(row: dict) -> list[str]:
             paths.extend(fixtures)
         paths.append(inputs.get("financials_fixture"))
         paths.append(inputs.get("bhavcopy_fixture"))
+        paths.append(inputs.get("regime_fixture"))
     for artifact in row.get("recorded_artifacts") or []:
         if isinstance(artifact, dict) and artifact.get("path") is not None:
             paths.append(artifact.get("path"))

@@ -1,0 +1,16 @@
+{
+  "sector_index": "^NSEBANK",
+  "sector_mrs": -2.2375,
+  "sector_mrs_mom": -0.3318,
+  "sector_rrg_state": "LAGGING",
+  "nifty_trend": "BELOW_200_DMA",
+  "market_breadth_pct": 4.5,
+  "breadth_regime": "RISK_OFF",
+  "vix_value": 80.5,
+  "vix_regime": "PANIC",
+  "fii_dii_flow_bias": "NET_SELLING",
+  "panic_regime_breaker": true,
+  "waived": false,
+  "as_of": "2020-03-24",
+  "missing_inputs": []
+}

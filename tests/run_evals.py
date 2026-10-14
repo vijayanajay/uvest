@@ -174,6 +174,7 @@ BREAKER_BY_CLASS: dict[str, str] = {
     "pledge_hazard": "promoter_pledging_gt_25pct",
     "earnings_hazard": "earnings_within_7d",
     "tight_stop": "tighter_than_0_75x_atr",
+    "regime_shock": "panic_regime",
 }
 
 # Which artifact each breaker reads — needed to know whether that breaker's
@@ -183,6 +184,7 @@ BREAKER_ARTIFACT: dict[str, str] = {
     "promoter_pledging_gt_25pct": "out_6_fundamental.json",
     "earnings_within_7d": "out_6_fundamental.json",
     "tighter_than_0_75x_atr": "out_2_market.json",
+    "panic_regime": "out_7_regime.json",
 }
 
 # evals.md §3 pass thresholds — frozen before any implementation code exists.
@@ -293,6 +295,20 @@ RULE_ARMS: dict[str, tuple[tuple[str, str, object, int, str | None], ...]] = {
          "days_to_earnings", 0, None),
     ),
     "tighter_than_0_75x_atr": (TIGHT_STOP_ARM,),
+    # BRD §10.3 #6: a *conjunction* (VIX > 24 AND breadth < 30), graded arm by
+    # arm so the census sees which side each record exercised — combined by
+    # BREAKER_COMBINE, never OR-ed like the R:R arms.
+    "panic_regime": (
+        ("panic_vix_above_24", "out_7_regime.json", "vix_value", 1, None),
+        ("panic_breadth_below_30", "out_7_regime.json",
+         "market_breadth_pct", 1, None),
+    ),
+}
+# How a breaker's arms combine into the class verdict: "any" (the R:R breaker
+# trips on either price) or "all" (the panic regime requires both arms — a
+# breadth print below 30 with a calm VIX is Risk-Off, not the breaker).
+BREAKER_COMBINE: dict[str, str] = {
+    "panic_regime": "all",
 }
 # How a clear arm's exercise is named: the same rule as the trap's, on the other
 # side of its threshold (`raw_rr_below_1` → `raw_rr_below_1:clear`). A clean
@@ -325,6 +341,15 @@ def _trips(breaker: str, field: str, value) -> bool:
             and 0 <= value < 7
     if breaker == "tighter_than_0_75x_atr":
         return value is True
+    if breaker == "panic_regime":
+        # The conjunction's two arms speak in different thresholds, so this
+        # breaker dispatches on which field the arm read (BRD §10.3 #6).
+        numeric = isinstance(value, (int, float)) and not isinstance(value, bool)
+        if field == "vix_value":
+            return numeric and value > 24.0
+        if field == "market_breadth_pct":
+            return numeric and value < 30.0
+        return False
     return False
 
 
@@ -353,12 +378,19 @@ def class_breaker_observed(trade: dict, breaker: str | None = None,
     """True iff the breaker corresponding to the trade's *class* is present
     with the threshold-level value — i.e., encoding projected the right value.
 
-    The class verdict is its arms OR-ed (BRD §10.2 #1 "R:R" trips on either
-    price), and `None` (ungradeable) propagates unchanged.
+    The class verdict combines the breaker's arms per `BREAKER_COMBINE` —
+    OR-ed by default (BRD §10.2 #1 "R:R" trips on either price), AND-ed for a
+    conjunction breaker like `panic_regime` — and `None` (ungradeable)
+    propagates unchanged.
     """
     cls = trade.get("trade_class")
-    arms = breaker_arms(trade, breaker or BREAKER_BY_CLASS[cls], unbacked)
-    return None if arms is None else any(arms.values())
+    breaker = breaker or BREAKER_BY_CLASS[cls]
+    arms = breaker_arms(trade, breaker, unbacked)
+    if arms is None:
+        return None
+    if BREAKER_COMBINE.get(breaker, "any") == "all":
+        return all(arms.values())
+    return any(arms.values())
 
 
 def _granulated(value, granule: int):
@@ -394,17 +426,35 @@ def rule_exercises(trade_class: str, trade: dict,
             arms = breaker_arms(trade, breaker, unbacked)
             if arms is None:
                 continue
+            conjunction = BREAKER_COMBINE.get(breaker, "any") == "all"
             for arm, source, field, granule, measure in RULE_ARMS[breaker]:
                 value = _field(trade, source, measure or field)
                 if value is None:
                     continue
-                key = arm if arms.get(arm) else f"{arm}{CLEAR_ARM_SUFFIX}"
+                # A conjunction fires (or clears) as one unit: the pair is the
+                # rule, so every arm is keyed by the breaker's own verdict.
+                fired = all(arms.values()) if conjunction else arms.get(arm)
+                key = arm if fired else f"{arm}{CLEAR_ARM_SUFFIX}"
                 found.add((key, _granulated(value, granule)))
         return frozenset(found)
     breaker = BREAKER_BY_CLASS[trade_class]
     arms = breaker_arms(trade, breaker, unbacked)
     if arms is None:
         return frozenset()
+    if BREAKER_COMBINE.get(breaker, "any") == "all":
+        # Same conjunction rule at the trap side: when the pair fired, every
+        # arm is a trap exercise at its own value; when it did not, every arm
+        # is the boundary that held (`:clear`) — a breadth print under 30 with
+        # a calm VIX exercised the pair, it just did not trip it.
+        fired = all(arms.values())
+        conjuncted = set()
+        for arm, source, field, granule, measure in RULE_ARMS[breaker]:
+            value = _field(trade, source, measure or field)
+            if value is None:
+                continue
+            key = arm if fired else f"{arm}{CLEAR_ARM_SUFFIX}"
+            conjuncted.add((key, _granulated(value, granule)))
+        return frozenset(conjuncted)
     found = set()
     for arm, source, field, granule, measure in RULE_ARMS[breaker]:
         if not arms.get(arm):

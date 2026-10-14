@@ -1115,8 +1115,8 @@ class TestRunRecordProvenance(unittest.TestCase):
         self.assertIn("Evidence provenance (run records)", block)
         self.assertIn(f"{self.workdir.name}/run_record.json", block,
                       "a record outside the repo is named by its directory")
-        self.assertIn("stages ran: [0, 1, 2, 3, 5, 6, 9, 12]", block)
-        self.assertIn("skipped: [4, 7, 8, 10, 11]", block)
+        self.assertIn("stages ran: [0, 1, 2, 3, 5, 6, 7, 9, 12]", block)
+        self.assertIn("skipped: [4, 8, 10, 11]", block)
         self.assertIn("Stage-12 reports proven: 1/1", block)
 
         disclosed = "\n".join(run_evals.render_provenance(
@@ -1650,6 +1650,88 @@ class TestProofRootPayloadEvidence(unittest.TestCase):
                   "script_outputs": {"out_1_math.json": {"raw_rr": 0.8}}}
         self.assertEqual(run_evals.breaker_arms(legacy, "inverted_risk_reward"),
                          {"raw_rr_below_1": True, "live_rr_below_1": True})
+
+    def test_the_panic_breaker_is_a_conjunction_of_both_arms(self):
+        """BRD §10.3 #6 trips only when BOTH arms do.
+
+        Breadth below 30 with a calm VIX is a Risk-Off print, not the panic
+        breaker (ADR-010 decision 6) — the OR that grades the R:R arms would
+        misgrade this conjunction, so `BREAKER_COMBINE` decides per breaker.
+        """
+        both = {"trade_id": "GB-TEST-P1", "trade_class": "regime_shock",
+                "script_outputs": {"out_7_regime.json":
+                                   {"vix_value": 26.4,
+                                    "market_breadth_pct": 28.5}}}
+        arms = run_evals.breaker_arms(both, "panic_regime")
+        self.assertEqual(arms, {"panic_vix_above_24": True,
+                                "panic_breadth_below_30": True})
+        self.assertIs(run_evals.class_breaker_observed(both), True)
+        self.assertEqual(
+            run_evals.rule_exercises("regime_shock", both),
+            frozenset({("panic_vix_above_24", 26.4),
+                       ("panic_breadth_below_30", 28.5)}),
+            "a trap row exercises both arms at their own granule")
+        narrow = {"trade_id": "GB-TEST-P2", "trade_class": "regime_shock",
+                  "script_outputs": {"out_7_regime.json":
+                                     {"vix_value": 15.0,
+                                      "market_breadth_pct": 22.0}}}
+        self.assertIs(run_evals.class_breaker_observed(narrow), False,
+                      "one arm alone is never this breaker")
+        self.assertEqual(
+            run_evals.rule_exercises("regime_shock", narrow),
+            frozenset({("panic_vix_above_24:clear", 15.0),
+                       ("panic_breadth_below_30:clear", 22.0)}),
+            "a row the conjunction did not fire exercised the pair from the "
+            "holding side — every arm at its own value, `:clear`")
+
+    def test_a_clean_row_never_leaks_the_panic_breaker(self):
+        """The clean class sweeps every registered breaker: an out_7 payload
+        with a single panic-side number (breadth 25, calm VIX) must not read
+        as a leak — the conjunction decides, exactly as at the trap side."""
+        trade = {"trade_id": "GB-TEST-C1", "trade_class": "clean_bullish",
+                 "script_outputs": {"out_7_regime.json":
+                                    {"vix_value": 15.0,
+                                     "market_breadth_pct": 25.0}}}
+        self.assertIs(run_evals.class_breaker_observed(
+            {**trade, "trade_class": "regime_shock"}), False)
+        self.assertIn(("panic_breadth_below_30:clear", 25.0),
+                      run_evals.rule_exercises("clean_bullish", trade),
+                      "the clear half of the conjunction is still an exercise")
+
+    def test_the_panic_breaker_grades_only_over_recorded_out_7_bytes(self):
+        """Gate 2 reads `out_7_regime.json`: recording decides graded vs
+        abstained, exactly as for every other breaker artifact (E1)."""
+        payload = {"vix_value": 26.4, "market_breadth_pct": 28.5}
+        row = {"trade_id": "GB-TEST-P3", "trade_class": "regime_shock",
+               "script_outputs": {"out_7_regime.json": payload}}
+        # A target behind the payload ⇒ the row is graded and its violation
+        # counts against the class quota.
+        recorded = {("GB-TEST-P3", "out_7_regime.json"): Path("out_7_regime.json")}
+        unbacked = run_evals.unbacked_payloads([row], recorded)
+        self.assertEqual(unbacked, frozenset())
+        gate = run_evals.gate_hard_breakers([row], unbacked, {"regime_shock": 1})
+        self.assertFalse(gate.skipped, gate.detail)
+        self.assertIn("regime_shock 1/1 graded", gate.coverage)
+        self.assertIn("1 graded, 0 violation(s)", gate.detail,
+                      "the trap class exists to carry the breaker: both arms "
+                      "encoded is a pass, not a violation")
+        # The real violation: a recorded trap row whose conjunction never fired.
+        calm = {"trade_id": "GB-TEST-P4", "trade_class": "regime_shock",
+                "script_outputs": {"out_7_regime.json":
+                                   {"vix_value": 15.0, "market_breadth_pct": 22.0}}}
+        calm_targets = {("GB-TEST-P4", "out_7_regime.json"): Path("out_7_regime.json")}
+        violating = run_evals.gate_hard_breakers(
+            [calm], run_evals.unbacked_payloads([calm], calm_targets),
+            {"regime_shock": 1})
+        self.assertIn("1 graded, 1 violation(s)", violating.detail)
+        self.assertIn("breaker value not encoded", violating.detail)
+        # The same bytes inline with no file behind them ⇒ E1 abstention.
+        unproven = run_evals.unbacked_payloads([row], {})
+        self.assertEqual(unproven,
+                         frozenset({("GB-TEST-P3", "out_7_regime.json")}))
+        abstained = run_evals.gate_hard_breakers([row], unproven,
+                                                  {"regime_shock": 1})
+        self.assertIn("regime_shock 0/1 graded, 1 abstained", abstained.coverage)
 
     def test_rule_coverage_cannot_shrink_below_the_frozen_floor(self):
         """The floor is the baseline's, and losing a distinct rule is a failure.

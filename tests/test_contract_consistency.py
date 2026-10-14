@@ -50,10 +50,14 @@ HARNESS_ROW_RE = re.compile(
 PIPELINE_CALL_RE = re.compile(r"python\s+(scripts/[0-9a-z_]+\.py)")
 SCRIPT_MENTION_RE = re.compile(r"scripts/([0-9a-z_]+\.py)")
 # Non-stage scripts the contract docs may name: the eval harness and the 0 → 12
-# orchestrator. Both are real entry points that are deliberately *not* BRD §9.1
-# stage rows — run_pipeline executes those rows and run_evals grades them — so
-# naming one is a reference, not an invented script.
-NON_STAGE_SCRIPTS = frozenset({"scripts/run_evals.py", "scripts/run_pipeline.py"})
+# orchestrator. All are real entry points that are deliberately *not* BRD §9.1
+# stage rows — run_pipeline executes those rows, run_evals grades them, and
+# fetch_market_context supplies live stage-7 evidence on the runner's
+# `--regime-live` flag — so naming one is a reference, not an invented script.
+NON_STAGE_SCRIPTS = frozenset({
+    "scripts/run_evals.py", "scripts/run_pipeline.py",
+    "scripts/fetch_market_context.py",
+})
 FENCED_BLOCK_RE = re.compile(r"```[a-zA-Z]*\n(.*?)```", re.DOTALL)
 
 INDEX_ROW_RE = re.compile(

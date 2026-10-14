@@ -47,9 +47,9 @@ from support.pipeline import (  # noqa: E402
 FIXTURE_PASTE = TESTS_DIR / "fixtures" / "_input_reliance_20261009.txt"
 
 # Every chain stage that reads `current_trade.json` and declares what it needs.
-# Stage 0 is the producer (not checked against itself) and stages 4/7/8/10 do
+# Stage 0 is the producer (not checked against itself) and stages 4/8/10 do
 # not exist yet, so they declare nothing and belong to no contract.
-CONTRACT_STAGES = (1, 2, 3, 5, 6, 9, 12)
+CONTRACT_STAGES = (1, 2, 3, 5, 6, 7, 9, 12)
 
 
 class TestIngestionSatisfiesEveryStage(unittest.TestCase):

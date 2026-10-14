@@ -228,11 +228,11 @@ A stock rarely swims against a collapsing sector or macro market tide.
 - **Calculation:** Compares the target stock's sector index (e.g., NIFTY BANK, NIFTY IT, NIFTY AUTO, NIFTY METAL) against the benchmark NIFTY 50 over a 50-day rolling window:
   $$\text{MRS}_t = \left( \frac{\text{Sector}_t / \text{NIFTY}_t}{\text{SMA}_{50}(\text{Sector} / \text{NIFTY})} - 1 \right) \times 100$$
 - **Stock vs. Sector RS:** Compares the target stock's return trajectory against its parent sectoral index.
-- **Relative Rotation Graph (RRG) Quadrants:** Classifies the setup into `LEADING`, `WEAKENING`, `LAGGING`, or `IMPROVING`. Only `LEADING` and `IMPROVING` receive full momentum points.
+- **Relative Rotation Graph (RRG) Quadrants:** Two axes, because a 4-quadrant map cannot be derived from a level alone: **RS-Ratio** = the MRS level above; **RS-Momentum** = the 5-session change in MRS ($\text{MRS}_t - \text{MRS}_{t-5}$, percentage points). Classifies the setup into `LEADING` (ratio $\ge 0$, momentum $\ge 0$), `WEAKENING` ($\ge 0$, $< 0$), `LAGGING` ($< 0$, $< 0$), or `IMPROVING` ($< 0$, $\ge 0$) — zero counts as the positive side. Only `LEADING` and `IMPROVING` receive full momentum points.
 
 ### 7.2 NIFTY 50 Macro Tape & Market Breadth
-- **Macro Trend:** NIFTY 50 relative to its 50-day and 200-day Simple Moving Averages.
-- **Market Breadth (NSE 500):** Percentage of NSE 500 stocks trading above their 200-day moving average:
+- **Macro Trend:** NIFTY 50 relative to its 50-day and 200-day Simple Moving Averages, emitted as `nifty_trend` $\in$ `ABOVE_50_200_DMA` $\mid$ `BELOW_50_ABOVE_200` $\mid$ `BELOW_200_DMA` (the 200-DMA test first; a close **equal** to an average counts as above it) — the frozen token vocabulary, so producer (stage 7) and scorer (stage 9) can never speak different languages.
+- **Market Breadth (NSE 500):** Percentage of NSE 500 stocks trading above their 200-day moving average, emitted as `market_breadth_pct` plus `breadth_regime` $\in$ `RISK_ON` $\mid$ `NEUTRAL` $\mid$ `RISK_OFF`:
   - $> 65\%$: Risk-On Regime (Bullish aggressive sizing).
   - $40\%–65\%$: Neutral / Selective Stock-Picker Regime.
   - $< 40\%$: Risk-Off Regime (Systemic downtrend; all long setups gated or reduced).
@@ -343,7 +343,7 @@ python scripts/12_generate_html_report.py                             # writes r
 | `4_ml_direction.py` | `current_trade.json` | LightGBM classifier inference on multi-factor features; outputs 1M probability and price cone. | `prob_target_hit_22d`, `price_cone_p10_p50_p90`, `mae_projected`, `mfe_projected`, `shap_drivers`, `direction_label` |
 | `5_institutional_flow.py` | `current_trade.json` | Scrapes NSE Bhavcopy; calculates Delivery % surge, Futures OI buildup, rollover %, basis. | `delivery_pct`, `delivery_zscore`, `oi_change_pct`, `matrix_verdict`, `basis_annualized` |
 | `6_fundamental_audit.py` | `current_trade.json` | Queries Screener.in; evaluates Piotroski F-score, Altman Z, Promoter Pledge %, CFO/PAT, Earnings Date. | `piotoski_score`, `promoter_pledge_pct`, `pledge_circuit_breaker`, `cfo_pat_ratio`, `days_to_earnings` |
-| `7_sector_macro_regime.py` | `current_trade.json` | Mansfield Sector RS vs NIFTY; NIFTY 50 vs 200 DMA; India VIX band; 5-day FII/DII net flows. | `sector_mrs`, `sector_rrg_state`, `nifty_trend`, `vix_regime`, `fii_dii_flow_bias` |
+| `7_sector_macro_regime.py` | `current_trade.json` | Mansfield Sector RS vs NIFTY; NIFTY 50 vs 200 DMA; India VIX band; 5-day FII/DII net flows. | `sector_index`, `sector_mrs`, `sector_mrs_mom`, `sector_rrg_state`, `nifty_trend`, `breadth_regime`, `market_breadth_pct`, `vix_value`, `vix_regime`, `fii_dii_flow_bias`, `panic_regime_breaker`, `waived`, `as_of`, `missing_inputs` |
 | `8_dhan_precision.py` | `current_trade.json` | Queries Dhan API for 5m/10m intraday bars; computes Anchored VWAP, Fair Value Gaps, optimal limit price. | `anchored_vwap`, `optimal_limit_buy`, `spread_impact_cost_pct`, `orderblock_support` |
 | `9_decision_engine.py` | All script outputs | Synthesizes p_win, expectancy, and 7-state verdict; evaluates circuit breakers; produces Decision Report. | `final_score`, `decision`, `circuit_breakers_tripped`, `three_predictions`, `flip_table`, `p_win`, `expectancy`, `verdict`, `what_would_flip_me` |
 | `10_daily_triage.py` | `uvest_history.db` | Daily stewardship loop; premise check; posterior still_chance_pct; adverse movement tri-state. | `open_trades_status`, `action_required`, `trailing_stop_update`, `premise_invalidated`, `still_chance_pct`, `chance_delta_since_entry`, `cancellation_call`, `action_levels`, `what_would_cancel_me_tomorrow` |
@@ -569,7 +569,7 @@ To prevent "vibe coding" and enforce strict engineering verification, UVEST adop
 │ 2. /to-spec         ──► Locks architecture, schemas, and math into BRD │
 │                         ★ MILESTONE: EVERYTHING SPECCED & FROZEN ★     │
 │ 3. /to-tickets      ──► Slices vertical tracer-bullet tickets          │
-│ 4. /evals           ──► 52-trade benchmark & behavioral pass criteria  │
+│ 4. /evals           ──► 58-trade benchmark & behavioral pass criteria  │
 │ 5. Strict TDD       ──► Failing test seam written ──► Implementation   │
 │ 6. /code-review     ──► Invariant audit against frozen specification   │
 └────────────────────────────────────────────────────────────────────────┘
@@ -706,7 +706,7 @@ When the user provides a recommendation, the Agent executes the script suite and
 1. **Phase 1: Ingestion & Core Math**
    - Canonical JSON parser with F&O ban and ASM/GSM checks (`0_ingest_reco.py`, `1_math_and_rr.py`).
 2. **Phase 2: Data Connectors**
-   - Tier 1 free Bhavcopy scraper and yfinance client (`2_market_data.py`, `5_institutional_flow.py`).
+   - Tier 1 free Bhavcopy scraper and yfinance client (`2_market_data.py`, `5_institutional_flow.py`); live `uvest-market-context/1` fetcher for stage 7 (`fetch_market_context.py`: Yahoo index closes, NSE constituents + computed breadth, NSE official FII/DII API + dated public table + local continuity cache — a failed source omits its series and stage 7 waives naming it).
    - Tier 2 Dhan API client with SQLite caching (`8_dhan_precision.py`).
 3. **Phase 3: Quant & Fundamental Engines**
    - FastDTW analog matcher (`3_dtw_pattern.py`).
@@ -719,4 +719,4 @@ When the user provides a recommendation, the Agent executes the script suite and
    - Persistent database and daily triage protocol (`10_daily_triage.py`).
    - Failure autopsy and self-audit engine (`11_postmortem_learning.py`).
 5. **Phase 5: Evals Benchmark Validation**
-   - Run `tests/run_evals.py` against 52-trade benchmark. All gates must pass 100%.
+   - Run `tests/run_evals.py` against 58-trade benchmark. All gates must pass 100%.

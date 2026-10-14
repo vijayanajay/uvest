@@ -1,0 +1,16 @@
+{
+  "sector_index": "^CNXINFRA",
+  "sector_mrs": -2.2375,
+  "sector_mrs_mom": -0.3318,
+  "sector_rrg_state": "LAGGING",
+  "nifty_trend": "BELOW_200_DMA",
+  "market_breadth_pct": 25.0,
+  "breadth_regime": "RISK_OFF",
+  "vix_value": 25.0,
+  "vix_regime": "PANIC",
+  "fii_dii_flow_bias": "NET_SELLING",
+  "panic_regime_breaker": true,
+  "waived": false,
+  "as_of": "2023-01-27",
+  "missing_inputs": []
+}

@@ -60,7 +60,7 @@ Canonical five roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-fo
 Single-context glossary of Indian market mechanics & frozen ADRs. See [domain.md](file:///d:/Code/uvest/docs/agents/domain.md).
 
 ### Evaluations (Evals)
-Behavioral benchmark suite against 52 historical trades. See [evals.md](file:///d:/Code/uvest/docs/agents/evals.md).
+Behavioral benchmark suite against 58 historical trades. See [evals.md](file:///d:/Code/uvest/docs/agents/evals.md).
 
 ---
 
@@ -79,7 +79,7 @@ All skills live in [skills/](file:///d:/Code/uvest/skills) (and [.agents/skills/
 | **`/code-review`** | Audits code changes along two axes: Standards (Kailash Nadh simplicity) and Spec (functional match). |
 | **`/domain-modeling`** | Builds and sharpens the project's domain vocabulary, GLOSSARY, and Architecture Decision Records (ADRs). |
 | **`/diagnosing-bugs`** | Systematic root-cause diagnosis loop for quantitative errors, calculation bugs, and regressions. |
-| **`/evals`** | Runs behavioral evaluations against the 52-trade golden dataset (`tests/evals/golden_dataset.json`) to audit calibration, hallucination, and gate enforcement. |
+| **`/evals`** | Runs behavioral evaluations against the 58-trade golden dataset (`tests/evals/golden_dataset.json`) to audit calibration, hallucination, and gate enforcement. |
 | **`/html-visualizer`** | Generates standalone, zero-dependency, rich interactive HTML report cards (`reports/report_{symbol}_{date}.html`) for each analyzed recommendation. |
 | **`/daily-triage`** | Audits open tracked positions daily; enforces the 3-stage adverse movement protocol; strictly prohibits averaging down. |
 | **`/postmortem`** | Decomposes closed trade failures into root causes (volatility noise, regime shock, institutional distribution, event shock, slippage). |
@@ -105,3 +105,56 @@ Every script and model must satisfy the evaluation criteria documented in [evals
 3. **Local SQLite Only:** All historical tracking lives in `uvest_history.db` and Dhan API cache in `dhan_cache.db`.
 4. **HTML Visualizer:** Every recommendation must produce a standalone, self-contained HTML visual dashboard (`report_{symbol}_{date}.html`) featuring interactive gauges, price cones, DTW overlays, and execution cards.
 5. **Post-Mortem Autopsy:** Never delete or ignore a losing recommendation. Track every recommendation, triage daily, and execute an autopsy upon resolution.
+
+<!-- graft:start -->
+## Graft — repo context graph
+
+This repo is indexed in `graft/`: small linked markdown nodes that explain each
+system and carry exact file:line spans, kept in sync with the code through git.
+
+For ANY task here — understanding how something works, finding where code lives,
+or scoping a change — get context from the graph before grepping or opening
+source files. Re-ask freely (it's cheap) and reuse literal identifiers you
+already have (symbol, error string, file name) as the query. New to this repo?
+Run `graft map` first — a token-budgeted orientation (dir clusters, hubs,
+hotspots), no LLM, no key.
+
+- Run `graft ask "<your question>" --source` → ranked nodes with the relevant
+  code spans inlined (each hit's ≤8-line crux by default; `--full` for whole
+  definitions when the crux isn't enough). Match the tool to the task shape:
+  for understanding or editing, the top node IS the answer — cite its
+  `covers:` file:line spans and edit straight from `--source`. For
+  exhaustive tasks ("every occurrence / every caller of this pattern"), ranked
+  results are top-N, not complete — run `graft grep "<literal>"` instead
+  (exhaustive over indexed files, grouped by enclosing symbol), falling back
+  to raw `grep -rn` only for unindexed files.
+- `graft skeleton <file>` → every definition's signature + span, ~10× cheaper
+  than reading the file; use it to skim an API surface.
+- `graft callers <symbol>` gives precomputed, exact edges — who calls this.
+  Add `--direction out` for what it calls, or `--depth N` to walk
+  transitively for the full blast radius. For structural questions, skip
+  ranking and use this directly.
+- Or browse: `graft/INDEX.md` lists every node; follow the links.
+- Monorepos and folders of multiple repos rank fairly across sub-projects —
+  hits carry `[scope/]` labels naming which one they're from. Narrow with
+  `graft ask "<task>" --in <scope>/` once you know where you're working.
+
+If a returned span is truncated ("+N more lines"), open the file at that exact
+range before finalizing. Only open source files when a node genuinely lacks a
+needed detail, and then at the exact file:line the node points to — never
+re-read whole files.
+
+After big code changes, refresh the graph with `graft build` (deterministic,
+no API key, $0).
+<!-- graft:end -->
+
+---
+
+## 6. Freebuff & Trail Session Protocol
+
+When running **Freebuff** (or other autonomous coding agents):
+1. **Initial Orientation:** Inspect existing learnings in `.trail/learnings/` and run `graft map` (or view `graft/INDEX.md`) to orient on repo topology before making changes.
+2. **Context Retrieval:** Use `graft ask "<query>" --source` (or `npx @nanonets/graft ask "<query>" --source`) to pull exact symbols and line spans rather than executing broad repository scans.
+3. **Capture Session Learnings:** At the conclusion of non-trivial tasks or bug investigations, save a brief note in `.trail/learnings/YYYY-MM-DD-<topic>.md` recording what was decided, what was ruled out, and what to watch out for.
+4. **Verification & Freshness:** Run `graft check` (or `npx @nanonets/graft check`) to verify the context graph remains consistent with the codebase.
+

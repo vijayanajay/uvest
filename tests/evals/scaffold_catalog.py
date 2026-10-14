@@ -84,6 +84,7 @@ ALLOWED_PREFIXES = ("_replay/",)
 FORWARD = curate.FORWARD              # 22 sessions (BRD §5.1)
 MIN_SESSIONS = curate.MIN_SESSIONS    # 200 (TICK-013 floor)
 FINANCIALS_FILE = "financials.json"   # authored stage-6 input bundle (per scenario)
+REGIME_FILE = "regime_context.json"   # authored stage-7 input bundle (per scenario)
 USER_CAPITAL_INR = 500000.0
 LOT_NOTIONAL_INR = 500000.0           # frozen lot-size derivation band
 CRLF = "\r\n"
@@ -160,6 +161,12 @@ def financials_fixture(scenario_id: str) -> Path | None:
     return path if path.exists() else None
 
 
+def regime_fixture(scenario_id: str) -> Path | None:
+    """The scenario's committed stage-7 input bundle, or None when it has none."""
+    path = PROOF_ROOT / "fixtures" / scenario_id / REGIME_FILE
+    return path if path.exists() else None
+
+
 def declare_hazard_evidence(row: dict, spec: dict) -> None:
     """Turn a committed financials bundle into declared, graded stage-6 evidence.
 
@@ -200,6 +207,46 @@ def declare_hazard_evidence(row: dict, spec: dict) -> None:
         "hazard_field": authored.get("hazard_field"),
         "hazard_value": authored.get("hazard_value"),
         "documented": authored.get("documented"),
+        "disclosure": authored.get("disclosure"),
+    }
+
+
+def declare_regime_evidence(row: dict) -> None:
+    """Turn a committed market-context bundle into declared, graded stage-7 evidence.
+
+    The same two-things-or-neither discipline as `declare_hazard_evidence`: the
+    artifact declaration (so the payload is proven, never typed) and the
+    `gate_focus` breaker id the bundle says it was authored to exercise. V11
+    pairs them — `panic_regime` depends on stage 7 — which is exactly why the
+    pending stage-7 intent existed while stage 7 was unimplemented, and why a
+    bundle that names no breaker leaves that pending intent alone instead of
+    promoting a guessed id. The bundle's own disclosure is copied onto the row,
+    so a manifest reader sees the authored inputs without opening the fixture.
+    """
+    sid = row["scenario_id"]
+    fixture = regime_fixture(sid)
+    if fixture is None:
+        return
+    try:
+        bundle = read_json(fixture)
+    except (OSError, json.JSONDecodeError):
+        print(f"  {sid}: {REGIME_FILE} is unreadable; regime evidence not declared")
+        return
+    row["recorded_artifacts"].append(
+        {"stage": 7, "artifact": "out_7_regime.json",
+         "path": f"fixtures/{sid}/recorded/out_7_regime.json",
+         "evidence": "recorded"})
+    row["replay_inputs"]["regime_fixture"] = f"fixtures/{sid}/{REGIME_FILE}"
+    # The bundle names the breaker it was authored to exercise; without that
+    # declaration the row keeps its pending intent rather than guessing one.
+    authored = (bundle.get("authoring") or {})
+    breaker = authored.get("breaker")
+    if breaker:
+        row["gate_focus"].append(breaker)
+        row["authoring"].pop("breaker_pending_stage_7", None)
+    row["authoring"]["regime_evidence"] = {
+        "fixture": f"fixtures/{sid}/{REGIME_FILE}",
+        "breaker": breaker,
         "disclosure": authored.get("disclosure"),
     }
 
@@ -420,6 +467,8 @@ def build_row(spec: dict, *, today: str) -> dict | None:
     # A committed financials bundle promotes the pending stage-6 breaker into
     # graded evidence (declaration + gate_focus + the stage-6 recording below).
     declare_hazard_evidence(row, spec)
+    # Same promotion for a committed market-context bundle and stage 7.
+    declare_regime_evidence(row)
     if symbol in TAPE_SOURCE_TICKER:
         fetched, reason = TAPE_SOURCE_TICKER[symbol]
         row["authoring"]["tape_source"] = {
@@ -452,7 +501,7 @@ def canonical_trade(row: dict) -> dict:
 
 
 def record_stages(row: dict) -> bool:
-    """Run stages 1–2 (and 6, when the scenario has a bundle) through --record.
+    """Run stages 1–2 (and 6/7, when the scenario has a bundle) through --record.
 
     The row's evidence is real stdout: every declared artifact is a stage's own
     output over the row's point-in-time fixtures, recorded in one bundle.
@@ -475,6 +524,12 @@ def record_stages(row: dict) -> bool:
             ("6_fundamental_audit.py", ["--input", str(canonical),
                                         "--financials-fixture", str(fundamentals),
                                         "--record", str(bundle)]))
+    regime = regime_fixture(sid)
+    if regime is not None:
+        stages.append(
+            ("7_sector_macro_regime.py", ["--input", str(canonical),
+                                          "--regime-fixture", str(regime),
+                                          "--record", str(bundle)]))
     for script, argv in stages:
         proc = subprocess.run([sys.executable, str(SCRIPTS / script), *argv],
                               capture_output=True, text=True, encoding="utf-8",

@@ -147,12 +147,12 @@ class TestOneInvocationChain(unittest.TestCase):
 
             # 1. Ascending canonical order for every stage that exists.
             runs = [int(s) for s in re.findall(r"\[RUN\] stage (\d+)", out)]
-            self.assertEqual(runs, [0, 1, 2, 3, 5, 6, 9, 12],
+            self.assertEqual(runs, [0, 1, 2, 3, 5, 6, 7, 9, 12],
                              f"chain order wrong: {runs}\n{out}")
 
             # 2. Every absent stage is disclosed, and stage 11 is named as the
             #    conditional stage — silence would be a hidden gap.
-            for stage in (4, 7, 8, 10):
+            for stage in (4, 8, 10):
                 self.assertIn(f"[SKIP] stage {stage}:", out,
                               f"missing disclosure for stage {stage}")
             self.assertIn("[SKIP] stage 11:", out)
@@ -162,7 +162,7 @@ class TestOneInvocationChain(unittest.TestCase):
             for name in ("current_trade.json", "out_1_math.json",
                          "out_2_market.json", "out_3_dtw.json",
                          "out_5_flow.json", "out_6_fundamental.json",
-                         "out_9_decision.json"):
+                         "out_7_regime.json", "out_9_decision.json"):
                 path = wd / name
                 self.assertTrue(path.exists(), f"artifact missing: {name}")
                 json.loads(path.read_text(encoding="utf-8"))  # must be real JSON
@@ -713,6 +713,45 @@ class TestRunnerArgvAndFrozenNames(unittest.TestCase):
         self.assertIn("--out-dir", argv)
         self.assertEqual(argv.count("--payload"), 2)
         self.assertNotIn("--record", argv, "stage 12 has no recorder support")
+
+    # ------------------------------------------------- live regime fetch mode
+    def test_regime_live_is_documented_and_conflicts_with_a_fixture(self):
+        """One way to give stage 7 a bundle: pass it, or ask for a live fetch."""
+        help_out = subprocess.run(
+            [sys.executable, str(RUNNER), "--help"],
+            capture_output=True, text=True, encoding="utf-8", check=False,
+            cwd=str(REPO_ROOT))
+        self.assertEqual(help_out.returncode, 0, help_out.stderr)
+        self.assertIn("--regime-live", help_out.stdout)
+        with tempfile.TemporaryDirectory() as tmp:
+            wd = Path(tmp)
+            proc = run_runner(wd, INPUT_FIXTURE,
+                              "--regime-fixture", "ctx.json", "--regime-live")
+        self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+        self.assertIn("mutually exclusive", proc.stderr)
+
+    def test_a_failed_live_fetch_degrades_to_the_waiver_path(self):
+        """No canonical trade, unmapped symbol — None and a warning, never a
+        crash: the fetcher's usage exits are a fetch failure down here."""
+        with tempfile.TemporaryDirectory() as tmp:
+            wd = Path(tmp)
+            err, out = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stderr(err), contextlib.redirect_stdout(out):
+                self.assertIsNone(self.module._fetch_live_context(wd),
+                                  "no current_trade.json ⇒ waiver path")
+            self.assertIn("[WARN]", err.getvalue())
+            (wd / "current_trade.json").write_text(
+                json.dumps({"symbol": "MYSTERYCO",
+                            "recommended_date": "2026-10-14"}),
+                encoding="utf-8")
+            err, out = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stderr(err), contextlib.redirect_stdout(out):
+                self.assertIsNone(self.module._fetch_live_context(wd),
+                                  "unmapped symbol ⇒ waiver path, not exit 2 "
+                                  "aborting the chain")
+            self.assertIn("symbol:unmapped:MYSTERYCO", err.getvalue())
+            self.assertFalse((wd / "market_context.json").exists(),
+                             "no bundle is invented for an unmapped symbol")
 
 
 if __name__ == "__main__":

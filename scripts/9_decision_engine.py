@@ -206,8 +206,12 @@ def score_fundamental(doc: dict) -> float:
 def score_regime(doc: dict) -> float:
     rrg = {"LEADING": 0.45, "IMPROVING": 0.35,
            "WEAKENING": 0.15, "LAGGING": 0.05}.get(doc.get("sector_rrg_state"), 0.15)
-    nifty = {"BULLISH": 0.3, "NEUTRAL": 0.2,
-             "BEARISH": 0.0}.get(doc.get("nifty_trend"), 0.2)
+    # `nifty_trend` speaks the frozen TICK-007 / BRD §7.2 vocabulary — the
+    # stage-7 producer can emit nothing else, so scoring any other token set
+    # (the retired BULLISH/NEUTRAL/BEARISH keys this once used) silently took
+    # the 0.2 default on every real run (ADR-010 decision 1).
+    nifty = {"ABOVE_50_200_DMA": 0.3, "BELOW_50_ABOVE_200": 0.2,
+             "BELOW_200_DMA": 0.0}.get(doc.get("nifty_trend"), 0.2)
     vix = {"LOW": 0.25, "NORMAL": 0.2,
            "ELEVATED": 0.05, "PANIC": 0.0}.get(doc.get("vix_regime"), 0.2)
     return _clip(rrg + nifty + vix)
@@ -371,10 +375,35 @@ def synthesize(trade: dict, payloads: dict[str, dict],
     # actually stands behind count — a waived payload caps nothing.
     fund_evidence = payloads.get("out_6_fundamental.json") or {}
     size_cap: float | None = None
+    cap_reasons: list[str] = []
     if fund_evidence and fund_evidence.get("waived") is not True:
         cap = fund_evidence.get("earnings_size_cap_pct")
         if isinstance(cap, (int, float)) and not isinstance(cap, bool) and cap > 0:
             size_cap = float(cap)
+            days = fund_evidence.get("days_to_earnings")
+            window = (f"{days} session(s)" if isinstance(days, int)
+                      else "the holding window")
+            cap_reasons.append(
+                f"quarterly earnings in {window} "
+                f"(BRD §6.4 corporate-calendar hazard)")
+
+    # Stage 7's macro sizing gates (BRD §7.2, §7.4; ADR-010 decision 6): a
+    # Risk-Off breadth regime or sustained combined FII+DII net selling sizes
+    # the trade down — the same half-size lever the §6.4 calendar cap uses —
+    # and never vetoes it: the fatal breaker stays exactly §10.3 #6 (VIX > 24
+    # AND breadth < 30). A waived or absent regime payload caps nothing.
+    regime_evidence = payloads.get("out_7_regime.json") or {}
+    if regime_evidence and regime_evidence.get("waived") is not True:
+        if regime_evidence.get("breadth_regime") == "RISK_OFF":
+            cap_reasons.append(
+                "market breadth in the RISK_OFF regime, under 40% of NSE 500 "
+                "above their 200 DMA (BRD §7.2 gates all long setups)")
+        if regime_evidence.get("fii_dii_flow_bias") == "NET_SELLING":
+            cap_reasons.append(
+                "combined FII+DII 5-day net selling beyond -₹5,000 Cr "
+                "(BRD §7.4 cautious sizing)")
+    if cap_reasons and size_cap is None:
+        size_cap = 50.0
 
     decision: str
     avoid_reason: str | None = None
@@ -407,10 +436,8 @@ def synthesize(trade: dict, payloads: dict[str, dict],
         decision = "WAIT"
     elif size_cap is not None:
         decision = "GO_WEAK"
-        days = fund_evidence.get("days_to_earnings")
-        window = f"{days} session(s)" if isinstance(days, int) else "the holding window"
-        confidence_deficit = (f"quarterly earnings in {window} cap size at "
-                              f"{size_cap:g}% (BRD §6.4 corporate-calendar hazard)")
+        confidence_deficit = (f"size capped at {size_cap:g}% — "
+                              + "; ".join(cap_reasons))
     else:
         decision = "GO"
 

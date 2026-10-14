@@ -40,7 +40,8 @@ Discipline (BRD §10.4, §9.1):
 Usage:
     python scripts/run_pipeline.py --input input.txt [--workdir DIR]
         [--ohlcv-fixture PATH] [--history-fixture PATH]
-        [--bhavcopy-fixture PATH] [--financials-fixture PATH] [--record DIR]
+        [--bhavcopy-fixture PATH] [--financials-fixture PATH]
+        [--regime-fixture PATH | --regime-live] [--record DIR]
 """
 
 from __future__ import annotations
@@ -89,7 +90,6 @@ ORDER: list[int] = sorted([*CHAIN, *EXCLUDED])
 # (`artifact_filename()` refuses to guess for them until then).
 PENDING_ARTIFACTS: dict[int, str] = {
     4: "out_4_ml.json",
-    7: "out_7_regime.json",
     8: "out_8_dhan.json",
     10: "out_10_triage.json",
 }
@@ -107,10 +107,11 @@ FIXTURE_FLAG: dict[int, str] = {
     3: "--history-fixture",
     5: "--bhavcopy-fixture",
     6: "--financials-fixture",
+    7: "--regime-fixture",
 }
 
 # Stages whose CLI carries _recorder.add_record_arg (stage 12 has no recorder).
-RECORD_STAGES = {0, 1, 2, 3, 5, 6, 9}
+RECORD_STAGES = {0, 1, 2, 3, 5, 6, 7, 9}
 
 # BRD §9.1 pipeline block: stage 10 logs the new trade before the report.
 STAGE10_ARGS = ["--action", "track"]
@@ -248,8 +249,44 @@ def write_run_record(workdir: Path, record: dict) -> Path | None:
     return path
 
 
+def _fetch_live_context(workdir: Path) -> str | None:
+    """Fetch a live market-context bundle into the workdir for stage 7.
+
+    Runs between stage 0 and stage 7, because the canonical trade (symbol,
+    recommended_date) only exists once the chain has ingested the input. Any
+    failure — unmapped symbol, network down, thin sources — returns None so
+    stage 7 takes its existing waiver path and says why; a partial bundle is
+    still worth passing, because stage 7 names exactly which series are
+    missing (`missing_inputs`) instead of guessing them.
+    """
+    try:
+        import fetch_market_context as fmc
+        trade = json.loads((workdir / "current_trade.json").read_text(
+            encoding="utf-8"))
+        symbol = str(trade.get("symbol") or "").strip().upper()
+        as_of = str(trade.get("recommended_date")
+                    or datetime.now().strftime("%Y-%m-%d"))
+        output = workdir / "market_context.json"
+        print(f"[FETCH] market context: {symbol} as of {as_of} "
+              "(tier-1: Yahoo + NSE)")
+        code = fmc.main(["--symbol", symbol, "--as-of", as_of,
+                         "--output", str(output)])
+        if code == 0 and output.exists():
+            return str(output)
+    except (Exception, SystemExit) as exc:
+        # SystemExit: the fetcher's usage gates (unmapped symbol, bad --as-of)
+        # exit rather than raise — a usage problem is still just a fetch
+        # failure down here, never a chain abort.
+        print(f"[WARN] market-context fetch failed: {type(exc).__name__}: "
+              f"{exc}", file=sys.stderr)
+    print("[WARN] no live bundle — stage 7 takes the waiver path",
+          file=sys.stderr)
+    return None
+
+
 def run_chain(run_record: dict, *, input_path: str, workdir: Path,
-              fixtures: dict[int, str | None], record_dir: str | None) -> int:
+              fixtures: dict[int, str | None], record_dir: str | None,
+              regime_live: bool = False) -> int:
     """Walk ORDER, forwarding each stage's stdout into its artifact.
 
     Returns the chain's exit code (0 on success, the first failing stage's own
@@ -274,6 +311,9 @@ def run_chain(run_record: dict, *, input_path: str, workdir: Path,
             print(f"[SKIP] stage {stage}: {reason}")
             note(stage, "skipped", artifact=ARTIFACTS.get(stage), skip_reason=reason)
             continue
+
+        if stage == 7 and regime_live and not fixtures.get(7):
+            fixtures[7] = _fetch_live_context(workdir)
 
         artifact = ARTIFACTS[stage]
         target = f" → {artifact}" if artifact else " → reports/report_{SYMBOL}_{DATE}.html"
@@ -394,10 +434,24 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--financials-fixture", default=None,
                         help="recorded financial-statement bundle for stage 6 "
                              "(omit for the waiver path).")
+    parser.add_argument("--regime-fixture", default=None,
+                        help="recorded uvest-market-context/1 bundle for stage 7 "
+                             "(omit for the waiver path).")
+    parser.add_argument("--regime-live", action="store_true",
+                        help="fetch a live uvest-market-context/1 bundle for "
+                             "stage 7 from tier-1 sources (Yahoo + NSE; "
+                             "fetch_market_context.py) instead of passing a "
+                             "fixture — a fetch that fails leaves stage 7's "
+                             "waiver path, never an invented value. Conflicts "
+                             "with --regime-fixture.")
     parser.add_argument("--record", default=None,
                         help="replay-bundle directory passed to every "
                              "recorder-capable stage.")
     args = parser.parse_args(argv)
+    if args.regime_live and args.regime_fixture:
+        parser.error("--regime-live and --regime-fixture are mutually "
+                     "exclusive — pass the bundle or ask the runner to fetch "
+                     "one, not both")
 
     # Resolve every path against the invocation cwd BEFORE the chain starts
     # running inside the workdir.
@@ -412,6 +466,7 @@ def main(argv: list[str] | None = None) -> int:
         3: resolve(args.history_fixture),
         5: resolve(args.bhavcopy_fixture),
         6: resolve(args.financials_fixture),
+        7: resolve(args.regime_fixture),
     }
     record_dir = resolve(args.record)
 
@@ -435,7 +490,8 @@ def main(argv: list[str] | None = None) -> int:
     exit_code: int | None = None
     try:
         exit_code = run_chain(run_record, input_path=input_path, workdir=workdir,
-                              fixtures=fixtures, record_dir=record_dir)
+                              fixtures=fixtures, record_dir=record_dir,
+                              regime_live=args.regime_live)
     finally:
         # Every exit path leaves the record behind — including a Ctrl-C, which is
         # exactly when the console log is least likely to have been kept.

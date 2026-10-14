@@ -1,7 +1,7 @@
 {
   "schema": "uvest-baseline-scorecard/1",
-  "scenario_manifest_sha256": "633206ed6e39239c596f944da03c35daa0feac374aeca1cd9ef33156347a3b54",
-  "manifest_sha256": "06b487d4dc7ad3c57df3dc4b90e7b66a92f749d6aa78706eb348879b3eebe246",
+  "scenario_manifest_sha256": "96b95ea0a05ae272e1a283a934074d87a4166bd623d81b5be3f8432926055841",
+  "manifest_sha256": "5e009ce0f1a4fd3ceb2ab2061acb0268a9224d368139bc62a7750593e33f6e40",
   "quarantined_count": 0,
   "quarantine_register_sha256": "440b46cb3f9865af6a2a672c2f3e62a0d25744a5bfef1d4b44a6bd910e0c4929",
   "probe_rosters": {
@@ -9,13 +9,15 @@
     "refusal_probes": 5
   },
   "probe_roster_ids": {
-    "option_probes": {      "OPT-001": "f9458041e7929a8c2a969f7714d3e41276b1d0624f05dd87696e6da0e4199312",
+    "option_probes": {
+      "OPT-001": "f9458041e7929a8c2a969f7714d3e41276b1d0624f05dd87696e6da0e4199312",
       "OPT-002": "6a588622ed2d2b4082381b44876032bacede65e1e328fc4ef84d9c6dcd2ebdce",
       "OPT-003": "ae3d23cbef2f2c132e04c9a240ee67fbe889fc44360775ad98db2d4b94be86d0",
       "OPT-004": "419436fafa22f9bd90af3ce4739037a64aa5cd21bf528fe5f6f9286f45fedf5d",
       "OPT-005": "b3a2a9634606d965f13007f94cc479daf549f654483e17ab87c13328409ceb15"
     },
-    "refusal_probes": {      "REF-001": "db27c5f1704d9f419568637f6241f60091111394c27616b7aeef977f19180e28",
+    "refusal_probes": {
+      "REF-001": "db27c5f1704d9f419568637f6241f60091111394c27616b7aeef977f19180e28",
       "REF-002": "c3177eacd2b16926a3a9a9f2862547eb824809d2765b7fb30050013d6beca351",
       "REF-003": "17d060a0ed6d35d454c3134ffa526cae5e60ec640afe6c1f01dd84261a5d9baa",
       "REF-004": "bd8f3b78b62a625d649ab5d125fe823aa2f11b6982356cd9000d64ef2cf3d08d",
@@ -27,6 +29,7 @@
     "earnings_hazard": 4,
     "inverted_rr": 8,
     "pledge_hazard": 5,
+    "regime_shock": 6,
     "tight_stop": 5
   }
 }

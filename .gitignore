@@ -245,3 +245,6 @@ reports/report_*.html
 # Scenario-manifest replay sandboxes — materialized per run under the proof
 # root; never evidence, never committed (scenario-manifest-schema.md).
 tests/proof/_replay/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/

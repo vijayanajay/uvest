@@ -1,6 +1,6 @@
 {
   "schema": "uvest-scenario-manifest/1",
-  "generated_on": "2026-10-13",
+  "generated_on": "2026-10-14",
   "scenarios": [
     {
       "scenario_id": "GB-2022-0001",
@@ -4473,7 +4473,7 @@
       "scenario_id": "SCEN-001",
       "schema_version": "uvest-scenario-manifest/1",
       "origin": "curated_behavioral",
-      "created_on": "2026-10-10",
+      "created_on": "2026-10-14",
       "authoring": {
         "source": "catalog-scaffold/1",
         "catalog": "business_test_cases.md §3",
@@ -4488,10 +4488,12 @@
         "expiry_rule": "NSE monthly last-Thursday, rolled when within 7 days of T_rec",
         "lot_size_rule": "₹500000 notional band on the authored entry, rounded to a 25-share grid; historical NSE lot revisions are not archived offline",
         "realized_outcome_basis": "target_first",
-        "breaker_pending_stage_7": [
-          "panic_regime"
-        ],
-        "catalog_trap": "India VIX 83.6; market hits 10% lower circuit"
+        "catalog_trap": "India VIX 83.6; market hits 10% lower circuit",
+        "regime_evidence": {
+          "fixture": "fixtures/SCEN-001/regime_context.json",
+          "breaker": "panic_regime",
+          "disclosure": "Authored market-context input (SCEN-001, as of 2020-03-23): the catalog's own trap — \"India VIX 83.6; market hits 10% lower circuit\" — with the breaker's panic arms stated as: VIX 83.6 (documented verbatim in the catalog trap), market breadth 25.0% (authored inside the breaker arm (< 30): the trap states no breadth level), plus an authored VIX/breadth trajectory, a 5-day combined net flow of -7000 Cr (NET_SELLING), the trade's sector index ^CNXENERGY, and a deterministic weekday date axis ending at T_rec. origin=authored: no offline source exists for point-in-time index series, so every value is disclosed authorship rather than a market data snapshot (E4: disclosed authorship, never an invented source)."
+        }
       },
       "classification_tags": [
         "CATALOG"
@@ -4499,7 +4501,8 @@
       "gate_focus": [
         "S3",
         "S4",
-        "S6"
+        "S6",
+        "panic_regime"
       ],
       "symbol": "RELIANCE",
       "exchange": "NSE",
@@ -4522,7 +4525,8 @@
           "cutoff": "2020-03-23",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/SCEN-001/regime_context.json"
       },
       "recorded_artifacts": [
         {
@@ -4535,6 +4539,12 @@
           "stage": 2,
           "artifact": "out_2_market.json",
           "path": "fixtures/SCEN-001/recorded/out_2_market.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 7,
+          "artifact": "out_7_regime.json",
+          "path": "fixtures/SCEN-001/recorded/out_7_regime.json",
           "evidence": "recorded"
         }
       ],
@@ -4557,12 +4567,12 @@
       "scenario_id": "SCEN-002",
       "schema_version": "uvest-scenario-manifest/1",
       "origin": "curated_behavioral",
-      "created_on": "2026-10-10",
+      "created_on": "2026-10-14",
       "authoring": {
         "source": "catalog-scaffold/1",
         "catalog": "business_test_cases.md §3",
         "catalog_name": "Covid Panic Liquidity Freeze",
-        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR)",
+        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR); a row whose tape then rallies records the honest false negative (§4.1), never a tuned loss",
         "entry_basis": "open",
         "shape": {
           "risk_atr": 0.5,
@@ -4572,10 +4582,12 @@
         "expiry_rule": null,
         "lot_size_rule": "₹500000 notional band on the authored entry, rounded to a 25-share grid; historical NSE lot revisions are not archived offline",
         "realized_outcome_basis": "stop_first",
-        "breaker_pending_stage_7": [
-          "panic_regime"
-        ],
-        "catalog_trap": "VIX > 80; NIFTY 500 breadth < 5% bullish"
+        "catalog_trap": "VIX > 80; NIFTY 500 breadth < 5% bullish",
+        "regime_evidence": {
+          "fixture": "fixtures/SCEN-002/regime_context.json",
+          "breaker": "panic_regime",
+          "disclosure": "Authored market-context input (SCEN-002, as of 2020-03-24): the catalog's own trap — \"VIX > 80; NIFTY 500 breadth < 5% bullish\" — with the breaker's panic arms stated as: VIX 80.5 (authored above the trap's stated floor (VIX > 80)), market breadth 4.5% (authored below the trap's stated bound (breadth < 5% bullish, and < 30 for the breaker arm)), plus an authored VIX/breadth trajectory, a 5-day combined net flow of -7000 Cr (NET_SELLING), the trade's sector index ^NSEBANK, and a deterministic weekday date axis ending at T_rec. origin=authored: no offline source exists for point-in-time index series, so every value is disclosed authorship rather than a market data snapshot (E4: disclosed authorship, never an invented source)."
+        }
       },
       "classification_tags": [
         "CATALOG"
@@ -4583,7 +4595,8 @@
       "gate_focus": [
         "S3",
         "S4",
-        "S6"
+        "S6",
+        "panic_regime"
       ],
       "symbol": "SBIN",
       "exchange": "NSE",
@@ -4606,7 +4619,8 @@
           "cutoff": "2020-03-24",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/SCEN-002/regime_context.json"
       },
       "recorded_artifacts": [
         {
@@ -4619,6 +4633,12 @@
           "stage": 2,
           "artifact": "out_2_market.json",
           "path": "fixtures/SCEN-002/recorded/out_2_market.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 7,
+          "artifact": "out_7_regime.json",
+          "path": "fixtures/SCEN-002/recorded/out_7_regime.json",
           "evidence": "recorded"
         }
       ],
@@ -4643,12 +4663,12 @@
       "scenario_id": "SCEN-003",
       "schema_version": "uvest-scenario-manifest/1",
       "origin": "curated_behavioral",
-      "created_on": "2026-10-10",
+      "created_on": "2026-10-14",
       "authoring": {
         "source": "catalog-scaffold/1",
         "catalog": "business_test_cases.md §3",
         "catalog_name": "Election Results Flash Crash",
-        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR)",
+        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR); a row whose tape then rallies records the honest false negative (§4.1), never a tuned loss",
         "entry_basis": "open",
         "shape": {
           "risk_atr": 0.5,
@@ -4658,10 +4678,12 @@
         "expiry_rule": "NSE monthly last-Thursday, rolled when within 7 days of T_rec",
         "lot_size_rule": "₹500000 notional band on the authored entry, rounded to a 25-share grid; historical NSE lot revisions are not archived offline",
         "realized_outcome_basis": "stop_first",
-        "breaker_pending_stage_7": [
-          "panic_regime"
-        ],
-        "catalog_trap": "Exit-poll euphoria followed by 6% NIFTY crash; VIX 32"
+        "catalog_trap": "Exit-poll euphoria followed by 6% NIFTY crash; VIX 32",
+        "regime_evidence": {
+          "fixture": "fixtures/SCEN-003/regime_context.json",
+          "breaker": "panic_regime",
+          "disclosure": "Authored market-context input (SCEN-003, as of 2024-06-04): the catalog's own trap — \"Exit-poll euphoria followed by 6% NIFTY crash; VIX 32\" — with the breaker's panic arms stated as: VIX 32.0 (documented verbatim in the catalog trap (VIX 32)), market breadth 25.0% (authored inside the breaker arm (< 30): the trap states no breadth level), plus an authored VIX/breadth trajectory, a 5-day combined net flow of -7000 Cr (NET_SELLING), the trade's sector index ^NSEBANK, and a deterministic weekday date axis ending at T_rec. origin=authored: no offline source exists for point-in-time index series, so every value is disclosed authorship rather than a market data snapshot (E4: disclosed authorship, never an invented source)."
+        }
       },
       "classification_tags": [
         "CATALOG"
@@ -4669,7 +4691,8 @@
       "gate_focus": [
         "S3",
         "S4",
-        "S6"
+        "S6",
+        "panic_regime"
       ],
       "symbol": "SBIN",
       "exchange": "NSE",
@@ -4692,7 +4715,8 @@
           "cutoff": "2024-06-04",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/SCEN-003/regime_context.json"
       },
       "recorded_artifacts": [
         {
@@ -4705,6 +4729,12 @@
           "stage": 2,
           "artifact": "out_2_market.json",
           "path": "fixtures/SCEN-003/recorded/out_2_market.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 7,
+          "artifact": "out_7_regime.json",
+          "path": "fixtures/SCEN-003/recorded/out_7_regime.json",
           "evidence": "recorded"
         }
       ],
@@ -4727,12 +4757,12 @@
       "scenario_id": "SCEN-004",
       "schema_version": "uvest-scenario-manifest/1",
       "origin": "curated_behavioral",
-      "created_on": "2026-10-10",
+      "created_on": "2026-10-14",
       "authoring": {
         "source": "catalog-scaffold/1",
         "catalog": "business_test_cases.md §3",
         "catalog_name": "PSU Euphoria Reversal",
-        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR)",
+        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR); a row whose tape then rallies records the honest false negative (§4.1), never a tuned loss",
         "entry_basis": "open",
         "shape": {
           "risk_atr": 0.5,
@@ -4742,10 +4772,12 @@
         "expiry_rule": "NSE monthly last-Thursday, rolled when within 7 days of T_rec",
         "lot_size_rule": "₹500000 notional band on the authored entry, rounded to a 25-share grid; historical NSE lot revisions are not archived offline",
         "realized_outcome_basis": "stop_first",
-        "breaker_pending_stage_7": [
-          "panic_regime"
-        ],
-        "catalog_trap": "Capital goods sector drops 12% intraday on election results"
+        "catalog_trap": "Capital goods sector drops 12% intraday on election results",
+        "regime_evidence": {
+          "fixture": "fixtures/SCEN-004/regime_context.json",
+          "breaker": "panic_regime",
+          "disclosure": "Authored market-context input (SCEN-004, as of 2024-06-04): the catalog's own trap — \"Capital goods sector drops 12% intraday on election results\" — with the breaker's panic arms stated as: VIX 25.0 (authored inside the breaker arm (> 24): the trap states no VIX level), market breadth 25.0% (authored inside the breaker arm (< 30): the trap states no breadth level), plus an authored VIX/breadth trajectory, a 5-day combined net flow of -7000 Cr (NET_SELLING), the trade's sector index ^CNXINFRA, and a deterministic weekday date axis ending at T_rec. origin=authored: no offline source exists for point-in-time index series, so every value is disclosed authorship rather than a market data snapshot (E4: disclosed authorship, never an invented source)."
+        }
       },
       "classification_tags": [
         "CATALOG"
@@ -4753,7 +4785,8 @@
       "gate_focus": [
         "S3",
         "S4",
-        "S6"
+        "S6",
+        "panic_regime"
       ],
       "symbol": "LT",
       "exchange": "NSE",
@@ -4776,7 +4809,8 @@
           "cutoff": "2024-06-04",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/SCEN-004/regime_context.json"
       },
       "recorded_artifacts": [
         {
@@ -4789,6 +4823,12 @@
           "stage": 2,
           "artifact": "out_2_market.json",
           "path": "fixtures/SCEN-004/recorded/out_2_market.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 7,
+          "artifact": "out_7_regime.json",
+          "path": "fixtures/SCEN-004/recorded/out_7_regime.json",
           "evidence": "recorded"
         }
       ],
@@ -4895,12 +4935,12 @@
       "scenario_id": "SCEN-006",
       "schema_version": "uvest-scenario-manifest/1",
       "origin": "curated_behavioral",
-      "created_on": "2026-10-10",
+      "created_on": "2026-10-14",
       "authoring": {
         "source": "catalog-scaffold/1",
         "catalog": "business_test_cases.md §3",
         "catalog_name": "RBI Surprise 40 bps Rate Hike",
-        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR)",
+        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR); a row whose tape then rallies records the honest false negative (§4.1), never a tuned loss",
         "entry_basis": "open",
         "shape": {
           "risk_atr": 0.5,
@@ -4910,10 +4950,12 @@
         "expiry_rule": "NSE monthly last-Thursday, rolled when within 7 days of T_rec",
         "lot_size_rule": "₹500000 notional band on the authored entry, rounded to a 25-share grid; historical NSE lot revisions are not archived offline",
         "realized_outcome_basis": "stop_first",
-        "breaker_pending_stage_7": [
-          "panic_regime"
-        ],
-        "catalog_trap": "Unscheduled off-cycle policy rate hike; Bank NIFTY crack"
+        "catalog_trap": "Unscheduled off-cycle policy rate hike; Bank NIFTY crack",
+        "regime_evidence": {
+          "fixture": "fixtures/SCEN-006/regime_context.json",
+          "breaker": "panic_regime",
+          "disclosure": "Authored market-context input (SCEN-006, as of 2022-05-04): the catalog's own trap — \"Unscheduled off-cycle policy rate hike; Bank NIFTY crack\" — with the breaker's panic arms stated as: VIX 25.0 (authored inside the breaker arm (> 24): the trap states no VIX level), market breadth 25.0% (authored inside the breaker arm (< 30): the trap states no breadth level), plus an authored VIX/breadth trajectory, a 5-day combined net flow of -7000 Cr (NET_SELLING), the trade's sector index ^NSEBANK, and a deterministic weekday date axis ending at T_rec. origin=authored: no offline source exists for point-in-time index series, so every value is disclosed authorship rather than a market data snapshot (E4: disclosed authorship, never an invented source)."
+        }
       },
       "classification_tags": [
         "CATALOG"
@@ -4921,7 +4963,8 @@
       "gate_focus": [
         "S3",
         "S4",
-        "S6"
+        "S6",
+        "panic_regime"
       ],
       "symbol": "HDFCBANK",
       "exchange": "NSE",
@@ -4944,7 +4987,8 @@
           "cutoff": "2022-05-04",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/SCEN-006/regime_context.json"
       },
       "recorded_artifacts": [
         {
@@ -4957,6 +5001,12 @@
           "stage": 2,
           "artifact": "out_2_market.json",
           "path": "fixtures/SCEN-006/recorded/out_2_market.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 7,
+          "artifact": "out_7_regime.json",
+          "path": "fixtures/SCEN-006/recorded/out_7_regime.json",
           "evidence": "recorded"
         }
       ],
@@ -5076,12 +5126,12 @@
       "scenario_id": "SCEN-008",
       "schema_version": "uvest-scenario-manifest/1",
       "origin": "curated_behavioral",
-      "created_on": "2026-10-10",
+      "created_on": "2026-10-14",
       "authoring": {
         "source": "catalog-scaffold/1",
         "catalog": "business_test_cases.md §3",
         "catalog_name": "Adani Contagion Liquidity Freeze",
-        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR)",
+        "policy": "an AVOID-class advisory is issued intraday, so the authored entry is the T_rec session OPEN — the price visible before the collapse — with the tight stop the catalog itself documents for advisories (SCEN-028 0.32x ATR, SCEN-029 0.55x ATR); a row whose tape then rallies records the honest false negative (§4.1), never a tuned loss",
         "entry_basis": "open",
         "shape": {
           "risk_atr": 0.5,
@@ -5091,10 +5141,12 @@
         "expiry_rule": "NSE monthly last-Thursday, rolled when within 7 days of T_rec",
         "lot_size_rule": "₹500000 notional band on the authored entry, rounded to a 25-share grid; historical NSE lot revisions are not archived offline",
         "realized_outcome_basis": "stop_first",
-        "breaker_pending_stage_7": [
-          "panic_regime"
-        ],
-        "catalog_trap": "Cascading lender margin call liquidations; bid liquidity dries"
+        "catalog_trap": "Cascading lender margin call liquidations; bid liquidity dries",
+        "regime_evidence": {
+          "fixture": "fixtures/SCEN-008/regime_context.json",
+          "breaker": "panic_regime",
+          "disclosure": "Authored market-context input (SCEN-008, as of 2023-01-27): the catalog's own trap — \"Cascading lender margin call liquidations; bid liquidity dries\" — with the breaker's panic arms stated as: VIX 25.0 (authored inside the breaker arm (> 24): the trap states no VIX level), market breadth 25.0% (authored inside the breaker arm (< 30): the trap states no breadth level), plus an authored VIX/breadth trajectory, a 5-day combined net flow of -7000 Cr (NET_SELLING), the trade's sector index ^CNXINFRA, and a deterministic weekday date axis ending at T_rec. origin=authored: no offline source exists for point-in-time index series, so every value is disclosed authorship rather than a market data snapshot (E4: disclosed authorship, never an invented source)."
+        }
       },
       "classification_tags": [
         "CATALOG"
@@ -5102,7 +5154,8 @@
       "gate_focus": [
         "S3",
         "S4",
-        "S6"
+        "S6",
+        "panic_regime"
       ],
       "symbol": "ADANIPORTS",
       "exchange": "NSE",
@@ -5125,7 +5178,8 @@
           "cutoff": "2023-01-27",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/SCEN-008/regime_context.json"
       },
       "recorded_artifacts": [
         {
@@ -5138,6 +5192,12 @@
           "stage": 2,
           "artifact": "out_2_market.json",
           "path": "fixtures/SCEN-008/recorded/out_2_market.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 7,
+          "artifact": "out_7_regime.json",
+          "path": "fixtures/SCEN-008/recorded/out_7_regime.json",
           "evidence": "recorded"
         }
       ],

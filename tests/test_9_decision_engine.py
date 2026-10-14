@@ -83,7 +83,8 @@ def strong_payloads() -> dict[str, dict]:
                                    "days_to_earnings": 28,
                                    "earnings_hazard_flag": False},
         "out_7_regime.json": {"sector_rrg_state": "LEADING",
-                              "nifty_trend": "BULLISH", "vix_regime": "LOW",
+                              "nifty_trend": "ABOVE_50_200_DMA",
+                              "vix_regime": "LOW",
                               "panic_regime_breaker": False},
         "out_8_dhan.json": {"optimal_limit_buy": 1497.0,
                             "spread_impact_cost_pct": 0.05},
@@ -145,6 +146,32 @@ class TestOutputContract(unittest.TestCase):
         text = proc.stdout.decode("utf-8")
         self.assertNotIn("NO_GO", text)
         self.assertNotIn("CONDITIONAL_GO", text)
+
+    def test_frozen_nifty_trend_tokens_are_the_scored_vocabulary(self):
+        """Stage 7 can only emit TICK-007 / BRD §7.2 tokens — score them.
+
+        This scorer once keyed `BULLISH`/`NEUTRAL`/`BEARISH`, tokens no
+        producer emits, so every real run took the neutral 0.2 default in
+        silence (ADR-010 decision 1). The frozen vocabulary must move the
+        score: the bearish state scores strictly less than the bullish one,
+        and an unknown token scores the neutral default.
+        """
+        def score_with(nifty_trend: str) -> float:
+            payloads = strong_payloads()
+            payloads["out_7_regime.json"]["nifty_trend"] = nifty_trend
+            proc = run_stage9(trade(), payloads)
+            self.assertEqual(proc.returncode, 0, proc.stderr.decode("utf-8"))
+            return verdict_of(proc)["final_score"]
+
+        bullish = score_with("ABOVE_50_200_DMA")
+        neutral = score_with("BELOW_50_ABOVE_200")
+        bearish = score_with("BELOW_200_DMA")
+        unknown = score_with("BULLISH")
+        self.assertGreater(bullish, neutral)
+        self.assertGreater(neutral, bearish)
+        self.assertEqual(unknown, neutral,
+                         "a token outside the frozen vocabulary must score "
+                         "the neutral default, never a rewarded state")
 
     def test_unusable_input_exits_non_zero(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -358,6 +385,68 @@ class TestReplayAndDeterminism(unittest.TestCase):
             trade(), math_only, {"module_weights": {"out_1_math.json": 10.0}}))
         self.assertEqual(out["max_possible_score"], 10.0, out)
         self.assertLessEqual(out["final_score"], 10.0, out)
+
+
+class TestMacroSizingGates(unittest.TestCase):
+    """ADR-010 decision 6 / BRD §7.2, §7.4: macro signals size, not veto.
+
+    `breadth_regime: RISK_OFF` or `fii_dii_flow_bias: NET_SELLING` caps a
+    would-be GO at GO_WEAK (50% size) through the §6.4 size-cap lever, with
+    the deficit naming each source; both together cap at the same 50% and
+    never compound; a waived regime payload caps nothing.
+    """
+
+    def test_risk_off_breadth_caps_go_at_half_size(self):
+        payloads = strong_payloads()
+        payloads["out_7_regime.json"]["breadth_regime"] = "RISK_OFF"
+        out = verdict_of(run_stage9(trade(), payloads))
+        self.assertEqual(out["decision"], "GO_WEAK", out)
+        self.assertEqual(out["circuit_breakers_tripped"], [],
+                         "breadth is a sizing gate, never a veto")
+        self.assertIn("50%", out["confidence_deficit"])
+        self.assertIn("breadth", out["confidence_deficit"])
+        self.assertTrue(out["what_would_flip_me"])
+
+    def test_net_selling_flow_caps_go_at_half_size(self):
+        payloads = strong_payloads()
+        payloads["out_7_regime.json"]["fii_dii_flow_bias"] = "NET_SELLING"
+        out = verdict_of(run_stage9(trade(), payloads))
+        self.assertEqual(out["decision"], "GO_WEAK", out)
+        self.assertEqual(out["circuit_breakers_tripped"], [])
+        self.assertIn("50%", out["confidence_deficit"])
+        self.assertIn("FII", out["confidence_deficit"])
+
+    def test_both_signals_name_both_sources_at_the_same_cap(self):
+        payloads = strong_payloads()
+        payloads["out_7_regime.json"]["breadth_regime"] = "RISK_OFF"
+        payloads["out_7_regime.json"]["fii_dii_flow_bias"] = "NET_SELLING"
+        out = verdict_of(run_stage9(trade(), payloads))
+        self.assertEqual(out["decision"], "GO_WEAK", out)
+        self.assertIn("breadth", out["confidence_deficit"])
+        self.assertIn("FII", out["confidence_deficit"])
+        self.assertNotIn("25%", out["confidence_deficit"],
+                         "caps must never compound (ADR-010 decision 6)")
+
+    def test_a_waived_regime_payload_caps_nothing(self):
+        payloads = strong_payloads()
+        payloads["out_7_regime.json"] = {"waived": True,
+                                         "breadth_regime": None,
+                                         "fii_dii_flow_bias": None}
+        out = verdict_of(run_stage9(trade(), payloads))
+        # The waiver rule caps it as a waived source — but the macro signals
+        # themselves must not appear: a null never gates.
+        self.assertEqual(out["decision"], "GO_WEAK", out)
+        self.assertIn("waived source(s)", out["confidence_deficit"])
+        self.assertNotIn("breadth", out["confidence_deficit"])
+        self.assertNotIn("FII", out["confidence_deficit"])
+
+    def test_neutral_regime_signals_leave_go_untouched(self):
+        payloads = strong_payloads()
+        payloads["out_7_regime.json"]["breadth_regime"] = "NEUTRAL"
+        payloads["out_7_regime.json"]["fii_dii_flow_bias"] = "NET_BUYING"
+        out = verdict_of(run_stage9(trade(), payloads))
+        self.assertEqual(out["decision"], "GO", out)
+        self.assertIsNone(out["confidence_deficit"])
 
 
 class TestTheFrozenWeightsAreReviewable(unittest.TestCase):
