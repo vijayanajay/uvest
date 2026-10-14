@@ -77,6 +77,16 @@ CONTRADICTORY_SL_INPUT = (
     "Recommended Date: 2026-10-09\n"
 )
 
+# The same card with one line missing. Stage 12 names its artifact
+# `report_{SYMBOL}_{DATE}.html` from `Recommended Date:` (TICK-010), so a paste
+# without it used to run stages 0 → 9, write every artifact, and then die at
+# the last stage with `ERR_INPUT: trade input is missing recommended_date`.
+# Ingestion has to be where that refusal happens.
+UNDATED_INPUT = (
+    "Symbol: SBIN\nType: CASH\nEntry Range: 820.00-825.00\n"
+    "Live Price: 822.10\nStoploss: 795.00\nTarget: 890.00\n"
+)
+
 # A fixture file that is not JSON: stages 2 and 3 refuse it (ERR_PARSE, exit 1)
 # rather than waiving it, while 5 and 6 treat a malformed fixture as absent.
 BAD_FIXTURE_BODY = "{this is not json"
@@ -201,6 +211,34 @@ class TestOneInvocationChain(unittest.TestCase):
             self.assertFalse((wd / "out_1_math.json").exists())
             self.assertFalse((wd / "reports").exists(),
                              "no report may be rendered from a rejected trade")
+
+    def test_a_dateless_paste_aborts_at_ingestion_not_at_stage_12(self):
+        """The stage-12 integration gap: accepted early, fatal at the end.
+
+        Everything stage 12 needs from the trade is available at stage 0 except
+        this one field, so the chain is only safe if stage 0 refuses a paste it
+        cannot render — a refusal here costs nothing, the same refusal at stage
+        12 costs eleven written artifacts and a half-graded run.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            wd = Path(tmp)
+            undated = wd / "undated_reco.txt"
+            undated.write_text(UNDATED_INPUT, encoding="utf-8")
+            proc = run_runner(wd, undated)
+            combined = proc.stdout + proc.stderr
+            self.assertEqual(proc.returncode, 1,
+                             f"expected stage 0's own exit code: {combined}")
+            self.assertIn("ERR_PARSE", combined)
+            self.assertIn("recommended_date", combined)
+            self.assertNotIn("[RUN] stage 1:", proc.stdout,
+                             "a dateless paste must never reach the chain")
+            self.assertFalse((wd / "out_1_math.json").exists())
+            self.assertFalse((wd / "reports").exists(),
+                             "no report may be rendered from an unrenderable trade")
+            record = json.loads((wd / "run_record.json").read_text(encoding="utf-8"))
+            self.assertEqual(record["outcome"], "aborted")
+            self.assertEqual(record["failed_stage"], 0)
+            self.assertEqual(record["exit_code"], 1)
 
 
 class TestRunRecord(unittest.TestCase):

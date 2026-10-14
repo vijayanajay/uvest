@@ -20,3 +20,4 @@ Parse raw user recommendation (unformatted copy-pasted text or mobile screenshot
 - [ ] Strict Options Gate: If instrument is `CE`, `PE`, or `OPT`, exits with error `ERR_OPTIONS_PROHIBITED` and exit code 2.
 - [ ] Checks mock or cached MWPL ban list for Futures: flags `ban_status: true` if banned.
 - [ ] Validates lot sizes and calculates total initial margin exposure.
+- [ ] Requires `Recommended Date:`: a paste with no date line, or with a value that is not a real ISO calendar date (`2026-10-09`), exits 1 with `ERR_PARSE` and no canonical payload — stage 12 names `reports/report_{SYMBOL}_{DATE}.html` from it, so a dateless paste must die at ingestion rather than at the last stage of the chain. Checked after the options and closed-domain gates, so a policy refusal always keeps its own exit code.

@@ -117,6 +117,8 @@ All downstream scripts consume this single source of truth:
 }
 ```
 
+**`recommended_date` is required.** Stage 12 builds its artifact name from it (`reports/report_{SYMBOL}_{DATE}.html`, §13) and the eval harness locates that report by the same string, so a trade carrying no date would run stages 0 → 9, write every artifact, and only then fail at the last one. `scripts/0_ingest_reco.py` therefore refuses a paste whose `Recommended Date:` line is missing, or whose value is not a real ISO calendar date (`2026-10-09`; `ERR_PARSE`, exit 1) — checked *after* the rules in §3.3, so an option paste is still reported as an option, never as a parse problem.
+
 ### 3.3 Preliminary Gatekeeper Validations
 Before invoking quantitative scripts, `scripts/0_ingest_reco.py` enforces three structural rules:
 1. **No Options Allowed:** If `instrument_type` is `CE`, `PE`, or `OPT`, terminate immediately with code `ERR_OPTIONS_PROHIBITED`. The instrument domain is closed (ADR-001: "only Equities and Futures are permitted"): the parser accepts exactly `CASH` and `FUT` and terminates on anything else with `ERR_INSTRUMENT_UNRECOGNIZED` (exit 2), so an option written with look-alike letters (`Type: СЕ`) or an invented instrument label can never be admitted and scored as cash downstream. Fatal-token detection is by token, not string equality, and runs over the `Type:` and `Symbol:` declaration sites after Unicode look-alikes are folded and invisible characters stripped.

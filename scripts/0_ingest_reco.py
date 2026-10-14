@@ -23,6 +23,10 @@ runs (BRD §3.3):
 Wrapping the parser in a script (not a library module) keeps the pipeline
 contract honest: stage N is invoked as `python scripts/N_*.py`, never imported.
 
+A paste that omits `Recommended Date:` is refused here as well (see
+`require_recommended_date`): stage 12 cannot name its report without it, and
+the refusal has to come cheap - before the chain exists, not at its last stage.
+
 Output: canonical JSON to stdout. Errors: stderr + non-zero exit, never stdout.
 """
 
@@ -33,6 +37,7 @@ import json
 import re
 import sys
 import unicodedata
+from datetime import date
 from pathlib import Path
 
 # Shared --record/--replay bundle helper lives next door; importable because
@@ -178,6 +183,38 @@ def parse_plain_text(raw: str) -> dict:
     return result
 
 
+# BRD 3.2 carries `recommended_date` in the canonical schema, and stage 12
+# builds its artifact name from it: `report_{SYMBOL}_{DATE}.html` (TICK-010),
+# which is also how the eval harness finds the report. A date the calendar
+# does not have (`2026-02-30`) or a human-format one (`09/10/2026`) is as fatal
+# as no date at all - the report path would not even be a path.
+ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def require_recommended_date(payload: dict) -> None:
+    """Refuse a trade stage 12 could not render a report for (BRD 13).
+
+    Called *after* the ADR-001 gates so a policy refusal always keeps its own
+    verdict (an option card with no date is still an option refusal), and
+    before any artifact exists: here the refusal is free, at stage 12 it has
+    cost eleven written files and a half-graded run.
+    """
+    value = payload.get("recommended_date")
+    if not value:
+        die(ERR_PARSE, 1,
+            "missing required field: recommended_date - stage 12 names "
+            "reports/report_{SYMBOL}_{DATE}.html from it")
+    text = str(value).strip()
+    if not ISO_DATE_RE.match(text):
+        die(ERR_PARSE, 1,
+            f"recommended_date={value!r} is not an ISO date (YYYY-MM-DD)")
+    try:
+        date.fromisoformat(text)
+    except ValueError:
+        die(ERR_PARSE, 1,
+            f"recommended_date={value!r} is not a real calendar date")
+
+
 def gatekeeper_checks(payload: dict) -> dict:
     """BRD §3.3 gates 2+3: F&O ban and ASM/GSM flags (offline mock lists)."""
     symbol = payload["symbol"]
@@ -244,6 +281,12 @@ def main() -> int:
             f"instrument_type={payload['instrument_type']!r} is not one of "
             f"{', '.join(RECOGNIZED_INSTRUMENTS)}; ADR-001 permits equities "
             f"and futures only")
+
+    # The field stage 12 builds its artifact name from. Refused here, where the
+    # chain has not started yet, instead of at its last stage, where eleven
+    # files are already on disk. After the ADR-001 gates so a policy refusal
+    # still owns its own verdict.
+    require_recommended_date(payload)
 
     payload["gatekeeper"] = gatekeeper_checks(payload)
 

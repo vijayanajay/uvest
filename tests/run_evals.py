@@ -59,10 +59,12 @@ that logged the refusal and walked on would leave both rejection rates at
 **Rosters may not shrink (evals.md §4).** Both probe rosters are graded sets
 whose *size* and *members* are part of the claim, so `baseline_scorecard.json`
 freezes both — `probe_rosters` (the counts) and `probe_roster_ids` (the
-SHA-256 of each probe's paste, keyed by `probe_id`) — exactly as
+SHA-256 of each probe's paste *and declared metadata* — family, instrument,
+origin, contract — keyed by `probe_id`) — exactly as
 `rule_exercises` freezes the rule census (`check_probe_roster_floor`):
-growing a roster is free, shrinking one, editing a frozen paste, or swapping a
-probe for a different paste — the case a count-only floor cannot see — is a
+growing a roster is free, shrinking one, editing a frozen probe's paste or
+its declared claims, or swapping a probe for a different one — cases a
+count-only floor cannot see — is a
 named shortfall and exit 1 until the probes come back or a deliberate
 re-freeze (`scaffold_catalog.re_freeze_baseline`, which banks both floors)
 accepts the new size.
@@ -673,17 +675,27 @@ def check_rule_coverage(census: dict[str, int],
 
 
 def probe_identity(probe: dict) -> str:
-    """The frozen identity of one probe: the SHA-256 of the paste it replays.
+    """The frozen identity of one probe: the SHA-256 of everything it declares
+    except its own id.
 
-    `raw_text` is the only input stage 0 ever sees, so it is the only thing a
-    probe's identity can honestly be made of — the declared family, contract
-    and instrument are checks *on* that paste, not the evidence the gate
-    grades. A count is not an identity either: swapping one probe for another
-    preserves a count, which is why the baseline banks this hash per
-    `probe_id` (`probe_roster_ids`) beside the roster size (`probe_rosters`).
+    A probe's graded surface is its paste *and* the claims the roster checks
+    enforce on it — `raw_text`, `family`, `declared_instrument`, `origin` and
+    the `expected` rejection contract — so all of it is hashed, canonically
+    (`sort_keys`, tight separators, `ensure_ascii=False`). The key itself is
+    excluded: a renamed id is already caught as a frozen member gone missing,
+    and hashing it too would only report one change twice. Hashing the whole
+    remainder rather than a listed field set also means a *new* declared field
+    cannot slip in un-frozen.
+
+    A count is not an identity either: swapping one probe for another, or
+    relabelling a family or contract, preserves a count — which is why the
+    baseline banks this hash per `probe_id` (`probe_roster_ids`) beside the
+    roster size (`probe_rosters`).
     """
-    raw = str(probe.get("raw_text") or "")
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    declared = {key: value for key, value in probe.items() if key != "probe_id"}
+    canonical = json.dumps(declared, sort_keys=True, ensure_ascii=False,
+                           separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def probe_roster_ids(rosters: dict[str, list[dict]]) -> dict[str, dict[str, str]]:
@@ -715,14 +727,18 @@ def check_probe_roster_floor(rosters: dict[str, list[dict]],
     The twin of `check_rule_coverage` for the graded sets outside `trades`,
     one step stricter — a count is not an identity. `baseline_scorecard.json`
     freezes both (`probe_rosters`, how many; `probe_roster_ids`, the SHA-256
-    of each probe's paste keyed by `probe_id`), so:
+    of each probe's paste *and declared metadata* — family, instrument,
+    origin, contract — keyed by `probe_id`), so:
 
       * a deleted probe is a size shortfall, named by roster and delta — a
         smaller graded set can never keep the same green percentage;
-      * a probe swapped for a *different* paste is an identity shortfall even
+      * a probe swapped for a *different* member is an identity shortfall even
         when the count holds, which is the case a size-only floor cannot see:
         replacing a homoglyph with a plain `CE` would otherwise sail through;
-      * an edited paste is the same identity shortfall at the same id;
+      * an edited paste, or a relabelled family/origin/contract, is the same
+        identity shortfall at the same id — the roster checks validate a
+        contract's *shape*, so only the hash notices that a frozen
+        `ERR_INSTRUMENT_UNRECOGNIZED` claim quietly became something else;
       * a duplicated `probe_id` is named, since two pastes cannot both be the
         frozen member;
       * and adding a probe — or a whole roster — stays free until a deliberate
@@ -760,8 +776,9 @@ def check_probe_roster_floor(rosters: dict[str, list[dict]],
                                       "with a different paste, is a deliberate "
                                       "re-freeze")
                 elif present[probe_id] != identity:
-                    shortfalls.append(f"{name}/{probe_id}: paste edited since "
-                                      "the last re-freeze — identity "
+                    shortfalls.append(f"{name}/{probe_id}: probe edited since "
+                                      "the last re-freeze — paste or declared "
+                                      "metadata changed, identity "
                                       f"{present[probe_id][:12]}… ≠ frozen "
                                       f"{identity[:12]}…")
     total = sum(counts.values())

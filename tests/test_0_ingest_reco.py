@@ -28,8 +28,11 @@ from support.pipeline import (  # noqa: E402
 REPO_ROOT = TESTS_DIR.parent
 SCRIPT = REPO_ROOT / "scripts" / "0_ingest_reco.py"
 
-VALID_FUTURES = "Symbol: RELIANCE\nType: FUT\nEntry Range: 2975.00-2985.00\nLive Price: 2988.20\nStoploss: 2910.00\nTarget: 3120.00\nLot Size: 250\n"
-VALID_CASH = "Symbol: SBIN\nType: CASH\nEntry Range: 820.00-825.00\nLive Price: 822.10\nStoploss: 795.00\nTarget: 890.00\n"
+# Both carry `Recommended Date:` because every real Univest card does, and
+# because stage 12 names its artifact from it (BRD §13, TICK-010): a paste
+# without it can no longer be admitted by stage 0. See TestRecommendedDate.
+VALID_FUTURES = "Symbol: RELIANCE\nType: FUT\nEntry Range: 2975.00-2985.00\nLive Price: 2988.20\nStoploss: 2910.00\nTarget: 3120.00\nLot Size: 250\nRecommended Date: 2026-10-09\n"
+VALID_CASH = "Symbol: SBIN\nType: CASH\nEntry Range: 820.00-825.00\nLive Price: 822.10\nStoploss: 795.00\nTarget: 890.00\nRecommended Date: 2026-10-09\n"
 
 
 class TestOptionsGate(unittest.TestCase):
@@ -187,7 +190,8 @@ FOLDED_COLONS = ("\ufe55", "\ufe13")
 # requires that it never becomes a trade.
 UNFOLDED_COLONS = ("\u2236", "\u02d0", "\u05c3", "\ua789")
 BENIGN_BODY = ("Entry Range: 100.00-102.00\nLive Price: 101.00\n"
-               "Stoploss: 95.00\nTarget: 115.00\n")
+               "Stoploss: 95.00\nTarget: 115.00\n"
+               "Recommended Date: 2026-10-09\n")
 
 
 def _fullwidth(text: str) -> str:
@@ -441,3 +445,71 @@ class TestOptionRejectionPropertyCoverage(unittest.TestCase):
         for family in ("homoglyph/", "unrecognized/"):
             self.assertTrue(any(family in label for label in unrecognized),
                             f"no {family} variant was generated")
+
+
+class TestRecommendedDate(unittest.TestCase):
+    """The date stage 12 names its report from must exist before the chain starts.
+
+    `recommended_date` was the one field the canonical schema (BRD §3.2)
+    carried but stage 0 did not require, and stage 12 refuses to render
+    without it: a paste stage 0 admitted walked 0 → 9, wrote every artifact,
+    then died at the last stage with `ERR_INPUT: trade input is missing
+    recommended_date` and exit 2. The report is named
+    `report_{SYMBOL}_{DATE}.html` from exactly this string (TICK-010) and the
+    evals locate it by it, so no later stage can invent it — the check has to
+    live where the refusal is free, before a single artifact exists.
+    """
+
+    @staticmethod
+    def without_date(paste: str) -> str:
+        return "".join(line for line in paste.splitlines(keepends=True)
+                       if not line.lower().startswith("recommended date"))
+
+    def test_the_accepted_payload_carries_the_declared_date(self):
+        payload, code, err = run_stage0_text(VALID_FUTURES)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(payload["recommended_date"], "2026-10-09")
+
+    def test_a_dateless_paste_is_refused_before_any_artifact_exists(self):
+        """The gap: admitted at stage 0, fatal at stage 12. Refuse instead."""
+        payload, code, err = run_stage0_text(self.without_date(VALID_CASH))
+        self.assertEqual(code, 1, f"expected an ingestion refusal, got {code}: {err}")
+        self.assertIn("ERR_PARSE", err)
+        self.assertIn("recommended_date", err)
+        self.assertIsNone(payload, "a dateless paste still emitted a trade")
+
+    def test_a_malformed_date_is_refused_too(self):
+        """Present but unusable would kill the chain just as late: `report_X_09/10/26.html`
+        is not even a path, and the harness keys reports off an ISO date."""
+        for value in ("09/10/2026", "Oct 09, 2026", "09-10-2026", "20260105",
+                      "2026-13-45", "2026-02-30"):
+            with self.subTest(value=value):
+                paste = self.without_date(VALID_CASH) + f"Recommended Date: {value}\n"
+                payload, code, err = run_stage0_text(paste)
+                self.assertEqual(code, 1,
+                                 f"{value!r} admitted — {err.strip()!r}")
+                self.assertIn("ERR_PARSE", err)
+                self.assertIn("recommended_date", err)
+                self.assertIsNone(payload)
+
+    def test_the_policy_gates_still_speak_first(self):
+        """BRD §3.3 #1 — an option must never be reported as a parse problem.
+
+        The date check therefore runs *after* the ADR-001 gates: a card that
+        is both undated and an option is still refused as an option, and an
+        unknown instrument still borrows neither verdict. Fail closed, but
+        never with the wrong reason.
+        """
+        payload, code, err = run_stage0_text(
+            self.without_date(VALID_FUTURES).replace("Type: FUT", "Type: CE"))
+        self.assertEqual(code, 2, f"an option was not refused as one: {err!r}")
+        self.assertIn("ERR_OPTIONS_PROHIBITED", err)
+        self.assertNotIn("ERR_PARSE", err)
+        self.assertIsNone(payload)
+
+        payload, code, err = run_stage0_text(
+            self.without_date(VALID_CASH).replace("Type: CASH", "Type: NFO"))
+        self.assertEqual(code, 2, f"an unknown instrument was not refused: {err!r}")
+        self.assertIn("ERR_INSTRUMENT_UNRECOGNIZED", err)
+        self.assertNotIn("ERR_PARSE", err)
+        self.assertIsNone(payload)

@@ -329,7 +329,7 @@ class TestOptionRejectionGate(unittest.TestCase):
         """The gate bites: one option paste that reaches stdout is a red run."""
         admitted = dict(self.probes[0], raw_text=(
             "Symbol: RELIANCE\nType: CASH\nEntry Range: 2500.00-2510.00\n"
-            "Live Price: 2505.00\nStoploss: 2400.00\nTarget: 2700.00\n"))
+            "Live Price: 2505.00\nStoploss: 2400.00\nTarget: 2700.00\nRecommended Date: 2026-10-09\n"))
         gate = run_evals.gate_option_rejection([admitted, *self.probes[1:]])
         self.assertLess(gate.value, 100.0)
         self.assertTrue(gate.detail, "a failed probe must name itself")
@@ -427,7 +427,7 @@ class TestRefusalProbeGate(unittest.TestCase):
         """The gate bites: one admitted paste is a red run, naming the probe."""
         admitted = dict(self.probes[0], raw_text=(
             "Symbol: RELIANCE\nType: CASH\nEntry Range: 2500.00-2510.00\n"
-            "Live Price: 2505.00\nStoploss: 2400.00\nTarget: 2700.00\n"))
+            "Live Price: 2505.00\nStoploss: 2400.00\nTarget: 2700.00\nRecommended Date: 2026-10-09\n"))
         gate = run_evals.gate_refusal_rejection([admitted])
         self.assertEqual(gate.value, 0.0)
         self.assertIn(self.probes[0]["probe_id"], gate.detail)
@@ -662,10 +662,11 @@ class TestProbeRosterFloor(unittest.TestCase):
 
     `baseline_scorecard.json` freezes both floors banked by
     `scaffold_catalog.re_freeze_baseline`: `probe_rosters` (the sizes) and
-    `probe_roster_ids` (each probe's paste hash, keyed by `probe_id`). Growing
-    a roster is free; shrinking one, editing a frozen paste, or swapping a
-    probe for a different one — the case a size-only floor cannot see — is a
-    named shortfall and a red run.
+    `probe_roster_ids` (each probe's identity — the hash of its paste *and*
+    its declared metadata, keyed by `probe_id`). Growing a roster is free;
+    shrinking one, editing a frozen paste, relabelling a family or contract,
+    or swapping a probe for a different one — the cases a size-only floor
+    cannot see — is a named shortfall and a red run.
     """
 
     FLOOR = {"option_probes": 5, "refusal_probes": 5}
@@ -756,7 +757,51 @@ class TestProbeRosterFloor(unittest.TestCase):
                                       "raw_text": "paste for REF-005 tweaked"}]}
         ok, _reason, shortfalls = run_evals.check_probe_roster_floor(edited, baseline)
         self.assertFalse(ok)
-        self.assertTrue(any("refusal_probes/REF-005: paste edited since the last"
+        self.assertTrue(any("refusal_probes/REF-005: probe edited since the last"
+                            in s for s in shortfalls), shortfalls)
+
+    def test_a_relabelled_family_fails_even_when_the_paste_holds(self):
+        """The paste is byte-identical, the graded replay would be identical —
+        and the roster check validates a family's *vocabulary*, not that this
+        probe still belongs to it. Only the identity floor can see the claim
+        the scorecard is now making about REF-005."""
+        labelled = [{"probe_id": f"REF-{i:03d}", "raw_text": f"paste for REF-{i:03d}",
+                     "family": "unrecognized_instrument"}
+                    for i in range(1, 6)]
+        baseline = self.baseline_for({"option_probes": self.roster("OPT", 5),
+                                      "refusal_probes": labelled})
+        relabelled = [*self.roster("REF", 4),
+                      {"probe_id": "REF-005", "raw_text": "paste for REF-005",
+                       "family": "homoglyph_option"}]
+        ok, _reason, shortfalls = run_evals.check_probe_roster_floor(
+            {"option_probes": self.roster("OPT", 5),
+             "refusal_probes": relabelled}, baseline)
+        self.assertFalse(ok,
+                         "relabelling a family changed nothing but the claim")
+        self.assertTrue(any("refusal_probes/REF-005: probe edited since the last"
+                            in s for s in shortfalls), shortfalls)
+        self.assertFalse(any("seeded probe(s) < frozen" in s for s in shortfalls),
+                         "the roster still holds five — only identity sees this")
+
+    def test_a_relabelled_contract_fails_even_when_the_paste_holds(self):
+        """The contract is what the roster check enforces and what the gate
+        replays against, so a frozen ERR_INSTRUMENT_UNRECOGNIZED claim that
+        quietly becomes the options verdict is a changed claim — caught even
+        though both codes are 'exit 2 with no payload' in shape."""
+        import copy
+        dataset = json.loads(DATASET_FILE.read_text(encoding="utf-8"))
+        frozen = {name: copy.deepcopy(dataset.get(name) or [])
+                  for name in run_evals.PROBE_ROSTERS}
+        baseline = self.baseline_for(frozen)
+        relabelled = copy.deepcopy(frozen)
+        relabelled["refusal_probes"][-1]["expected"] = {
+            **relabelled["refusal_probes"][-1]["expected"],
+            "error_code": "ERR_OPTIONS_PROHIBITED"}
+        ok, _reason, shortfalls = run_evals.check_probe_roster_floor(relabelled,
+                                                                    baseline)
+        self.assertFalse(ok, "a relabelled contract kept the run green")
+        gone = frozen["refusal_probes"][-1]["probe_id"]
+        self.assertTrue(any(f"refusal_probes/{gone}: probe edited since the last"
                             in s for s in shortfalls), shortfalls)
 
     def test_a_duplicated_probe_id_is_named(self):
@@ -796,7 +841,7 @@ class TestProbeRosterFloor(unittest.TestCase):
         self.assertEqual(
             frozen.get("probe_roster_ids"), ids,
             "baseline_scorecard.json's probe_roster_ids is stale — a probe's "
-            "paste changed without a re-freeze")
+            "paste or declared metadata changed without a re-freeze")
         self.assertEqual(counts, self.FLOOR)
         self.assertEqual({name: len(m) for name, m in ids.items()}, self.FLOOR)
 
@@ -858,7 +903,7 @@ class TestProbeRosterFloor(unittest.TestCase):
              "declared_instrument": "FUTURES",
              "raw_text": "Symbol: RELIANCE\nType: FUTURES\n"
                          "Entry Range: 2500.00-2510.00\nLive Price: 2505.00\n"
-                         "Stoploss: 2400.00\nTarget: 2700.00\n"}]
+                         "Stoploss: 2400.00\nTarget: 2700.00\nRecommended Date: 2026-10-09\n"}]
         tmp = self.enterContext(tempfile.NamedTemporaryFile(
             mode="w", suffix=".json", delete=False, encoding="utf-8"))
         json.dump(dataset, tmp, indent=2, ensure_ascii=False)
