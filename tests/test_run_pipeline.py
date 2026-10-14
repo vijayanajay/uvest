@@ -240,6 +240,37 @@ class TestOneInvocationChain(unittest.TestCase):
             self.assertEqual(record["failed_stage"], 0)
             self.assertEqual(record["exit_code"], 1)
 
+    def test_a_failed_stage_leaves_no_empty_artifact_and_no_partial(self):
+        """A refusal must not leave a file that looks like a payload.
+
+        The runner used to open the artifact *before* spawning the stage, so
+        every refusal left a 0-byte file behind — `current_trade.json` when
+        stage 0 refused, `out_1_math.json` when stage 1 did. The run record
+        already refused to claim those bytes; the filesystem now agrees with
+        the record instead of contradicting it.
+        """
+        for label, body, own_artifact in (
+                ("stage 0", UNDATED_INPUT, "current_trade.json"),
+                ("stage 1", CONTRADICTORY_SL_INPUT, "out_1_math.json")):
+            with self.subTest(failed_stage=label), tempfile.TemporaryDirectory() as tmp:
+                wd = Path(tmp)
+                reco = wd / "reco.txt"
+                reco.write_text(body, encoding="utf-8")
+                proc = run_runner(wd, reco)
+                self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+                self.assertFalse(
+                    (wd / own_artifact).exists(),
+                    f"{label} failed but left a {own_artifact} that looks "
+                    "like a payload")
+                self.assertEqual(list(wd.glob(".*.partial")), [],
+                                 "a partial artifact leaked from an aborted stage")
+                # The stage before it still published its own artifact.
+                if label == "stage 1":
+                    self.assertTrue((wd / "current_trade.json").exists())
+                    self.assertNotEqual(
+                        (wd / "current_trade.json").stat().st_size, 0,
+                        "stage 0 succeeded; its artifact must carry its bytes")
+
 
 class TestRunRecord(unittest.TestCase):
     """Provenance: the record must say what happened, not what was attempted."""
@@ -588,10 +619,38 @@ class TestRunnerArgvAndFrozenNames(unittest.TestCase):
                          "importing the runner must not write to stdout")
 
     def test_artifact_table_matches_the_frozen_recorder(self):
+        """The table is *derived* from the recorder for implemented stages.
+
+        It used to be a hand-copied table policed by this very assertion; now
+        the merge takes the name from `_recorder.FROZEN_ARTIFACTS`, so the
+        copy that could drift is gone rather than guarded.
+        """
         table = self.module.ARTIFACTS
         for stage, artifact in _recorder.FROZEN_ARTIFACTS.items():
             self.assertEqual(table.get(stage), artifact,
                              f"stage {stage} artifact drifted from _recorder")
+        self.assertIsNone(table[12], "stage 12 writes its own HTML artifact")
+
+    def test_every_chain_script_on_disk_has_an_artifact_row(self):
+        """A stage script without a row would have its artifact dropped.
+
+        The runner needs the table for two things: where to stream a stage's
+        stdout, and what a skipped stage would have produced. A script that
+        appears on disk without a row would run with nowhere to put its bytes.
+        """
+        table = self.module.ARTIFACTS
+        for script in sorted(SCRIPTS_DIR.glob("[0-9]*_*.py")):
+            stage = int(script.name.split("_", 1)[0])
+            if stage in self.module.EXCLUDED:
+                continue
+            with self.subTest(script=script.name):
+                self.assertIn(stage, table, f"{script.name} has no artifact row")
+                if stage == 12:
+                    continue  # writes reports/report_{SYMBOL}_{DATE}.html itself
+                self.assertIn(
+                    stage, _recorder.FROZEN_ARTIFACTS,
+                    f"{script.name} exists but its name lives only in the "
+                    "runner — freeze it in _recorder.FROZEN_ARTIFACTS (BRD §9.1)")
 
     def test_chain_is_the_frozen_ascending_order_without_stage_11(self):
         self.assertEqual(self.module.CHAIN, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12])

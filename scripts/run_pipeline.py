@@ -48,6 +48,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import time
@@ -66,6 +67,10 @@ for _stream in (sys.stdout, sys.stderr):
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = REPO_ROOT / "scripts"
 
+sys.path.insert(0, str(SCRIPTS_DIR))
+
+import _recorder  # noqa: E402  (scripts dir spliced above)
+
 # Frozen ascending execution order (BRD §9.1). Stage 11 is conditional and
 # therefore excluded from CHAIN; it is still walked in ORDER so the gap is
 # disclosed in sequence rather than silently missing.
@@ -77,18 +82,21 @@ EXCLUDED: dict[int, str] = {
 ORDER: list[int] = sorted([*CHAIN, *EXCLUDED])
 
 # BRD §9.1 output artifacts; stage 12 writes its HTML itself (None here).
-ARTIFACTS: dict[int, str | None] = {
-    0: "current_trade.json",
-    1: "out_1_math.json",
-    2: "out_2_market.json",
-    3: "out_3_dtw.json",
+# Implemented stages take their name from the recorder's frozen table — one
+# source, so a rename can never leave the runner and the recorder disagreeing.
+# Stages that do not exist yet keep the BRD §9.1 name here as a skip-row audit
+# label only, and must move into `_recorder.FROZEN_ARTIFACTS` when they land
+# (`artifact_filename()` refuses to guess for them until then).
+PENDING_ARTIFACTS: dict[int, str] = {
     4: "out_4_ml.json",
-    5: "out_5_flow.json",
-    6: "out_6_fundamental.json",
     7: "out_7_regime.json",
     8: "out_8_dhan.json",
-    9: "out_9_decision.json",
     10: "out_10_triage.json",
+}
+ARTIFACTS: dict[int, str | None] = {
+    **{stage: _recorder.FROZEN_ARTIFACTS[stage]
+       for stage in sorted(_recorder.FROZEN_ARTIFACTS)},
+    **PENDING_ARTIFACTS,
     12: None,
 }
 
@@ -276,16 +284,25 @@ def run_chain(run_record: dict, *, input_path: str, workdir: Path,
                             payloads=_payloads_for(ran, workdir),
                             workdir=workdir)
         started = time.monotonic()
+        # A stage's stdout streams into a *partial* file that is published
+        # only on success. The runner used to open the artifact itself, which
+        # truncated it before the stage ran, so a refusal left a 0-byte
+        # `current_trade.json` (or `out_*.json`) behind — a file that looks
+        # like a payload and is not. The run record already refuses to claim
+        # bytes a failed stage did not produce; the filesystem now agrees.
+        partial = (workdir / f".{artifact}.partial") if artifact else None
         try:
             # Always go through the interpreter: `.py` files are not directly
             # executable on Windows, and sys.executable pins the runtime.
             command = [sys.executable, *invoke]
             if artifact:
-                with open(workdir / artifact, "wb") as handle:
+                with open(partial, "wb") as handle:
                     proc = subprocess.run(command, cwd=str(workdir), stdout=handle)
             else:
                 proc = subprocess.run(command, cwd=str(workdir))
         except OSError as exc:
+            if partial is not None:
+                partial.unlink(missing_ok=True)
             print(f"[FAIL] stage {stage}: {exc}", file=sys.stderr)
             run_record["failed_stage"] = stage
             note(stage, "failed", artifact=artifact, exit_code=None,
@@ -293,6 +310,11 @@ def run_chain(run_record: dict, *, input_path: str, workdir: Path,
                  skip_reason=f"stage did not run: {type(exc).__name__}: {exc}")
             return 1
         elapsed = round(time.monotonic() - started, 3)
+        if partial is not None:
+            if proc.returncode == 0:
+                os.replace(partial, workdir / artifact)
+            else:
+                partial.unlink(missing_ok=True)
         if proc.returncode != 0:
             # The stage already wrote its diagnosis to inherited stderr; the
             # runner only names the abort and hands back the stage's own code

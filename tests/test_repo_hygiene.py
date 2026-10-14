@@ -48,6 +48,11 @@ COMMITTABLE_PATHS = [
     "tests/evals/replay/RELIANCE_2022.json",
     "skills-lock.json",
     "reports/sample_report.html",
+    # The reviewable copy of stage 9's frozen weights: `thresholds.json` is
+    # generated per-run state and stays untracked, so this template is the
+    # only place a reviewer (or a fresh clone) can see the numbers a verdict
+    # is scored with.
+    "thresholds.example.json",
 ]
 
 

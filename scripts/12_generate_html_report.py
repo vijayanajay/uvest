@@ -314,6 +314,13 @@ def render(trade: dict, payloads: dict[str, dict]) -> str:
 """
 
 
+# The trade fields stage 12 cannot render without: `symbol`, and the date the
+# artifact name is built from (`report_{SYMBOL}_{DATE}.html`, TICK-010).
+# Module-level so the chain contract (tests/test_chain_contract.py) reads the
+# same list the gate uses, instead of a copy that could drift from it.
+REQUIRED_FIELDS = ("symbol", "recommended_date")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="UVEST stage 12 — standalone HTML report (TICK-010).")
@@ -331,7 +338,7 @@ def main(argv: list[str] | None = None) -> int:
         die(ERR_INPUT, 2, f"unreadable trade input: {exc}")
     if not isinstance(trade, dict):
         die(ERR_INPUT, 2, "trade input must be a JSON object")
-    for field in ("symbol", "recommended_date"):
+    for field in REQUIRED_FIELDS:
         if not trade.get(field):
             die(ERR_INPUT, 2, f"trade input is missing {field}")
 

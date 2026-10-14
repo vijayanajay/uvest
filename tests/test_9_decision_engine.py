@@ -360,5 +360,38 @@ class TestReplayAndDeterminism(unittest.TestCase):
         self.assertLessEqual(out["final_score"], 10.0, out)
 
 
+class TestTheFrozenWeightsAreReviewable(unittest.TestCase):
+    """The weights a verdict is scored with must be visible, not only embedded.
+
+    `thresholds.json` is generated per-run state — stage 11 is its sole writer
+    (BRD §9.1) and the repo-hygiene rules keep it untracked — so the baseline
+    a run falls back to lived only inside `DEFAULT_WEIGHTS`, invisible to a
+    reviewer and to a fresh clone. `thresholds.example.json` is the reviewable
+    copy; these tests are what keep it from drifting away from the code that
+    actually uses it.
+    """
+
+    TEMPLATE = REPO_ROOT / "thresholds.example.json"
+
+    @classmethod
+    def setUpClass(cls):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("stage9_weights", STAGE9)
+        cls.stage9 = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(cls.stage9)
+
+    def test_the_template_matches_the_frozen_defaults(self):
+        doc = json.loads(self.TEMPLATE.read_text(encoding="utf-8"))
+        self.assertEqual(
+            doc["module_weights"], self.stage9.DEFAULT_WEIGHTS,
+            "the template no longer states the weights stage 9 falls back to")
+
+    def test_the_frozen_weights_are_the_100_point_model(self):
+        """BRD §10.2's calibration model adds up; a retune must re-freeze it."""
+        self.assertAlmostEqual(sum(self.stage9.DEFAULT_WEIGHTS.values()), 100.0,
+                               places=6, msg="module weights no longer sum to 100")
+
+
 if __name__ == "__main__":
     unittest.main()

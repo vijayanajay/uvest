@@ -1,0 +1,12 @@
+{
+  "_about": "Baseline module weights for scripts/9_decision_engine.py (BRD §10.2, the 100-point calibration model). Copy this file into a run's workdir as `thresholds.json` to pin or retune them — stage 9 reads `thresholds.json` from its workdir, and stage 11 becomes its sole writer once trades resolve (BRD §9.1, BRD §12.2). The repo keeps `thresholds.json` itself untracked as generated per-run state (tests/test_repo_hygiene.py), which is exactly why the reviewable baseline lives here: the numbers a verdict is scored with should be diffable, not only embedded in code.",
+  "module_weights": {
+    "out_1_math.json": 20.0,
+    "out_3_dtw.json": 12.5,
+    "out_4_ml.json": 12.5,
+    "out_5_flow.json": 20.0,
+    "out_6_fundamental.json": 15.0,
+    "out_7_regime.json": 15.0,
+    "out_8_dhan.json": 5.0
+  }
+}
