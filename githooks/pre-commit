@@ -12,8 +12,22 @@
 REPO_ROOT=$(git rev-parse --show-toplevel) || exit 1
 cd "$REPO_ROOT" || exit 1
 
+# Prefer the repository's own interpreter over whatever `python` is first on
+# PATH: the suite imports the pinned requirements (fastdtw, lightgbm), which a
+# system interpreter may not have, so a green tree could fail here — or a red
+# one pass — purely because a shell picked another runtime. CI pins its own
+# 3.11 via setup-python; this is the same pin, locally.
+if [ -x "$REPO_ROOT/.venv/Scripts/python.exe" ]; then
+    PY="$REPO_ROOT/.venv/Scripts/python.exe"        # Windows
+elif [ -x "$REPO_ROOT/.venv/bin/python" ]; then
+    PY="$REPO_ROOT/.venv/bin/python"                # POSIX
+else
+    PY="python"
+fi
+echo "   (interpreter: $PY)"
+
 echo "🛡️  UVEST invariant suite (pre-commit)..."
-python tests/run_all_tests.py
+"$PY" tests/run_all_tests.py
 status=$?
 
 if [ $status -ne 0 ]; then
@@ -27,7 +41,7 @@ echo "✅ Invariant suite passed."
 
 echo ""
 echo "📊 UVEST behavioral evals scorecard (pre-commit)..."
-python tests/run_evals.py
+"$PY" tests/run_evals.py
 evals_status=$?
 
 if [ $evals_status -ne 0 ]; then
