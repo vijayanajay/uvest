@@ -13,9 +13,17 @@ Frozen definitions (each one pinned by `tests/test_8_dhan_precision.py`):
   `OB_LOOKBACK` trailing sessions; with no such pair the window's minimum low
   is the disclosed fallback.
 * `optimal_limit_range` — the sorted band [`anchored_vwap`,
-  `orderblock_support`]; `optimal_limit_buy` is its midpoint (2dp). This is
-  the Tier-1 answer to Core Prediction 3's limit zone, computed from the same
-  free daily OHLCV prefix stage 2 reads.
+  `orderblock_support`]; `optimal_limit_buy` is its midpoint (2dp), and it is
+  a limit entry **only when it is a strict discount** below the record's
+  `entry_price` — the signed-proposal-B discount clamp (2026-10-16,
+  docs/agents/proposal-limit-band-policy.md): a midpoint at or above the entry
+  is a market order that can only grade worse (a *filled* limit beats market
+  MAE iff `limit < entry`), so it ships as `optimal_limit_buy: null` with
+  `zone_above_market: true` — the band's levels still ship; a clamp is a
+  disclosure, not a waiver. A non-numeric entry cannot be evaluated: the
+  limit ships and `zone_above_market` is null (the tri-state, never a guess).
+  This is the Tier-1 answer to Core Prediction 3's limit zone, computed from
+  the same free daily OHLCV prefix stage 2 reads.
 * **The Dhan half is operator-gated and atomic**: it runs only when `--live`
   is passed *and* `DHAN_CLIENT_ID` + `DHAN_ACCESS_TOKEN` + a
   `--dhan-security-id` are available. Any failure (missing credentials, HTTP
@@ -36,7 +44,11 @@ Grading contract (gate 6, evals.md §3 #6): `record_stage8_evidence.py` reads
 and the `$derive` rule `limit_mae_pct` measures the pinned tape's worst low
 against that limit. An **unfilled** limit derives `null` and is excluded from
 the gate's denominator — no position, no MAE — so a limit that never trades
-can never inflate the pass rate.
+can never inflate the pass rate. A **clamped** zone (`zone_above_market:
+true`) ships no limit claim at all, and the gate's criterion is the
+better-fraction *plus* a ≥ 60% fill-rate floor over the records that do —
+signed proposal B, the falsifiable half a clamped better-fraction no longer
+is.
 """
 from __future__ import annotations
 
@@ -315,7 +327,29 @@ def _waived_payload(reasons: list[str]) -> dict:
         "precision_source": None,
         "waived_reason": "; ".join(reasons) if reasons else None,
         "missing_inputs": reasons,
+        "zone_above_market": None,
     }
+
+
+def _apply_discount_clamp(zone: dict, entry) -> tuple[dict, bool | None]:
+    """Signed proposal B (2026-10-16): the discount clamp.
+
+    The midpoint is a limit entry only when it sits strictly below the
+    record's `entry_price` — the lemma the clamp implements is that a
+    *filled* limit beats market MAE iff `limit < entry`, so a zone at or
+    above the entry is a market order wearing a limit's name and can only
+    grade worse. Returns the (possibly rewritten) zone and the disclosure
+    flag: True = clamped, False = shipped as a strict discount, None = not
+    evaluable (no numeric entry — the tri-state, never a guess).
+    """
+    limit = zone.get("optimal_limit_buy")
+    if limit is None:
+        return zone, None
+    if isinstance(entry, bool) or not isinstance(entry, (int, float)):
+        return zone, None
+    if limit < float(entry):
+        return zone, False
+    return {**zone, "optimal_limit_buy": None}, True
 
 
 def precision_payload(bars: list[dict] | None, trade: dict, *,
@@ -347,6 +381,9 @@ def precision_payload(bars: list[dict] | None, trade: dict, *,
         spread, depth_reason = spread_impact_pct(
             intraday, now=now, db_path=db_path, fetcher=fetcher)
     reasons = [r for r in (reason, depth_reason) if r]
+    # The clamp rides on the FINAL zone (post-refinement): the claim is what
+    # the Dhan tier may have moved, and gate 6 grades the shipped claim.
+    zone, above_market = _apply_discount_clamp(zone, trade.get("entry_price"))
     return {
         **zone,
         "spread_impact_cost_pct": spread,
@@ -355,6 +392,7 @@ def precision_payload(bars: list[dict] | None, trade: dict, *,
         "precision_source": source,
         "waived_reason": "; ".join(reasons) if reasons else None,
         "missing_inputs": [],
+        "zone_above_market": above_market,
     }
 
 

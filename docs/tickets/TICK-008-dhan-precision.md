@@ -1,6 +1,6 @@
 # TICK-008: Dhan API Precision Intraday & Depth Client
 
-**Status:** FROZEN  
+**Status:** FROZEN (amended 2026-10-16 by owner command — Q1–Q3 signed as recommendation B in [docs/agents/proposal-limit-band-policy.md](file:///d:/Code/uvest/docs/agents/proposal-limit-band-policy.md): the **discount clamp** — `optimal_limit_buy` is a limit entry only when it sits strictly below `entry_price`, disclosed by the new `zone_above_market` key — and gate 6's fill-rate floor ≥ 60% with the median-net line)  
 **Priority:** P1  
 **Test Seam:** `tests/test_8_dhan_precision.py`  
 **Target Script:** `scripts/8_dhan_precision.py`  
@@ -30,8 +30,9 @@ Stage 8 is the **Tier-2 Precision Intraday and Execution Layer** (BRD §8, §9.1
 | Key | Type | Meaning |
 | :--- | :--- | :--- |
 | `anchored_vwap` | float \| null | Intraday Anchored VWAP from swing low pivot |
-| `optimal_limit_buy` | float \| null | Recommended limit buy entry price |
-| `optimal_limit_range` | list[float] \| null | Optimal execution band `[min, max]` |
+| `optimal_limit_buy` | float \| null | Recommended limit buy entry price — the band midpoint, and **null when it is not a strict discount** below `entry_price` (the 2026-10-16 clamp: a limit at/above the entry is a market order, not a limit entry) |
+| `optimal_limit_range` | list[float] \| null | Optimal execution band `[min, max]` (the levels ship even when the midpoint is clamped) |
+| `zone_above_market` | bool \| null | `true` when the midpoint was clamped (≥ `entry_price`), `false` when the limit shipped, `null` when no zone was computed (waiver) |
 | `spread_impact_cost_pct`| float \| null | Real-time bid-ask spread and impact cost % |
 | `orderblock_support` | float \| null | Nearest 5m demand orderblock support level |
 | `cache_hit` | bool | `true` if served from `dhan_cache.db` |
@@ -44,3 +45,4 @@ Stage 8 is the **Tier-2 Precision Intraday and Execution Layer** (BRD §8, §9.1
 - [x] Caches responses in `dhan_cache.db` with 15-minute expiry; avoids redundant API calls.
 - [x] Degrades gracefully when `DHAN_ACCESS_TOKEN` is unset: returns `waived: true` with null metrics and exit code 0 (the Dhan half only — the daily Tier-1 zone still ships, exactly §8.1's "completes the validation using daily OHLCV from Tier 1").
 - [x] Fully tested offline using recorded mock API payloads with zero live network calls (the Dhan half is operator-gated behind `--live`, which the validation chain never passes, so every recorded artifact is byte-deterministic and byte-compared to a fresh run via `test_proof_manifest.RERUNNABLE`).
+- [x] Discount clamp (amended 2026-10-16, proposal B signed): the midpoint is emitted only when it sits strictly below `entry_price`; at or above it `optimal_limit_buy` is null with `zone_above_market: true`, and gate 6's criterion is now *both* ≥ 75% of filled limits beating market MAE *and* a ≥ 60% fill rate over records carrying a limit claim (the lemma: a filled limit beats market MAE iff `limit < entry`, so the fill rate is the falsifiable half).

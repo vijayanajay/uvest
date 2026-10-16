@@ -2361,5 +2361,62 @@ class TestProofRootPayloadEvidence(unittest.TestCase):
             self.assertIn("SUITE PASSED", out)
 
 
+class TestGateSixFillRateFloor(unittest.TestCase):
+    """Signed proposal B (2026-10-16): once the discount clamp makes "filled
+    limit beats market" an algebraic identity, gate 6's falsifiable half is
+    the fill-rate floor — and the mean/median split is disclosed, not averaged
+    away (SCEN-016 once moved the mean −530pp on a 1.17% denominator)."""
+
+    @staticmethod
+    def trade(limit, mkt, lim):
+        return {"limit_entry_price": limit,
+                "market_mae_pct": mkt, "limit_mae_pct": lim}
+
+    def test_a_clamped_gate_passes_only_with_the_fill_rate_at_or_above_the_floor(self):
+        # 7 of 10 recorded limits fill, every fill better (the identity):
+        # better 100%, fill rate 70% ≥ 60% → PASS, both numbers disclosed.
+        trades = ([self.trade(95.0, 5.0, 2.0) for _ in range(7)]
+                  + [self.trade(95.0, 5.0, None) for _ in range(3)])
+        gate = run_evals.gate_mae_reduction(trades)
+        verdict, display = gate.evaluate()
+        self.assertEqual(verdict, "[PASS]", display)
+        self.assertEqual(gate.value, 100.0)
+        self.assertIn("filled 7/10", gate.coverage)
+        self.assertIn("70.0% fill rate", gate.coverage)
+        self.assertIn("median", gate.coverage,
+                      "the outlier-prone mean never travels alone")
+        self.assertIn("by construction", gate.coverage)
+        # The numbers survive a PASS: coverage prints for every status, while
+        # detail would be hidden behind a FAIL/SKIP-only renderer branch.
+        self.assertEqual(gate.detail, "")
+
+    def test_a_fill_rate_below_the_floor_fails_despite_a_perfect_better_fraction(self):
+        """The identity half cannot save the gate: a zone the tape never
+        reaches is not value-add, it is an unfilled wish."""
+        trades = ([self.trade(95.0, 5.0, 2.0) for _ in range(5)]
+                  + [self.trade(95.0, 5.0, None) for _ in range(5)])
+        gate = run_evals.gate_mae_reduction(trades)
+        verdict, display = gate.evaluate()
+        self.assertEqual(gate.value, 100.0,
+                         "the headline metric is unchanged by the floor")
+        self.assertEqual(verdict, "[FAIL]")
+        self.assertIn("below the fill-rate floor 50.0% >= 60.0%", display)
+
+    def test_a_worse_fill_still_counts_against_the_better_fraction(self):
+        """The clamp does not delete the primary criterion: 2 of 3 better
+        is 66.7% < 75% → FAIL on the headline itself."""
+        trades = [self.trade(95.0, 5.0, 2.0), self.trade(95.0, 5.0, 2.0),
+                  self.trade(95.0, 1.0, 2.0)]
+        gate = run_evals.gate_mae_reduction(trades)
+        verdict, _ = gate.evaluate()
+        self.assertEqual(verdict, "[FAIL]")
+        self.assertAlmostEqual(gate.value, 200.0 / 3.0)
+
+    def test_the_floor_never_applies_to_a_skipped_gate(self):
+        gate = run_evals.gate_mae_reduction([])
+        self.assertEqual(gate.evaluate()[0], "[SKIP]")
+        self.assertIsNone(gate.floor)
+
+
 if __name__ == "__main__":
     unittest.main()

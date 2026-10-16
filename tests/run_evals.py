@@ -148,6 +148,7 @@ import hashlib
 import importlib.util
 import json
 import re
+import statistics
 import subprocess
 import sys
 import tempfile
@@ -204,6 +205,12 @@ HALLUCINATION_MIN = 100.0
 BRIER_MAX = 0.18
 COVERAGE_MIN = 80.0
 MAE_REDUCTION_MIN = 75.0
+# Signed proposal B (2026-10-16, docs/agents/proposal-limit-band-policy.md):
+# once the discount clamp makes "every filled limit beats market" an
+# algebraic identity (a filled limit beats market MAE iff `limit < entry`),
+# the better-fraction is no longer falsifiable — the fill rate over the
+# records that carry a limit claim is the half that still can be wrong.
+MAE_FILL_RATE_MIN = 60.0
 HTML_VALIDITY_MIN = 100.0
 
 
@@ -244,6 +251,13 @@ class Gate:
         self.value: float | None = None
         self.skipped = False
         self.detail = ""
+        # An optional second criterion that can only *fail* the gate, never
+        # pass it: (label, current value, minimum). Gate 6 sets it to the
+        # fill-rate floor — after the discount clamp its better-fraction is
+        # 100%-by-construction, so the floor is the falsifiable half. The
+        # headline value stays the primary metric; a floor breach FAILs the
+        # gate and names itself in the display string.
+        self.floor: tuple[str, float, float] | None = None
         # A disclosure that has to survive a PASS. Gate 2 sets it to the breaker
         # classes it actually graded, because a percentage over a shrunken graded
         # set reads exactly like a percentage over the whole benchmark: which
@@ -262,10 +276,18 @@ class Gate:
             return "[SKIP]", "inputs incomplete — partial dataset"
         ok = (self.value >= self.threshold) if self.higher_is_pass \
             else (self.value <= self.threshold)
+        floor_note = ""
+        if self.floor is not None:
+            label, got, minimum = self.floor
+            if got < minimum:
+                ok = False
+                floor_note = (f", below the {label} "
+                              f"{self.fmt.format(got)} >= "
+                              f"{self.fmt.format(minimum)}")
         threshold_str = (">= " if self.higher_is_pass else "<= ") + self.fmt.format(self.threshold)
         return (
             "[PASS]" if ok else "[FAIL]",
-            f"{self.fmt.format(self.value)}  ({threshold_str})",
+            f"{self.fmt.format(self.value)}  ({threshold_str}{floor_note})",
         )
 
 
@@ -2036,9 +2058,9 @@ def gate_mae_reduction(trades: list[dict]) -> Gate:
         if mkt > 0:
             baselines.append(100.0 * (mkt - lim) / mkt)
         graded.append(1.0 if lim < mkt else 0.0)
+    with_limit = sum(1 for t in trades if t.get("limit_entry_price") is not None)
     if not graded:
         g.skipped = True
-        with_limit = sum(1 for t in trades if t.get("limit_entry_price") is not None)
         if not with_limit:
             g.detail = ("no record carries a stage-8 limit entry yet — "
                         "record stage-8 evidence (tests/evals/"
@@ -2050,9 +2072,23 @@ def gate_mae_reduction(trades: list[dict]) -> Gate:
                         "as a free win")
         return g
     # Report pass-fraction as the headline metric (threshold is a fraction),
+    # …but since the signed discount clamp it is 100%-by-construction among
+    # fills (a filled limit beats market MAE iff `limit < entry`), so the
+    # falsifiable half is the fill rate: how often the zone is reached at all.
     g.value = 100.0 * (sum(graded) / len(graded))
+    fill_rate = 100.0 * len(graded) / with_limit
+    g.floor = ("fill-rate floor", fill_rate, MAE_FILL_RATE_MIN)
     net = sum(baselines) / len(baselines)
-    g.detail = f"net expectancy: {net:+.1f}% avg MAE reduction"
+    med = statistics.median(baselines)
+    # Coverage, not detail: these numbers must survive a PASS (the renderer
+    # prints detail only for FAIL/SKIP), and Q3's signed amendment is that the
+    # fill rate and the median travel with the headline everywhere.
+    g.coverage = (f"filled {len(graded)}/{with_limit} recorded limit(s) "
+                  f"({fill_rate:.1f}% fill rate); net expectancy: "
+                  f"{net:+.1f}% mean / {med:+.1f}% median avg MAE reduction; "
+                  "every filled clamped limit beats market MAE by "
+                  "construction (limit < entry) — the falsifiable half is "
+                  "the fill rate")
     return g
 
 

@@ -1,7 +1,7 @@
 {
   "schema": "uvest-baseline-scorecard/1",
   "scenario_manifest_sha256": "45ff2e7c050dd1ee72b274aaa8117d22b019683919a3ba6b9d442b8ca29cafdc",
-  "manifest_sha256": "a9e2d58da4c80556cdc9b40fc4e8ba6f77b863c9d2f1311b2162ced364174ccd",
+  "manifest_sha256": "c5cf565e94a96ddd3da29e87732f88ff627792e3089a3d832829ea47253b83af",
   "quarantined_count": 0,
   "quarantine_register_sha256": "440b46cb3f9865af6a2a672c2f3e62a0d25744a5bfef1d4b44a6bd910e0c4929",
   "probe_rosters": {
@@ -62,8 +62,8 @@
       "value": 0.0
     },
     "Optimal Limit Slippage Reduction": {
-      "verdict": "FAIL",
-      "value": 71.42857142857143
+      "verdict": "PASS",
+      "value": 100.0
     },
     "HTML Visualizer Validation": {
       "verdict": "PASS",

@@ -11,5 +11,6 @@
   "waived": true,
   "precision_source": "daily_tier1",
   "waived_reason": "dhan:not-requested",
-  "missing_inputs": []
+  "missing_inputs": [],
+  "zone_above_market": false
 }

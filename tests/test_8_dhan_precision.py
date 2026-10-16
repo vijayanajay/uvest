@@ -15,7 +15,13 @@ tape's worst low against the engine's limit price (`limit_entry_price`, read
 out of the recorded artifact by `record_stage8_evidence.py`) and the market
 entry via the `$derive` rule `limit_mae_pct` — an *unfilled* limit derives
 `null` and is excluded from the denominator (no position, no MAE), so a deep
-limit that never trades can never inflate the pass rate.
+limit that never trades can never inflate the pass rate. And since the signed
+proposal B (2026-10-16, docs/agents/proposal-limit-band-policy.md) the limit
+claim itself carries a **discount clamp**: a filled limit beats market MAE
+iff `limit < entry`, so a midpoint at or above the entry is a market order,
+not a limit entry — it ships as `optimal_limit_buy: null` with
+`zone_above_market: true` (the band's levels still ship), and gate 6's
+criterion is the better-fraction *plus* a ≥ 60% fill-rate floor.
 
 Modes per tests/support/pipeline.py: in-process import for behaviour, one
 subprocess for the CLI contract.
@@ -49,6 +55,7 @@ SCEN_FIXTURE = REPO_ROOT / "tests" / "proof" / "fixtures" / "SCEN-001"
 CONTRACT_KEYS = {
     "anchored_vwap", "optimal_limit_buy", "optimal_limit_range",
     "spread_impact_cost_pct", "orderblock_support", "cache_hit", "waived",
+    "zone_above_market",
 }
 
 
@@ -139,6 +146,68 @@ class TestTheDailyPrecisionZone(unittest.TestCase):
                           "no depth offline — the Dhan metric stays null")
         self.assertFalse(payload["cache_hit"])
         self.assertIn("daily_tier1", payload["precision_source"])
+
+
+class TestTheDiscountClamp(unittest.TestCase):
+    """Signed proposal B (2026-10-16): the midpoint is a limit entry only
+    when it is a strict discount below the record's entry.
+
+    The lemma the clamp implements: a *filled* limit beats market MAE iff
+    `limit < entry` — so a zone at/above the entry is a market order that can
+    only grade worse, and grading it as limit execution is a category error.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.stage8, _ = import_mode(8)
+        # Hand-checkable band: pivot at session 2 (low 94), demand block at
+        # session 1's low (95), AVWAP from the pivot = mean of the typical
+        # prices 97.6667 and 99.3333 = 98.5 → band [95.0, 98.5],
+        # midpoint 96.75.
+        cls.bars = [
+            session("2020-01-01", 100, 101, 95, 96),
+            session("2020-01-02", 96, 100, 94, 99),
+            session("2020-01-03", 99, 101, 97, 100),
+        ]
+
+    def test_a_zone_below_the_entry_ships_unchanged(self):
+        payload = self.stage8.precision_payload(
+            self.bars, trade_doc(entry_price=100.0))
+        self.assertFalse(payload["zone_above_market"],
+                         "a strict discount is a limit entry")
+        self.assertAlmostEqual(payload["optimal_limit_buy"], 96.75)
+
+    def test_a_zone_at_or_above_the_entry_is_not_a_limit_entry(self):
+        payload = self.stage8.precision_payload(
+            self.bars, trade_doc(entry_price=96.0))
+        self.assertIsNone(payload["optimal_limit_buy"],
+                          "a midpoint at/above the entry is a market order")
+        self.assertTrue(payload["zone_above_market"])
+        # The levels still ship: the clamp removes the *claim*, not the zone.
+        self.assertEqual(payload["optimal_limit_range"], [95.0, 98.5])
+        self.assertIsNotNone(payload["anchored_vwap"])
+        self.assertIsNotNone(payload["orderblock_support"])
+        # A clamp is a disclosure, not a whole-payload waiver: no input was
+        # missing (`waived` here is the Dhan half's usual offline flag).
+        self.assertEqual(payload["missing_inputs"], [])
+        self.assertEqual(payload["waived_reason"], "dhan:not-requested")
+
+    def test_equality_is_not_a_strict_discount(self):
+        """`limit < entry` is strict: a limit priced AT the market fills
+        instantly with zero discount and must clamp."""
+        payload = self.stage8.precision_payload(
+            self.bars, trade_doc(entry_price=96.75))
+        self.assertIsNone(payload["optimal_limit_buy"])
+        self.assertTrue(payload["zone_above_market"])
+
+    def test_an_unevaluable_entry_discloses_rather_than_clamps(self):
+        """No numeric entry_price ⇒ the clamp cannot be evaluated: the limit
+        ships and `zone_above_market` is null (tri-state, never a guess)."""
+        trade = trade_doc()
+        del trade["entry_price"]
+        payload = self.stage8.precision_payload(self.bars, trade)
+        self.assertAlmostEqual(payload["optimal_limit_buy"], 96.75)
+        self.assertIsNone(payload["zone_above_market"])
 
 
 class TestTheWaiverContract(unittest.TestCase):

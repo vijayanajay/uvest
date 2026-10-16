@@ -52,3 +52,45 @@
   deliberately re-banked — that's the policy working.
 - `.env.example` (BRD §8.1) is the one remaining unchecked stage-8 actionplan
   item; the Dhan half stays unexercised live until credentials exist.
+
+## Follow-up (same day) — the unfilled-limit investigation
+
+Measured all 58 records gate-exact (harness reproduces the banked 71.4% / −0.8%
+before scoring any alternative). Three findings, formalized in
+`docs/agents/proposal-limit-band-policy.md`:
+
+- **12/58 zone midpoints sit at/above the market entry** — exactly the 12
+  worse fills. Lemma: a *filled* limit beats market MAE iff `limit < entry`
+  (pure algebra), so an above-entry "limit" is a market order that can only
+  grade worse — a rule defect, not an engine failure. A discount clamp makes
+  every clamped policy 100%-better **by construction**, so the gate's
+  falsifiable content moves to the fill rate (floor ≥ 60% proposed).
+- **The net-expectancy line is outlier-dominated**: −0.8% mean vs +10.0%
+  median; SCEN-016 contributes −530% alone (1.17% market-MAE denominator).
+- **The 16 unfilled**: 4 are within +1% near-misses (2 within 10 bp), 12 are
+  deep crash gaps (max ADANIENT +13.68%); 9/16 would fill at the band's high
+  side, **0/16** at the low side — going deeper never rescues an unfilled
+  limit. AVWAP-side clamped is the deepest policy (+43.5% net / +42.9% med)
+  but fills only 56.8%; midpoint clamped fills 65.2% at +31.1%.
+- Nothing implemented at investigation time: spec-freeze first (Iron Rule).
+  Q1–Q3 on the owner's desk; recommendation B (clamp + midpoint + criterion
+  amendment).
+
+## Follow-up 2 (same day) — proposal B signed and shipped
+
+The owner signed Q1–Q3 as B; implemented end-to-end the same day:
+
+- Stage 8's `_apply_discount_clamp`: midpoint ships only when strictly below
+  `entry_price`; otherwise `optimal_limit_buy: null` + `zone_above_market:
+  true` (levels still ship — a clamp is a disclosure, not a waiver), `null`
+  flag when the entry is unevaluable (tri-state). The clamp rides on the
+  *final* zone (post-Dhan-refinement).
+- Gate 6: `Gate.floor` — a second criterion that can only FAIL a gate and
+  names itself in the display string; `MAE_FILL_RATE_MIN = 60.0`; mean AND
+  median net on a `coverage` line (the renderer hides `detail` on PASS —
+  numbers that must survive a green gate belong in coverage).
+- Evidence re-recorded (12 rows clamped), gates re-banked deliberately (9).
+  Gate 6: PASS 100.0%, 30/46 filled (65.2%), +31.1% mean / +24.7% median —
+  exactly the proposal's measured P5 row. Suite 621/621.
+- Watch: the 16 unfilled (4 near-misses) are the next lever; the AVWAP-side
+  anchor (P8) is the signed-off alternative if fill rate ever drops under 60%.
