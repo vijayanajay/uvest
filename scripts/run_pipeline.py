@@ -89,9 +89,7 @@ ORDER: list[int] = sorted([*CHAIN, *EXCLUDED])
 # label only, and must move into `_recorder.FROZEN_ARTIFACTS` when they land
 # (`artifact_filename()` refuses to guess for them until then).
 PENDING_ARTIFACTS: dict[int, str] = {
-    4: "out_4_ml.json",
     8: "out_8_dhan.json",
-    10: "out_10_triage.json",
 }
 ARTIFACTS: dict[int, str | None] = {
     **{stage: _recorder.FROZEN_ARTIFACTS[stage]
@@ -101,17 +99,23 @@ ARTIFACTS: dict[int, str | None] = {
 }
 
 # Optional per-stage data fixtures (the tier-1 fetchers are unimplemented, so
-# an omitted fixture is the tri-state waiver path, never an error).
-FIXTURE_FLAG: dict[int, str] = {
-    2: "--ohlcv-fixture",
-    3: "--history-fixture",
-    5: "--bhavcopy-fixture",
-    6: "--financials-fixture",
-    7: "--regime-fixture",
+# an omitted fixture is the tri-state waiver path, never an error). Each entry
+# is the flag a stage takes paired with the slot the value is resolved into, so
+# a stage may draw on more than one — and two stages may share one artifact.
+# Stage 4 is the case ADR-010 decision 4 anticipates: it reads the stock OHLCV
+# stage 2 reads *and* the single `uvest-market-context/1` bundle stage 7
+# classifies, instead of growing a second fetcher and a second cache.
+FIXTURE_FLAG: dict[int, tuple[tuple[str, int], ...]] = {
+    2: (("--ohlcv-fixture", 2),),
+    3: (("--history-fixture", 3),),
+    4: (("--ohlcv-fixture", 2), ("--context-fixture", 4)),
+    5: (("--bhavcopy-fixture", 5),),
+    6: (("--financials-fixture", 6),),
+    7: (("--regime-fixture", 7),),
 }
 
 # Stages whose CLI carries _recorder.add_record_arg (stage 12 has no recorder).
-RECORD_STAGES = {0, 1, 2, 3, 5, 6, 7, 9}
+RECORD_STAGES = {0, 1, 2, 3, 4, 5, 6, 7, 9, 10}
 
 # BRD §9.1 pipeline block: stage 10 logs the new trade before the report.
 STAGE10_ARGS = ["--action", "track"]
@@ -144,12 +148,13 @@ def stage_argv(stage: int, script: Path, *, input_path: str,
         argv += list(STAGE10_ARGS)
     if stage == 12:
         argv += ["--input", "current_trade.json", "--out-dir", "reports"]
-    fixture = fixtures.get(stage)
-    if fixture:
-        argv += [FIXTURE_FLAG[stage], fixture]
+    for flag, source_stage in FIXTURE_FLAG.get(stage, ()):
+        fixture = fixtures.get(source_stage)
+        if fixture:
+            argv += [flag, fixture]
     if record is not None and stage in RECORD_STAGES:
         argv += ["--record", record]
-    if stage in (9, 12):
+    if stage in (9, 10, 12):
         for payload in payloads:
             argv += ["--payload", payload]
     if stage == 9 and (workdir / "thresholds.json").exists():
@@ -250,14 +255,15 @@ def write_run_record(workdir: Path, record: dict) -> Path | None:
 
 
 def _fetch_live_context(workdir: Path) -> str | None:
-    """Fetch a live market-context bundle into the workdir for stage 7.
+    """Fetch a live market-context bundle into the workdir for stages 4 and 7.
 
-    Runs between stage 0 and stage 7, because the canonical trade (symbol,
-    recommended_date) only exists once the chain has ingested the input. Any
-    failure — unmapped symbol, network down, thin sources — returns None so
-    stage 7 takes its existing waiver path and says why; a partial bundle is
-    still worth passing, because stage 7 names exactly which series are
-    missing (`missing_inputs`) instead of guessing them.
+    Runs in front of the first bundle consumer (stage 4), because the
+    canonical trade (symbol, recommended_date) only exists once the chain has
+    ingested the input. Any failure — unmapped symbol, network down, thin
+    sources — returns None so the consuming stages take their existing waiver
+    paths and say why; a partial bundle is still worth passing, because both
+    name exactly which series are missing (`missing_inputs` on stage 7, the
+    feature window on stage 4) instead of guessing them.
     """
     try:
         import fetch_market_context as fmc
@@ -298,6 +304,7 @@ def run_chain(run_record: dict, *, input_path: str, workdir: Path,
             stage_row(len(run_record["stages"]), stage, status, **fields))
 
     ran: list[int] = []
+    context_fetched = False
     for stage in ORDER:
         if stage in EXCLUDED:
             reason = EXCLUDED[stage]
@@ -312,8 +319,14 @@ def run_chain(run_record: dict, *, input_path: str, workdir: Path,
             note(stage, "skipped", artifact=ARTIFACTS.get(stage), skip_reason=reason)
             continue
 
-        if stage == 7 and regime_live and not fixtures.get(7):
+        # The live bundle is fetched once, in front of the FIRST stage that
+        # reads it (stage 4 in the frozen order), and handed to both consumers:
+        # one fetch, one cache, one no-lookahead truncation — never two
+        # fetchers racing the same market (ADR-010 decision 4).
+        if regime_live and not context_fetched and stage in (4, 7):
+            context_fetched = True
             fixtures[7] = _fetch_live_context(workdir)
+            fixtures[4] = fixtures[7]
 
         artifact = ARTIFACTS[stage]
         target = f" → {artifact}" if artifact else " → reports/report_{SYMBOL}_{DATE}.html"
@@ -426,7 +439,8 @@ def main(argv: list[str] | None = None) -> int:
                              "run_record.json and reports/ (default: current "
                              "directory).")
     parser.add_argument("--ohlcv-fixture", default=None,
-                        help="recorded daily-OHLCV file for stage 2.")
+                        help="recorded daily-OHLCV file for stage 2 (and the "
+                             "stock series stage 4's features need).")
     parser.add_argument("--history-fixture", default=None,
                         help="recorded 10-year history file for stage 3.")
     parser.add_argument("--bhavcopy-fixture", default=None,
@@ -435,7 +449,9 @@ def main(argv: list[str] | None = None) -> int:
                         help="recorded financial-statement bundle for stage 6 "
                              "(omit for the waiver path).")
     parser.add_argument("--regime-fixture", default=None,
-                        help="recorded uvest-market-context/1 bundle for stage 7 "
+                        help="recorded uvest-market-context/1 bundle, handed to "
+                             "BOTH of its consumers — stage 7 as "
+                             "--regime-fixture and stage 4 as --context-fixture "
                              "(omit for the waiver path).")
     parser.add_argument("--regime-live", action="store_true",
                         help="fetch a live uvest-market-context/1 bundle for "
@@ -464,6 +480,9 @@ def main(argv: list[str] | None = None) -> int:
     fixtures: dict[int, str | None] = {
         2: resolve(args.ohlcv_fixture),
         3: resolve(args.history_fixture),
+        # One bundle, two consumers (`--regime-fixture` and stage 4's
+        # `--context-fixture` are the same artifact by construction).
+        4: resolve(args.regime_fixture),
         5: resolve(args.bhavcopy_fixture),
         6: resolve(args.financials_fixture),
         7: resolve(args.regime_fixture),

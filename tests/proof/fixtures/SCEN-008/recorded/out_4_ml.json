@@ -1,0 +1,42 @@
+{
+  "prob_target_hit_22d": 0.5282,
+  "price_cone_p10_p50_p90": {
+    "p10": 629.49,
+    "p25": 659.04,
+    "p50": 733.38,
+    "p75": 783.08,
+    "p90": 819.61
+  },
+  "mae_projected": -17.53,
+  "mfe_projected": 57.64,
+  "shap_drivers": [
+    {
+      "feature": "sma200_dist",
+      "value": -26.032534,
+      "contribution": 1.155799
+    },
+    {
+      "feature": "ret_5",
+      "value": -23.07841,
+      "contribution": -0.371336
+    },
+    {
+      "feature": "vol_ratio_14_60",
+      "value": 1.564784,
+      "contribution": 0.352945
+    },
+    {
+      "feature": "sma50_dist",
+      "value": -28.512492,
+      "contribution": -0.156881
+    },
+    {
+      "feature": "rsi_14",
+      "value": 5.922023,
+      "contribution": -0.116397
+    }
+  ],
+  "direction_label": "STRONG_BULLISH",
+  "direction_probability": 0.7456,
+  "waived": false
+}

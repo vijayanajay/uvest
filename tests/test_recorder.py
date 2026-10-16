@@ -52,13 +52,14 @@ class TestFrozenArtifactMap(unittest.TestCase):
         self.assertEqual(_recorder.FROZEN_ARTIFACTS[1], "out_1_math.json")
         self.assertEqual(_recorder.FROZEN_ARTIFACTS[2], "out_2_market.json")
         self.assertEqual(_recorder.FROZEN_ARTIFACTS[3], "out_3_dtw.json")
+        self.assertEqual(_recorder.FROZEN_ARTIFACTS[4], "out_4_ml.json")
         self.assertEqual(_recorder.FROZEN_ARTIFACTS[5], "out_5_flow.json")
 
     def test_unregistered_stage_fails_loudly_not_derivatively(self):
         """Any stage NOT in the frozen map must fail loudly naming the contract.
-        (Stage 4 is the next unimplemented stage; keep this forward-looking.)"""
+        (Stage 8 is the next unimplemented stage; keep this forward-looking.)"""
         with self.assertRaises(AssertionError) as caught:
-            _recorder.artifact_filename(4)
+            _recorder.artifact_filename(8)
         self.assertIn("BRD §9.1", str(caught.exception))
 
 

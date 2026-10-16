@@ -43,9 +43,60 @@ Key operations:
 
 ### 3. TDD Acceptance Criteria
 
-- [ ] Logs new trades into SQLite `uvest_history.db` and queries active positions.
+- [x] Logs new trades into SQLite `uvest_history.db` and queries active positions.
 - [ ] Classifies position into the 4 operational zones based on price progress.
 - [ ] Level 1 drawdown ($\le 1.0\times\text{ATR}$) strictly prescribes `HOLD` with explicit prohibition against averaging down.
 - [ ] Level 2 drawdown ($> 1.0\times\text{ATR}$ or close $< 20\text{ EMA}$) tightens stop and raises warning.
 - [ ] Level 3 triggers instant liquidation when stop loss is breached.
-- [ ] Tested with local in-memory/temp SQLite database and recorded price fixtures.
+- [x] Tested with local in-memory/temp SQLite database and recorded price fixtures.
+
+### 4. Implemented slice (2026-10-14) — the trade store and the macro-premise half
+
+The mode the daily loop needs first is in place; the price half stays open.
+
+**Trade store (BRD §11).** `uvest_history.db` (`trade_id`, symbol, instrument,
+entry/stop/target, lot size, entry prior, `tracked_on`, status) plus a
+`triage_history` audit trail. `--action track` is the canonical chain invocation
+(BRD §9.1 row 10): it freezes the day-1 thesis into `trades` **once** — a second
+`track` for the same `trade_id` cannot rewrite the geometry the original verdict
+was judged on — and then audits it against the regime evidence the same run
+already produced (`--payload out_7_regime.json`, with the entry prior from
+`out_9_decision.json`). `trade_id` reuses `_recorder.bundle_name`
+(`{SYMBOL}_{YYYYMMDD}`), so TICK-012's `--resolve <TRADE_ID>` addresses the same
+row the replay bundle was recorded for.
+
+**Daily triage mode (the rerun).** `--action triage` — with `--action status` as a
+documented alias, the wording the `daily-triage` skill prints — enumerates every
+**open** tracked position and **reruns stage 7 against live market context**: one
+bundle per position (the position's own symbol decides which sectoral index it
+carries), fetched by the same `fetch_market_context.py` the runner uses. The rerun
+is the real stage: `7_sector_macro_regime.py` is spawned through its frozen CLI
+and its payload is transcribed verbatim into the row — no regime arithmetic is
+re-implemented here. Each audit is appended to `triage_history` (one row per
+position per day, replacing its own same-day row) and the aggregate published.
+
+**Macro premise → action (documented, deterministic).** The day-1 premise BRD
+§11.1 #1 names is "sector MRS leading", so the RRG quadrant *is* premise evidence:
+`broken :=` panic breaker **or** VIX `PANIC` **or** sector `LAGGING` ⇒ `LIQUIDATE`
+(§11.2 Level 3 invalidation; §10.3 #6 forbids long setups outright);
+`weakened :=` breadth `RISK_OFF` **or** flow `NET_SELLING` **or** sector
+`WEAKENING`/`IMPROVING` ⇒ `TIGHTEN_STOP` (§11.2 Level 2 premise warning); otherwise
+`HOLD`. Every frozen RRG token is accounted for — `LEADING` is the premise holding,
+the two rolling quadrants weaken it, `LAGGING` breaks it. A waived regime
+contributes no premise change (BRD §10.4) and says so. `TRAIL_STOP` is profit
+harvesting — the price half — so it is never emitted.
+
+**Disclosed gaps.** `adverse_level` and `trailing_stop_update` are `null`, and
+every row names the evidence they need in `pending_inputs`
+(`position_price:drawdown_vs_entry`, `atr_14:drawdown_in_atr`,
+`close_vs_ema20:premise_evidence`, `delivery_zscore:premise_evidence`), plus
+`regime:waived` when the rerun produced none — the same disclosure idiom stage 7
+uses for `missing_inputs` and stage 9 for `confidence_deficit`. The four-zone
+classification, the deterministic `still_chance_pct` posterior and the action
+levels above remain this ticket's open work.
+
+**Payload.** Exactly the §2 contract keys. **Seam.**
+`tests/test_10_daily_triage.py` (22 tests): the frozen thesis, the mapping, a
+real per-position stage-7 rerun (asserted against the stage's own output), the
+per-position waiver, the injected-fetcher live path, store discipline and one CLI
+invocation with `--record` identity.

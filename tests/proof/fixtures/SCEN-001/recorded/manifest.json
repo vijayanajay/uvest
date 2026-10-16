@@ -15,6 +15,61 @@
       "stage": 7,
       "artifact": "out_7_regime.json",
       "recorded_at": "2026-10-14T14:19:37+00:00"
+    },
+    {
+      "stage": 4,
+      "artifact": "out_4_ml.json",
+      "recorded_at": "2026-10-14T18:00:45+00:00"
+    },
+    {
+      "stage": 4,
+      "artifact": "out_4_ml.json",
+      "recorded_at": "2026-10-14T18:01:29+00:00"
+    },
+    {
+      "stage": 4,
+      "artifact": "out_4_ml.json",
+      "recorded_at": "2026-10-14T18:02:39+00:00"
+    },
+    {
+      "stage": 4,
+      "artifact": "out_4_ml.json",
+      "recorded_at": "2026-10-14T18:43:01+00:00"
+    },
+    {
+      "stage": 4,
+      "artifact": "out_4_ml.json",
+      "recorded_at": "2026-10-14T18:51:33+00:00"
+    },
+    {
+      "stage": 4,
+      "artifact": "out_4_ml.json",
+      "recorded_at": "2026-10-14T19:17:58+00:00"
+    },
+    {
+      "stage": 4,
+      "artifact": "out_4_ml.json",
+      "recorded_at": "2026-10-15T03:48:13+00:00"
+    },
+    {
+      "stage": 4,
+      "artifact": "out_4_ml.json",
+      "recorded_at": "2026-10-15T14:15:27+00:00"
+    },
+    {
+      "stage": 4,
+      "artifact": "out_4_ml.json",
+      "recorded_at": "2026-10-15T14:15:47+00:00"
+    },
+    {
+      "stage": 4,
+      "artifact": "out_4_ml.json",
+      "recorded_at": "2026-10-15T19:49:21+00:00"
+    },
+    {
+      "stage": 4,
+      "artifact": "out_4_ml.json",
+      "recorded_at": "2026-10-15T20:07:56+00:00"
     }
   ]
 }

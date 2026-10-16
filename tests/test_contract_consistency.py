@@ -57,6 +57,10 @@ SCRIPT_MENTION_RE = re.compile(r"scripts/([0-9a-z_]+\.py)")
 NON_STAGE_SCRIPTS = frozenset({
     "scripts/run_evals.py", "scripts/run_pipeline.py",
     "scripts/fetch_market_context.py",
+    # Shared domain data, not a stage: the symbol → sectoral-index map stage 7
+    # and stage 4 both import (ADR-010 decision 5 — extracted the moment a
+    # second consumer existed).
+    "scripts/_sector_map.py",
 })
 FENCED_BLOCK_RE = re.compile(r"```[a-zA-Z]*\n(.*?)```", re.DOTALL)
 

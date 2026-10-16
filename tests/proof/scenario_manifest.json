@@ -4542,6 +4542,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/SCEN-001/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 7,
           "artifact": "out_7_regime.json",
           "path": "fixtures/SCEN-001/recorded/out_7_regime.json",
@@ -4633,6 +4639,12 @@
           "stage": 2,
           "artifact": "out_2_market.json",
           "path": "fixtures/SCEN-002/recorded/out_2_market.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/SCEN-002/recorded/out_4_ml.json",
           "evidence": "recorded"
         },
         {
@@ -4732,6 +4744,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/SCEN-003/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 7,
           "artifact": "out_7_regime.json",
           "path": "fixtures/SCEN-003/recorded/out_7_regime.json",
@@ -4823,6 +4841,12 @@
           "stage": 2,
           "artifact": "out_2_market.json",
           "path": "fixtures/SCEN-004/recorded/out_2_market.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/SCEN-004/recorded/out_4_ml.json",
           "evidence": "recorded"
         },
         {
@@ -5001,6 +5025,12 @@
           "stage": 2,
           "artifact": "out_2_market.json",
           "path": "fixtures/SCEN-006/recorded/out_2_market.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/SCEN-006/recorded/out_4_ml.json",
           "evidence": "recorded"
         },
         {
@@ -5192,6 +5222,12 @@
           "stage": 2,
           "artifact": "out_2_market.json",
           "path": "fixtures/SCEN-008/recorded/out_2_market.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/SCEN-008/recorded/out_4_ml.json",
           "evidence": "recorded"
         },
         {

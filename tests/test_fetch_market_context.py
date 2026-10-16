@@ -120,18 +120,66 @@ class TestSeriesBuilders(unittest.TestCase):
 
     def test_align_axes_inner_joins_without_inventing_dates(self):
         series = {
-            "^NSEI": [("2026-10-13", 1.0), ("2026-10-14", 2.0)],
+            "^NSEI": [("2026-10-10", 0.5), ("2026-10-13", 1.0),
+                      ("2026-10-14", 2.0)],
             "^INDIAVIX": [("2026-10-13", 15.0), ("2026-10-14", 16.0),
                           ("2026-10-15", 17.0)],
-            "^NSEBANK": [("2026-10-14", 9.0)],
         }
-        aligned = fmc.align_axes(series)
-        self.assertEqual(aligned["^NSEI"], [("2026-10-14", 2.0)])
-        self.assertEqual(aligned["^INDIAVIX"], [("2026-10-14", 16.0)])
-        self.assertEqual(aligned["^NSEBANK"], [("2026-10-14", 9.0)])
+        aligned, omitted = fmc.align_axes(series, min_sessions=2)
+        self.assertEqual(omitted, [])
+        self.assertEqual(aligned["^NSEI"],
+                         [("2026-10-13", 1.0), ("2026-10-14", 2.0)])
+        self.assertEqual(aligned["^INDIAVIX"],
+                         [("2026-10-13", 15.0), ("2026-10-14", 16.0)])
         # Order follows the first series; no date appears that any series lacked.
         self.assertEqual([d for d, _ in aligned["^INDIAVIX"]],
-                         ["2026-10-14"])
+                         ["2026-10-13", "2026-10-14"])
+
+    def test_align_axes_omits_a_thin_series_instead_of_cutting_the_others(self):
+        """One stub series must not decide the whole bundle's axis.
+
+        The live failure this pins: for an energy-sector trade Yahoo served
+        `^CNXENERGY` a single session while `^NSEI` had ~320 and `^INDIAVIX`
+        ~319, and the plain inner join cut *every* series to that one date —
+        the sector stub took the trend and panic-VIX evidence down with it.
+        A member below the floor is omitted (and reported so the caller can
+        disclose it); the series that can carry a joint estimate keep their
+        own sessions.
+        """
+        series = {
+            "^NSEI": [("2026-10-13", 1.0), ("2026-10-14", 2.0)],
+            "^INDIAVIX": [("2026-10-13", 15.0), ("2026-10-14", 16.0)],
+            "^NSEBANK": [("2026-10-14", 9.0)],
+        }
+        aligned, omitted = fmc.align_axes(series, min_sessions=2)
+        self.assertEqual(omitted, [("^NSEBANK", 1)])
+        self.assertNotIn("^NSEBANK", aligned)
+        self.assertEqual([d for d, _ in aligned["^NSEI"]],
+                         ["2026-10-13", "2026-10-14"])
+        self.assertEqual([d for d, _ in aligned["^INDIAVIX"]],
+                         ["2026-10-13", "2026-10-14"])
+
+    def test_the_default_join_floor_is_one_trading_month(self):
+        """Below a month of aligned sessions no joint estimate is possible.
+
+        The floor is the fetcher's, not a consumer's stage-7 threshold: it is
+        the shortest *joint* window any reader aligns (stage 4's 20-session
+        cross-asset window), so a series under it is dropped rather than
+        allowed to cut the others. Every-member-thin yields no axis at all —
+        never a one-date bundle that reads as evidence.
+        """
+        self.assertEqual(fmc.MIN_JOIN_SESSIONS, 21)
+        short = {name: [(f"2026-09-{i:02d}", 1.0) for i in range(1, 21)]
+                 for name in ("^NSEI", "^INDIAVIX")}  # 20 sessions each
+        aligned, omitted = fmc.align_axes(short)
+        self.assertEqual(aligned, {})
+        self.assertEqual(omitted, [("^INDIAVIX", 20), ("^NSEI", 20)],
+                         "name-sorted so the disclosed order is stable")
+        long_ = {name: [(f"2026-09-{i:02d}", 1.0) for i in range(1, 22)]
+                 for name in ("^NSEI", "^INDIAVIX")}  # 21 sessions each
+        aligned, omitted = fmc.align_axes({**long_, "^NSEBANK": [("2026-09-21", 1.0)]})
+        self.assertEqual(omitted, [("^NSEBANK", 1)])
+        self.assertEqual(len(aligned["^NSEI"]), 21)
 
     def test_breadth_counts_only_eligible_stocks_and_skips_thin_dates(self):
         # A: always rising (above its own 200-DMA once eligible).
@@ -190,7 +238,8 @@ class TestSeriesBuilders(unittest.TestCase):
 
 
 def _fake_sources(*, drop: tuple[str, ...] = (),
-                  as_of: date = AS_OF) -> dict:
+                  as_of: date = AS_OF,
+                  sector_sessions: int | None = None) -> dict:
     """Injected sources: real shapes, zero network."""
     index = {
         "^NSEI": rising(210, 24000.0, 5.0, as_of.isoformat()),
@@ -198,6 +247,9 @@ def _fake_sources(*, drop: tuple[str, ...] = (),
                       [:-1] + [(as_of.isoformat(), 26.5)]),
         "^NSEBANK": rising(210, 52000.0, -3.0, as_of.isoformat()),
     }
+    if sector_sessions is not None:
+        # Yahoo serving a stub series for one ticker — the live `^CNXENERGY`.
+        index["^NSEBANK"] = index["^NSEBANK"][-sector_sessions:] or []
     # 1 of 4 eligible names above its 200-DMA on the last session ⇒ a 25%
     # breadth print, which satisfies the panic breaker's breadth arm (< 30).
     panel = {
@@ -299,6 +351,61 @@ class TestAssembly(unittest.TestCase):
         # The surviving series still carry real points — one failure never
         # fabricates or blanks the rest.
         self.assertIn("^NSEI", bundle["series"])
+
+    def test_a_thin_sector_series_loses_only_itself(self):
+        """The live bug at the assembly level, not just in the pure join.
+
+        With the sector index served as a single session, the bundle used to
+        arrive with all three index series cut to that one date. It must now
+        arrive with the sector absent, its thinness disclosed, and the NIFTY
+        trend plus panic-VIX evidence intact.
+        """
+        bundle, statuses = self._bundle(sector_sessions=1)
+        self.assertNotIn("^NSEBANK", bundle["series"])
+        self.assertEqual(len(bundle["series"]["^NSEI"]["values"]), 210)
+        self.assertEqual(len(bundle["series"]["^INDIAVIX"]["values"]), 210)
+        self.assertEqual(bundle["series"]["^INDIAVIX"]["values"][-1]["value"],
+                         26.5, "the panic-VIX print survived the sector stub")
+        thin = [s for s in statuses if s["series"] == "^NSEBANK"]
+        self.assertTrue(any("too thin to join" in s["detail"] for s in thin),
+                        statuses)
+        self.assertTrue(all(s["status"] == "failed" for s in thin[-1:]),
+                        statuses)
+
+    def test_stage7_waives_only_the_thin_series_the_bundle_lost(self):
+        """End to end: the waiver names one series, not the whole axis.
+
+        Because the other series kept their sessions, stage 7 sees an
+        adjacent-series bundle and its tri-state contract can say exactly
+        which index is missing — instead of `index-axis:misaligned` wiping
+        out a verdict it could have formed from the trend and VIX it has.
+        """
+        bundle, _ = self._bundle(sector_sessions=1)
+        with tempfile.TemporaryDirectory() as tmp:
+            ctx = Path(tmp) / "ctx.json"
+            ctx.write_text(json.dumps(bundle), encoding="utf-8")
+            trade = Path(tmp) / "current_trade.json"
+            trade.write_text(json.dumps({
+                "symbol": "SBIN", "exchange": "NSE",
+                "instrument_type": "FUT", "action": "BUY",
+                "entry_price": 190.95, "target": 216.93, "stoploss": 177.96,
+                "lot_size": 2625, "margin": 500000.0,
+                "recommended_date": "2026-10-14",
+            }), encoding="utf-8")
+            proc = subprocess.run(
+                [sys.executable, str(SCRIPTS / "7_sector_macro_regime.py"),
+                 "--input", str(trade), "--regime-fixture", str(ctx)],
+                capture_output=True, check=False, encoding="utf-8")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        payload = json.loads(proc.stdout)
+        self.assertTrue(payload["waived"])
+        named = " ".join(payload.get("missing_inputs") or [])
+        self.assertIn("^NSEBANK", named)
+        for key in ("^NSEI", "^INDIAVIX", "NSE500_BREADTH", "FII_DII_NET"):
+            self.assertNotIn(
+                key, named,
+                f"the bundle lost {key} to the sector stub's join: "
+                f"{payload.get('missing_inputs')}")
 
     def test_unmapped_symbols_are_refused_at_the_cli(self):
         proc = subprocess.run(

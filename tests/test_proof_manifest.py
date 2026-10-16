@@ -65,6 +65,12 @@ ENGINE_CLAIM_STAGES = {
 RERUNNABLE = {
     1: "1_math_and_rr.py",
     2: "2_market_data.py",
+    # Stage 4 is offline-runnable through the row's own OHLCV prefix plus the
+    # same market-context bundle stage 7 classifies (`replay_inputs`), so a
+    # recorded `out_4_ml.json` is byte-compared to a fresh run exactly like
+    # stages 1–2 — the cone envelope and the calibrated direction probability
+    # that eval dimensions 4–5 grade are verified, not taken on trust.
+    4: "4_ml_direction.py",
     # Stage 5 is offline-runnable through the row's committed bhavcopy bundle
     # (`replay_inputs.bhavcopy_fixture`), so a recorded `out_5_flow.json` is
     # byte-compared to a fresh run exactly like stages 1–2 — the distribution
@@ -100,6 +106,9 @@ def fresh_stage_stdout(row: dict, artifact: dict) -> bytes | None:
            "--input", str(PROOF_ROOT / inputs["canonical_trade"])]
     if stage == 2:
         cmd += ["--ohlcv-fixture", str(PROOF_ROOT / inputs["truncated_fixtures"][0])]
+    if stage == 4:
+        cmd += ["--ohlcv-fixture", str(PROOF_ROOT / inputs["truncated_fixtures"][0]),
+                "--context-fixture", str(PROOF_ROOT / inputs["regime_fixture"])]
     if stage == 5:
         cmd += ["--bhavcopy-fixture", str(PROOF_ROOT / inputs["bhavcopy_fixture"])]
     if stage == 6:

@@ -43,10 +43,12 @@ FROZEN_ARTIFACTS = {
     1: "out_1_math.json",
     2: "out_2_market.json",
     3: "out_3_dtw.json",
+    4: "out_4_ml.json",
     5: "out_5_flow.json",
     6: "out_6_fundamental.json",
     7: "out_7_regime.json",
     9: "out_9_decision.json",
+    10: "out_10_triage.json",
 }
 
 

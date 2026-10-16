@@ -171,9 +171,27 @@ class TestSeedRegimeRecords(unittest.TestCase):
                               "actual_direction"):
                     self.assertTrue(dr.is_derive(raw_record[field]),
                                     f"{sid}.{field} must derive from the tape")
-                self.assertIsNone(raw_record["cone_p10"])
-                self.assertIsNone(raw_record["predicted_direction"])
-                self.assertIsNone(raw_record["limit_mae_pct"])
+                # An engine claim is either absent or backed by the stage that
+                # produces it (E4): a hand-typed cone or direction here is the
+                # claim `tests/test_proof_manifest.py` refuses. Stage 4's
+                # evidence is recorded for the rows that own a market bundle
+                # (`tests/evals/record_stage4_evidence.py`), so these rows now
+                # carry either state legitimately; what must never hold is a
+                # number with no recorded artifact behind it.
+                declared = {a.get("stage") for a in self.rows[sid]["recorded_artifacts"]
+                            if isinstance(a, dict) and a.get("evidence") == "recorded"}
+                for field, stage in (("cone_p10", 4), ("cone_p90", 4),
+                                     ("predicted_direction", 4),
+                                     ("predicted_probability", 4),
+                                     ("limit_mae_pct", 8)):
+                    with self.subTest(field=field):
+                        value = raw_record.get(field)
+                        if value is None:
+                            continue
+                        self.assertIn(
+                            stage, declared,
+                            f"{sid}.{field}={value!r} carries no recorded "
+                            f"stage-{stage} artifact — no engine produced it")
 
     # ----------------------------------------------------------------- grading
     def test_gate_2_grades_every_regime_record_from_recorded_bytes(self):

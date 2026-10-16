@@ -33,7 +33,8 @@
       "distribution_verified=true: all 52 records are present and every class count matches class_counts_expected (flipped by tests/evals/seed_distribution_records.py when the tenth institutional_distribution row was authored).",
       "option_probes: 5 authored Univest-style option pastes (CE/PE/OPT/CALL/PUT) seeded in the top-level `option_probes` roster as gate 1's stage-0 test cases (docs/agents/evals.md §2.1). They are AUTHORED PARSER INPUTS, disclosed as such — never sourced recommendations and never hazard measurements — and they are not trades: stage 0 rejects them before a canonical current_trade.json exists and the proof root pins no option scenario, so the frozen 52-trade quota, the class counts and distribution_verified are untouched. Gate 1 replays each paste live through scripts/0_ingest_reco.py and grades exit 2 + ERR_OPTIONS_PROHIBITED with no canonical payload (ADR-001, TICK-001 §3); meta.option_probes_expected governs the roster size.",
       "REF-001..REF-005 are authored stage-0 *refusal* probes, not trades: input to the ingestion gate, disclosed as authored and counted by meta.refusal_probes_expected. They exercise ADR-001's closed instrument domain (\"only Equities and Futures are permitted\") at the two shapes the option-token gate cannot name: an option written with look-alike letters (Cyrillic/Greek/mixed) and an invented or un-aliased label (NFO, FUTURES). Each declares the refusal it must reproduce (exit 2, ERR_INSTRUMENT_UNRECOGNIZED, no canonical payload) and is replayed live by the Unrecognized Instrument Guardrail; the code is deliberately not ERR_OPTIONS_PROHIBITED, so a paste the gate never classified as an option cannot inflate the option rejection rate. No class count, census cell or distribution_verified claim is touched.",
-      "58 of 58 records: all seven classes are seeded and every class count matches class_counts_expected (distribution_verified=true). The three geometry classes (clean_bullish 15/15, inverted_rr 10/10, tight_stop 5/5) carry recorded stage-1/2 evidence over their pinned <=T_rec tape; the two hazard classes (pledge_hazard 5/5, earnings_hazard 7/7) are views of the frozen catalog's own hazard rows (business_test_cases.md §3) with recorded stage-6 evidence over an authored, disclosed bundle — the catalog's documented level verbatim where it states one and a disclosed value above the stated floor where it states only the inequality, statement blocks deliberately empty so stage 6 reports null ratios with missing_inputs naming every gap (E4: absence, never an invented filing); GB-2023-0003's legacy pledge payload was retired into recorded stage-6 evidence (tests/evals/retire_quarantine_records.py), so the E5 meter is 0 and gate 2 has no abstention left. institutional_distribution 10/10 (GB-2022-0033, GB-2022-0034, GB-2022-0035, GB-2022-0036, GB-2022-0037, GB-2022-0038, GB-2023-0039, GB-2023-0040, GB-2023-0041, GB-2023-0042): scan-authored by tests/evals/seed_distribution_records.py from NSE's own daily files — sec_bhavdata_full delivery % (EQ series) and the F&O bhavcopy's front-month open interest on each T_rec — admitting only sessions the files measure as price up, delivery < 25% and OI <= -5% (the class signature of docs/agents/evals.md §2) whose pinned tape then resolves LOSS under the frozen crisis geometry (T_rec open, 0.5x ATR stop, 2.0R target); every fixture discloses its source files' sha256 and a 20-session delivery window, and stage 5 is recorded through `5_institutional_flow.py --record`, so the class invariant (SHORT_COVERING_TRAP matrix, delivery < 25%, OI <= -5%) grades from proven bytes. Authored by tests/evals/seed_distribution_records.py. regime_shock 1/1 (SCEN-002, Covid Panic Liquidity Freeze): the catalog's stated panic bounds (VIX > 80; NIFTY 500 breadth < 5% bullish) authored into a disclosed `uvest-market-context/1` bundle (tests/evals/seed_regime_records.py) and recorded through `7_sector_macro_regime.py --record`, so gate 2 grades the panic_regime conjunction (VIX > 24 AND breadth < 30) from proven bytes rather than a pending promise. regime_shock 6/6 (SCEN-001, SCEN-002, SCEN-003, SCEN-004, SCEN-006, SCEN-008) — the catalog's panic scenarios with a stage-7 `panic_regime` intent, each recorded through `7_sector_macro_regime.py --record` over a disclosed `uvest-market-context/1` bundle (tests/evals/seed_regime_records.py): the trap's own level where it states one (SCEN-001: VIX 83.6 documented verbatim; SCEN-003: VIX 32.0 documented verbatim; SCEN-002 at its stated > 80 / < 5% bounds), disclosed authored values inside the breaker arms where it states none, so gate 2 grades the panic_regime conjunction (VIX > 24 AND breadth < 30, ADR-010 decision 6) from proven bytes rather than pending promises."
+      "58 of 58 records: all seven classes are seeded and every class count matches class_counts_expected (distribution_verified=true). The three geometry classes (clean_bullish 15/15, inverted_rr 10/10, tight_stop 5/5) carry recorded stage-1/2 evidence over their pinned <=T_rec tape; the two hazard classes (pledge_hazard 5/5, earnings_hazard 7/7) are views of the frozen catalog's own hazard rows (business_test_cases.md §3) with recorded stage-6 evidence over an authored, disclosed bundle — the catalog's documented level verbatim where it states one and a disclosed value above the stated floor where it states only the inequality, statement blocks deliberately empty so stage 6 reports null ratios with missing_inputs naming every gap (E4: absence, never an invented filing); GB-2023-0003's legacy pledge payload was retired into recorded stage-6 evidence (tests/evals/retire_quarantine_records.py), so the E5 meter is 0 and gate 2 has no abstention left. institutional_distribution 10/10 (GB-2022-0033, GB-2022-0034, GB-2022-0035, GB-2022-0036, GB-2022-0037, GB-2022-0038, GB-2023-0039, GB-2023-0040, GB-2023-0041, GB-2023-0042): scan-authored by tests/evals/seed_distribution_records.py from NSE's own daily files — sec_bhavdata_full delivery % (EQ series) and the F&O bhavcopy's front-month open interest on each T_rec — admitting only sessions the files measure as price up, delivery < 25% and OI <= -5% (the class signature of docs/agents/evals.md §2) whose pinned tape then resolves LOSS under the frozen crisis geometry (T_rec open, 0.5x ATR stop, 2.0R target); every fixture discloses its source files' sha256 and a 20-session delivery window, and stage 5 is recorded through `5_institutional_flow.py --record`, so the class invariant (SHORT_COVERING_TRAP matrix, delivery < 25%, OI <= -5%) grades from proven bytes. Authored by tests/evals/seed_distribution_records.py. regime_shock 1/1 (SCEN-002, Covid Panic Liquidity Freeze): the catalog's stated panic bounds (VIX > 80; NIFTY 500 breadth < 5% bullish) authored into a disclosed `uvest-market-context/1` bundle (tests/evals/seed_regime_records.py) and recorded through `7_sector_macro_regime.py --record`, so gate 2 grades the panic_regime conjunction (VIX > 24 AND breadth < 30) from proven bytes rather than a pending promise. regime_shock 6/6 (SCEN-001, SCEN-002, SCEN-003, SCEN-004, SCEN-006, SCEN-008) — the catalog's panic scenarios with a stage-7 `panic_regime` intent, each recorded through `7_sector_macro_regime.py --record` over a disclosed `uvest-market-context/1` bundle (tests/evals/seed_regime_records.py): the trap's own level where it states one (SCEN-001: VIX 83.6 documented verbatim; SCEN-003: VIX 32.0 documented verbatim; SCEN-002 at its stated > 80 / < 5% bounds), disclosed authored values inside the breaker arms where it states none, so gate 2 grades the panic_regime conjunction (VIX > 24 AND breadth < 30, ADR-010 decision 6) from proven bytes rather than pending promises.",
+      "stage 4 (BRD §5.2) promotion: 6 record(s) now carry a recorded `out_4_ml.json` — the cone envelope ([P10, P90]), the direction label and the calibrated direction probability (`direction_probability`, i.e. P(up) = P(BULL) + φ·P(NEUTRAL)) read out of the stage's own stdout over the row's pinned ≤T_rec tape and its market-context bundle, with the artifact `$ref`d from `script_outputs`. Eval dimensions 4 and 5 grade those bytes instead of skipping; a row whose artifact is waived keeps null claims. Authored by tests/evals/record_stage4_evidence.py."
     ],
     "distribution_verified": true
   },
@@ -2362,6 +2363,9 @@
         },
         "out_7_regime.json": {
           "$ref": "tests/proof/fixtures/SCEN-001/recorded/out_7_regime.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/SCEN-001/recorded/out_4_ml.json"
         }
       },
       "forward_prices_22d": {
@@ -2370,8 +2374,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 386.82,
+      "cone_p90": 472.5,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-001/forward_tape.json",
@@ -2379,13 +2383,14 @@
         }
       },
       "limit_mae_pct": null,
-      "predicted_direction": null,
+      "predicted_direction": "STRONG_BULLISH",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-001/forward_tape.json",
           "rule": "realized_direction"
         }
-      }
+      },
+      "predicted_probability": 0.7766
     },
     {
       "trade_id": "SCEN-002",
@@ -2417,6 +2422,9 @@
         },
         "out_7_regime.json": {
           "$ref": "tests/proof/fixtures/SCEN-002/recorded/out_7_regime.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/SCEN-002/recorded/out_4_ml.json"
         }
       },
       "forward_prices_22d": {
@@ -2425,8 +2433,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 178.7,
+      "cone_p90": 216.12,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-002/forward_tape.json",
@@ -2434,13 +2442,14 @@
         }
       },
       "limit_mae_pct": null,
-      "predicted_direction": null,
+      "predicted_direction": "BULLISH",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-002/forward_tape.json",
           "rule": "realized_direction"
         }
-      }
+      },
+      "predicted_probability": 0.7701
     },
     {
       "trade_id": "SCEN-003",
@@ -2472,6 +2481,9 @@
         },
         "out_7_regime.json": {
           "$ref": "tests/proof/fixtures/SCEN-003/recorded/out_7_regime.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/SCEN-003/recorded/out_4_ml.json"
         }
       },
       "forward_prices_22d": {
@@ -2480,8 +2492,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 840.88,
+      "cone_p90": 1017.56,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-003/forward_tape.json",
@@ -2489,13 +2501,14 @@
         }
       },
       "limit_mae_pct": null,
-      "predicted_direction": null,
+      "predicted_direction": "STRONG_BULLISH",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-003/forward_tape.json",
           "rule": "realized_direction"
         }
-      }
+      },
+      "predicted_probability": 0.7946
     },
     {
       "trade_id": "SCEN-004",
@@ -2527,6 +2540,9 @@
         },
         "out_7_regime.json": {
           "$ref": "tests/proof/fixtures/SCEN-004/recorded/out_7_regime.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/SCEN-004/recorded/out_4_ml.json"
         }
       },
       "forward_prices_22d": {
@@ -2535,8 +2551,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 3548.46,
+      "cone_p90": 4549.5,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-004/forward_tape.json",
@@ -2544,13 +2560,14 @@
         }
       },
       "limit_mae_pct": null,
-      "predicted_direction": null,
+      "predicted_direction": "STRONG_BULLISH",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-004/forward_tape.json",
           "rule": "realized_direction"
         }
-      }
+      },
+      "predicted_probability": 0.8405
     },
     {
       "trade_id": "SCEN-006",
@@ -2582,6 +2599,9 @@
         },
         "out_7_regime.json": {
           "$ref": "tests/proof/fixtures/SCEN-006/recorded/out_7_regime.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/SCEN-006/recorded/out_4_ml.json"
         }
       },
       "forward_prices_22d": {
@@ -2590,8 +2610,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 650.6,
+      "cone_p90": 775.35,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-006/forward_tape.json",
@@ -2599,13 +2619,14 @@
         }
       },
       "limit_mae_pct": null,
-      "predicted_direction": null,
+      "predicted_direction": "NEUTRAL",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-006/forward_tape.json",
           "rule": "realized_direction"
         }
-      }
+      },
+      "predicted_probability": 0.6008
     },
     {
       "trade_id": "SCEN-007",
@@ -2692,6 +2713,9 @@
         },
         "out_7_regime.json": {
           "$ref": "tests/proof/fixtures/SCEN-008/recorded/out_7_regime.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/SCEN-008/recorded/out_4_ml.json"
         }
       },
       "forward_prices_22d": {
@@ -2700,8 +2724,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 629.49,
+      "cone_p90": 819.61,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-008/forward_tape.json",
@@ -2709,13 +2733,14 @@
         }
       },
       "limit_mae_pct": null,
-      "predicted_direction": null,
+      "predicted_direction": "STRONG_BULLISH",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-008/forward_tape.json",
           "rule": "realized_direction"
         }
-      }
+      },
+      "predicted_probability": 0.7456
     },
     {
       "trade_id": "SCEN-009",

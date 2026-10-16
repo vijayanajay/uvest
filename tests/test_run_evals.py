@@ -56,6 +56,7 @@ pipeline. What is frozen here is the *contract around* the runner:
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import unittest
@@ -120,7 +121,15 @@ class TestEvalRunnerContract(unittest.TestCase):
         """Partial coverage is honest, not fake green: gated gates stay [SKIP]
         until their inputs exist, and every [SKIP] names its blocking reason."""
         scorecard = "\n".join(stdout_lines(run_run_evals(DATASET_FILE)))
-        self.assertIn("[SKIP] Directional Brier Score", scorecard)
+        # Stage 4 emits calibrated direction probabilities and a cone envelope,
+        # and the promoted records declare the recorded artifact behind them, so
+        # both engine gates grade real bytes — a [SKIP] here would mean those
+        # bytes went missing, not that the engine is absent.
+        self.assertNotIn("[SKIP] Directional Brier Score", scorecard)
+        self.assertNotIn("[SKIP] Price Cone Range Coverage", scorecard)
+        self.assertIn("Directional Brier Score", scorecard)
+        self.assertIn("calibrated predictions", scorecard)
+        self.assertIn("cone-labeled trades", scorecard)
         # Missing stage-12 artifacts are replayed from the proof root before
         # grading (run_evals.ensure_reports), so both artifact-graded gates
         # grade real bytes even on a fresh clone — never a silent skip. The
@@ -157,7 +166,15 @@ class TestEvalRunnerContract(unittest.TestCase):
         self.assertIn("Refusal probes: OK", scorecard)
         self.assertLess(scorecard.count("[SKIP]"), 7,
                         "runner hardcoded a full-skip beat instead of grading")
-        self.assertEqual(scorecard.count("[FAIL]"), 0)
+        # Gate 6's engine (stage 8) does not exist yet, so it still skips — and a
+        # skip names what is missing rather than reading as a pass.
+        self.assertIn("[SKIP] Optimal Limit Slippage Reduction", scorecard)
+        # The verdict follows the gates rather than being asserted beside them:
+        # a graded gate that misses its threshold is published, and the run is
+        # red for it — never a green percentage that hides a failed dimension.
+        self.assertIn("FINAL EVALUATION VERDICT:", scorecard)
+        self.assertIn("SUITE PASSED" if scorecard.count("[FAIL]") == 0
+                      else "SUITE NOT PASSED", scorecard)
         # ...and the scorecard says what proved the artifacts it graded, including
         # the stages the record discloses as skipped rather than silently absent.
         self.assertIn("Evidence provenance (run records)", scorecard)
@@ -210,7 +227,13 @@ class TestEvalRunnerContract(unittest.TestCase):
             data["trades"], REPO_ROOT / "reports",
             run_evals.load_proof(REPO_ROOT / "reports"),
             targets=run_evals.dataset_payload_targets(raw))
-        self.assertEqual(proc.returncode, 1 if uncovered else 0, scorecard)
+        # The exit code is the run's own verdict: uncovered evidence *or* a graded
+        # gate under its threshold. Read off the scorecard the runner printed, so
+        # this follows the evidence instead of freezing today's answer.
+        self.assertEqual(proc.returncode,
+                         1 if "SUITE NOT PASSED" in scorecard else 0, scorecard)
+        if uncovered:
+            self.assertIn("Evidence completeness: INCOMPLETE", scorecard)
 
     def test_an_inline_breaker_payload_earns_no_grade_and_fails_the_run(self):
         """End to end: the CLI hands the gates the payload provenance they need.
@@ -655,6 +678,287 @@ class TestChainAbortGate(unittest.TestCase):
                 self.aborted_record(), run_evals.REFUSAL_PROBE_ERROR)
             self.assertEqual(refusal_stop, [],
                              "a homoglyph stop is a stop of its own")
+
+
+class TestConeCoverageScope(unittest.TestCase):
+    """Gate 5 grades only the tapes the trained window could have produced.
+
+    The envelope's excursion pools come from the shipped booster's corpus
+    (`models/lgbm_direction_v1.calibration.json` → `provenance.corpus.row_window`),
+    so a forward tape outside that window is a regime the pools never saw:
+    grading it would measure the corpus's age rather than the engine. Such a
+    record is **disclosed — named, with its span and reason — and excluded from
+    the denominator**, never counted as a miss (evals.md §3 #5).
+    """
+
+    # A *synthetic* scope for the unit seams below: the shipped window is read
+    # from the calibration (`_window_from_calibration`), never pinned here, so
+    # a retrain cannot stale this constant — and an out-of-window date under
+    # the real one (2020-03-24 is inside it since the corpus reach, ADR-011
+    # decision 10) keeps exercising the exclusion these seams cover.
+    SYNTHETIC_WINDOW = ("2020-04-09", "2025-10-20")
+
+    @staticmethod
+    def _trade(tid: str, *, p10: float, p90: float, lo: float, hi: float) -> dict:
+        return {"trade_id": tid, "cone_p10": p10, "cone_p90": p90,
+                "forward_prices_22d": {"min": lo, "max": hi}}
+
+    @staticmethod
+    def _window_from_calibration() -> tuple[str, str]:
+        cal = json.loads((REPO_ROOT / "models" / "lgbm_direction_v1.calibration.json")
+                         .read_text(encoding="utf-8"))
+        first, last = cal["provenance"]["corpus"]["row_window"]
+        return str(first), str(last)
+
+    def test_the_scope_comes_from_the_shipped_calibration_s_own_disclosure(self):
+        """The window is what the artifact says it was trained on, not a constant."""
+        window = run_evals.trained_corpus_window()
+        self.assertIsNotNone(window)
+        self.assertEqual(window, self._window_from_calibration())
+
+    def test_a_missing_or_malformed_calibration_has_no_window(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            absent = Path(tmp) / "nope.json"
+            self.assertIsNone(run_evals.trained_corpus_window(absent))
+            unscoped = Path(tmp) / "no_window.json"
+            unscoped.write_text(json.dumps({"provenance": {"corpus": {}}}),
+                                encoding="utf-8")
+            self.assertIsNone(run_evals.trained_corpus_window(unscoped))
+
+    def test_an_out_of_window_tape_is_disclosed_and_never_counted(self):
+        """A miss outside the window is a disclosure; a miss inside is a miss."""
+        inside = self._trade("IN-1", p10=90.0, p90=110.0, lo=80.0, hi=100.0)
+        outside = self._trade("OUT-1", p10=90.0, p90=110.0, lo=10.0, hi=999.0)
+        gate = run_evals.gate_cone_coverage(
+            [inside, outside], window=self.SYNTHETIC_WINDOW,
+            spans={"IN-1": ("2024-06-05", "2024-07-05"),
+                   "OUT-1": ("2020-03-24", "2020-04-28")})
+        status, _display = gate.evaluate()
+        self.assertEqual(status, "[FAIL]", "the in-window miss must still fail")
+        self.assertEqual(gate.value, 0.0, "one graded row, one miss")
+        # The disclosure is printed whatever the verdict, and names the record.
+        self.assertIn("1 of 2 cone-labeled trades", gate.coverage)
+        self.assertIn("trained corpus window", gate.coverage)
+        self.assertIn("OUT-1", gate.coverage)
+        self.assertIn("2020-03-24..2020-04-28", gate.coverage)
+
+    def test_the_denominator_is_the_in_window_rows_only(self):
+        """The excluded row cannot drag the percentage down *or* prop it up."""
+        # The graded row's bars (95..105) sit inside its envelope (90..110); the
+        # out-of-window row misses outright and must contribute nothing either way.
+        inside = self._trade("IN-1", p10=90.0, p90=110.0, lo=95.0, hi=105.0)
+        outside = self._trade("OUT-1", p10=90.0, p90=110.0, lo=10.0, hi=999.0)
+        gate = run_evals.gate_cone_coverage(
+            [inside, outside], window=self.SYNTHETIC_WINDOW,
+            spans={"IN-1": ("2024-06-05", "2024-07-05"),
+                   "OUT-1": ("2020-03-24", "2020-04-28")})
+        status, _display = gate.evaluate()
+        self.assertEqual(gate.value, 100.0)
+        self.assertEqual(status, "[PASS]")
+        self.assertIn("OUT-1", gate.coverage,
+                      "the ungraded record is named beside a PASS too")
+
+    def test_a_record_without_a_pinned_tape_cannot_be_placed_in_the_window(self):
+        """No tape to read ⇒ the row cannot be scoped, so it is not graded."""
+        trade = self._trade("NOTAPED", p10=90.0, p90=110.0, lo=85.0, hi=105.0)
+        gate = run_evals.gate_cone_coverage(
+            [trade], window=self.SYNTHETIC_WINDOW, spans={"NOTAPED": None})
+        status, _display = gate.evaluate()
+        self.assertEqual(status, "[SKIP]")
+        self.assertIn("NOTAPED", gate.coverage)
+
+    def test_an_unreadable_window_skips_with_a_reason_instead_of_grading_all(self):
+        """A scope that cannot be read is disclosed, never silently dropped."""
+        trade = self._trade("IN-1", p10=90.0, p90=110.0, lo=85.0, hi=105.0)
+        gate = run_evals.gate_cone_coverage(
+            [trade], window=None, spans={"IN-1": ("2024-06-05", "2024-07-05")})
+        status, _display = gate.evaluate()
+        self.assertEqual(status, "[SKIP]")
+        self.assertIn("row_window", gate.detail)
+        self.assertIsNone(gate.value, "no number over an unscoreable scope")
+
+    def test_the_span_is_read_from_the_same_tape_the_numbers_come_from(self):
+        raw = json.loads(DATASET_FILE.read_text(encoding="utf-8"))
+        trade = next(t for t in raw["trades"] if t.get("cone_p10") is not None)
+        span = dataset_refs.forward_tape_span(trade)
+        self.assertIsNotNone(span)
+        tape = trade["forward_prices_22d"]["$derive"]["tape"]
+        bars = json.loads((REPO_ROOT / tape).read_text(encoding="utf-8"))["bars"]
+        self.assertEqual(span, (str(bars[0]["date"]), str(bars[-1]["date"])))
+
+    def test_an_inline_range_has_no_tape_to_place(self):
+        self.assertIsNone(dataset_refs.forward_tape_span(
+            {"trade_id": "x", "forward_prices_22d": {"min": 1.0, "max": 2.0}}))
+
+    def test_the_covid_tapes_are_inside_the_scope_and_all_six_grade(self):
+        """End to end on the real dataset: the corpus reaches its own benchmark.
+
+        ADR-011 decision 10: the shipped window must open before the
+        benchmark's earliest graded tape, so the two Covid tapes that decision
+        9's disclosure had named ungraded are *graded* here — the reach gap is
+        a corpus defect, fixed by re-fetching and retraining, never by leaving
+        a tape out of the denominator. The disclosure machinery itself stays
+        covered by the synthetic seams above, which do not depend on where the
+        real window opens.
+        """
+        raw = json.loads(DATASET_FILE.read_text(encoding="utf-8"))
+        window = self._window_from_calibration()
+        candidates = [t for t in raw["trades"]
+                      if t.get("cone_p10") is not None and t.get("cone_p90") is not None]
+        inside, outside = [], []
+        for trade in candidates:
+            span = dataset_refs.forward_tape_span(trade)
+            hit = bool(span and window[0] <= span[0] and span[1] <= window[1])
+            (inside if hit else outside).append(str(trade["trade_id"]))
+        self.assertTrue(inside, "the benchmark must have an in-window record")
+        self.assertEqual(outside, [],
+                         "the shipped corpus must reach every graded tape "
+                         f"(out of scope: {outside})")
+        self.assertIn("SCEN-001", inside,
+                      "the Covid RELIANCE tape (2020-03-24..2020-04-28) must be gradeable")
+        self.assertIn("SCEN-002", inside,
+                      "the Covid SBIN tape (2020-03-25..2020-04-29) must be gradeable")
+        proc = run_run_evals(DATASET_FILE)
+        scorecard = "\n".join(stdout_lines(proc))
+        self.assertIn("trained corpus window", scorecard)
+        self.assertIn(f"{len(candidates)} of {len(candidates)} cone-labeled trades graded",
+                      scorecard)
+        scope_lines = [ln for ln in stdout_lines(proc)
+                       if "scope: trained corpus window" in ln]
+        self.assertTrue(scope_lines, scorecard)
+        self.assertNotIn("ungraded", scope_lines[0],
+                         "no tape may fall outside the scope anymore: the "
+                         "coverage line must carry no exclusion")
+        self.assertEqual(proc.returncode, 1, scorecard)
+
+
+class TestConeMissDiagnosis(unittest.TestCase):
+    """A coverage miss says where the realised excursion sat in its own pool.
+
+    Gate 5's red (0.0% against >= 80%) is only actionable if each miss carries
+    its own diagnosis: the realised low/high as percent of the entry, and the
+    percentile that value occupies among the *observed* excursions of the pool
+    the cone actually read for that record — the trade's own sector's block
+    when it is deep enough to answer, the pooled block otherwise (stage 4's
+    `samples_for`, imported, never re-derived). Percentiles are equal-weight
+    over the pool's atoms: the class-probability mixture the levels invert is
+    not recoverable from the frozen 8-key payload, so the disclosure counts
+    atoms — "where it sits in the pool" is exactly that share.
+    """
+
+    WINDOW = ("2020-01-01", "2025-12-31")
+
+    @staticmethod
+    def _trade(tid: str, *, lo: float, hi: float, p10: float, p90: float,
+               entry: float = 100.0, symbol: str = "SBIN") -> dict:
+        return {"trade_id": tid, "symbol": symbol, "entry_price": entry,
+                "cone_p10": p10, "cone_p90": p90,
+                "forward_prices_22d": {"min": lo, "max": hi}}
+
+    @staticmethod
+    def _block(depth: int) -> dict:
+        """A calibration-shaped block: `depth` atoms per class per measure."""
+        stage4 = run_evals.load_stage4()
+        signed = {"mae_pct": lambda i: -(i + 1.0),
+                  "mfe_pct": lambda i: i + 1.0,
+                  "forward_return_pct": lambda i: i - depth / 2.0}
+        return {measure: {cls: [make(i) for i in range(depth)]
+                          for cls in stage4.CLASSES}
+                for measure, make in signed.items()}
+
+    def _calibration(self, *, sector: str = "^NSEBANK", depth: int = 30,
+                     pooled_depth: int = 30) -> dict:
+        return {"samples": self._block(pooled_depth),
+                "samples_by_sector": {sector: self._block(depth)},
+                "provenance": {"corpus": {"row_window": list(self.WINDOW)}}}
+
+    def _gate(self, trades, calibration):
+        return run_evals.gate_cone_coverage(
+            trades, window=self.WINDOW,
+            spans={str(t["trade_id"]): ("2024-06-05", "2024-07-05")
+                   for t in trades},
+            calibration=calibration)
+
+    def test_a_miss_names_the_pool_the_cone_read_and_its_percentile(self):
+        """The low side breached, so the adverse pool carries the diagnosis."""
+        # Entry 100, bars bottom at 80 = -20.00%, below the -5.00% floor.
+        # The ^NSEBANK block holds 3 x 30 adverse atoms in -1..-30; 33 of 90
+        # are <= -20, so the realised low sits at the 36.7th percentile.
+        gate = self._gate([self._trade("MISS-1", lo=80.0, hi=102.0,
+                                       p10=95.0, p90=110.0)],
+                          self._calibration())
+        status, _display = gate.evaluate()
+        self.assertEqual(status, "[FAIL]")
+        self.assertIn(
+            "MISS-1: low -20.00% = 36.7th pct of the ^NSEBANK adverse pool "
+            "(floor -5.00%)", gate.detail)
+
+    def test_a_high_side_miss_diagnoses_the_favourable_pool(self):
+        gate = self._gate([self._trade("MISS-2", lo=98.0, hi=163.0,
+                                       p10=90.0, p90=114.0)],
+                          self._calibration())
+        self.assertIn(
+            "MISS-2: high +63.00% = 100.0th pct of the ^NSEBANK favourable "
+            "pool (floor +14.00%)", gate.detail)
+
+    def test_a_thin_sector_block_falls_back_to_the_pooled_pool_and_says_so(self):
+        """The fallback the stage answered with is named, never hidden."""
+        gate = self._gate([self._trade("MISS-3", lo=80.0, hi=102.0,
+                                       p10=95.0, p90=110.0)],
+                          self._calibration(depth=5, pooled_depth=30))
+        self.assertIn(
+            "MISS-3: low -20.00% = 36.7th pct of the pooled adverse pool "
+            "(floor -5.00%)", gate.detail)
+
+    def test_a_covered_row_carries_no_bogus_diagnosis(self):
+        gate = self._gate([self._trade("HIT-1", lo=95.0, hi=105.0,
+                                       p10=90.0, p90=110.0)],
+                          self._calibration())
+        status, _display = gate.evaluate()
+        self.assertEqual(status, "[PASS]")
+        self.assertNotIn("pct of the", gate.detail)
+
+    def test_without_a_calibration_the_old_sentence_stands(self):
+        """No pool bytes, no percentile: the diagnosis is never invented."""
+        gate = run_evals.gate_cone_coverage(
+            [self._trade("MISS-4", lo=80.0, hi=102.0,
+                         p10=95.0, p90=110.0)],
+            window=self.WINDOW,
+            spans={"MISS-4": ("2024-06-05", "2024-07-05")})
+        self.assertIn("missed [P10, P90]", gate.detail)
+        self.assertNotIn("pct of the", gate.detail)
+
+    def test_an_entry_less_miss_is_counted_without_a_percentile(self):
+        """A record with no entry price cannot ground a percent excursion."""
+        trade = self._trade("MISS-5", lo=80.0, hi=102.0,
+                            p10=95.0, p90=110.0)
+        trade["entry_price"] = None
+        gate = self._gate([trade], self._calibration())
+        self.assertIn("missed [P10, P90]", gate.detail)
+        self.assertNotIn("pct of the", gate.detail)
+
+    def test_the_shipped_calibration_diagnoses_a_real_record(self):
+        """End to end on the real artifact: numbers read out of committed bytes.
+
+        SCEN-008 (ADANIPORTS, entry 699.00) fell to 395.10 — -43.48% against a
+        -8.98% floor — so the detail must place that low inside the block the
+        stage read for it, at a percentile below the floor's own 10th.
+        """
+        calibration = run_evals.load_calibration()
+        self.assertIsNotNone(calibration)
+        gate = run_evals.gate_cone_coverage(
+            [self._trade("SCEN-008", lo=395.1, hi=656.6,
+                         p10=636.22, p90=822.02, entry=699.0,
+                         symbol="ADANIPORTS")],
+            window=self.WINDOW,
+            spans={"SCEN-008": ("2023-01-30", "2023-03-03")},
+            calibration=calibration)
+        match = re.search(
+            r"SCEN-008: low -43\.48% = (\d+\.\d)th pct of the (\S+) adverse "
+            r"pool \(floor -8\.98%\)", gate.detail)
+        self.assertIsNotNone(match, gate.detail)
+        self.assertLess(float(match.group(1)), 10.0,
+                        "a value below P10 must sit in the pool's lower tail")
 
 
 class TestProbeRosterFloor(unittest.TestCase):
@@ -1115,8 +1419,8 @@ class TestRunRecordProvenance(unittest.TestCase):
         self.assertIn("Evidence provenance (run records)", block)
         self.assertIn(f"{self.workdir.name}/run_record.json", block,
                       "a record outside the repo is named by its directory")
-        self.assertIn("stages ran: [0, 1, 2, 3, 5, 6, 7, 9, 12]", block)
-        self.assertIn("skipped: [4, 8, 10, 11]", block)
+        self.assertIn("stages ran: [0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 12]", block)
+        self.assertIn("skipped: [8, 11]", block)
         self.assertIn("Stage-12 reports proven: 1/1", block)
 
         disclosed = "\n".join(run_evals.render_provenance(
@@ -1850,8 +2154,9 @@ class TestProofRootPayloadEvidence(unittest.TestCase):
         self.assertEqual(offenders, registered,
                          "the disclosed exclusions are exactly the registered debt")
 
-    def test_the_scorecard_discloses_declared_debt_and_stays_green(self):
-        """End to end: red only for an undeclared gap, and never silently so."""
+    def test_the_scorecard_discloses_declared_debt_and_reports_the_verdict(self):
+        """End to end: red only for an undeclared gap or a missed gate, never
+        silently so."""
         covered, uncovered, excluded = run_evals.check_payload_coverage(
             self.trades, self.proof, self.targets)
         proc = run_run_evals(DATASET_FILE)
@@ -1863,17 +2168,26 @@ class TestProofRootPayloadEvidence(unittest.TestCase):
             self.assertIn(entry.split(" (", 1)[0], out)
         for entry in uncovered[:3]:
             self.assertIn(entry.split(" (", 1)[0], out)
-        # Only an *undeclared* gap turns the run red; registered debt is disclosed
-        # on the ledger and leaves the verdict alone.
-        self.assertEqual(proc.returncode, 1 if uncovered else 0, out)
+        # An *undeclared* gap turns the run red and says so; registered debt is
+        # disclosed on the ledger and leaves the verdict alone. A graded gate
+        # under its threshold is the other red path, and the verdict pages it.
+        self.assertEqual(
+            proc.returncode, 1 if "SUITE NOT PASSED" in out else 0, out)
         if excluded:
             self.assertIn("registered debt — no gate grades them as evidence", out)
             self.assertIn(f"{len(excluded)} registered exclusion(s)", out)
         if uncovered:
             self.assertIn("Evidence completeness: INCOMPLETE", out)
-            self.assertIn("SUITE NOT PASSED", out)
         else:
             self.assertIn("Evidence completeness: OK", out)
+        graded = [line.strip() for line in out.splitlines()
+                  if line.strip().startswith(("[PASS]", "[FAIL]"))]
+        failed = [line for line in graded if line.startswith("[FAIL]")]
+        self.assertTrue(graded, "the scorecard must grade at least one gate")
+        # ...and the verdict is the gates' own arithmetic, not a second opinion.
+        if uncovered or failed:
+            self.assertIn("SUITE NOT PASSED", out)
+        else:
             self.assertIn("SUITE PASSED", out)
 
 

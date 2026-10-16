@@ -48,6 +48,11 @@ Three deliberate properties:
 Quarantined payloads are resolved for inspection but are **never evidence**:
 callers must keep them out of graded gates (`tests/run_evals.py` discloses and
 excludes them — E5 of `docs/agents/scenario-manifest-schema.md`).
+
+A tape's dates travel with its numbers: `forward_tape_span` reads the same pinned
+tape the frozen rules read, so a gate that scopes itself to a window of sessions
+(`run_evals.gate_cone_coverage`, evals.md §3 #5) places a record by the bytes it
+grades it from, never by a second copy of the dates.
 """
 
 from __future__ import annotations
@@ -232,6 +237,27 @@ def derive_value(value: Any, trade: dict, root: Path | None = None) -> Any:
     tape, rule = derive_spec(value)
     doc = _load_artifact(tape, root or REPO_ROOT)
     return FORWARD_TAPE_RULES[rule](_bars_of(doc, tape), trade)
+
+
+def forward_tape_span(trade: Any, root: Path | None = None) -> tuple[str, str] | None:
+    """`(first_bar_date, last_bar_date)` of a record's pinned forward tape.
+
+    The same tape file the `$derive` rules read, so a span used to *scope* a gate
+    cannot disagree with the numbers that gate grades: one loader, one file, one
+    set of bars. A record whose range is typed inline pins no tape and returns
+    `None` — its dates cannot be verified, so a caller must treat it as
+    unplaceable rather than assume it lies inside the scope.
+    """
+    if not isinstance(trade, dict):
+        return None
+    value = trade.get("forward_prices_22d")
+    if not is_derive(value):
+        return None
+    tape, _rule = derive_spec(value)
+    bars = _bars_of(_load_artifact(tape, root or REPO_ROOT), tape)
+    if not bars:
+        return None
+    return str(bars[0]["date"]), str(bars[-1]["date"])
 
 
 def derivations(data: dict) -> list[tuple[str, str, str, str]]:

@@ -51,46 +51,11 @@ INDIA_VIX = "^INDIAVIX"
 BREADTH = "NSE500_BREADTH"
 FLOW = "FII_DII_NET"
 
-# Symbol → NSE sectoral index ticker. Conservative by design: a symbol whose
-# membership is not pinned here is *unmapped* and waives the stage — never a
-# guessed index (ADR-010 decision 5; the stage-0 OPTIONS_TYPES precedent of
-# domain data living in code, pinned by tests).
-SECTOR_INDEX_MAP = {
-    # NIFTY ENERGY
-    "RELIANCE": "^CNXENERGY", "ONGC": "^CNXENERGY", "IOC": "^CNXENERGY",
-    "BPCL": "^CNXENERGY", "GAIL": "^CNXENERGY",
-    # NIFTY BANK
-    "HDFCBANK": "^NSEBANK", "ICICIBANK": "^NSEBANK", "SBIN": "^NSEBANK",
-    "KOTAKBANK": "^NSEBANK", "AXISBANK": "^NSEBANK", "INDUSINDBK": "^NSEBANK",
-    # NIFTY IT
-    "INFY": "^CNXIT", "TCS": "^CNXIT", "HCLTECH": "^CNXIT", "WIPRO": "^CNXIT",
-    "TECHM": "^CNXIT", "LTIM": "^CNXIT",
-    # NIFTY AUTO
-    "MARUTI": "^CNXAUTO", "TATAMOTORS": "^CNXAUTO", "M&M": "^CNXAUTO",
-    "BAJAJ-AUTO": "^CNXAUTO", "HEROMOTOCO": "^CNXAUTO",
-    "EICHERMOT": "^CNXAUTO", "ASHOKLEY": "^CNXAUTO",
-    # NIFTY PHARMA
-    "SUNPHARMA": "^CNXPHARMA", "DRREDDY": "^CNXPHARMA", "CIPLA": "^CNXPHARMA",
-    "DIVISLAB": "^CNXPHARMA", "LUPIN": "^CNXPHARMA", "TORNTPHARM": "^CNXPHARMA",
-    # NIFTY FMCG
-    "HINDUNILVR": "^CNXFMCG", "ITC": "^CNXFMCG", "NESTLEIND": "^CNXFMCG",
-    "BRITANNIA": "^CNXFMCG", "DABUR": "^CNXFMCG", "MARICO": "^CNXFMCG",
-    "TATACONSUM": "^CNXFMCG", "GODREJCP": "^CNXFMCG",
-    # NIFTY METAL
-    "TATASTEEL": "^CNXMETAL", "JSWSTEEL": "^CNXMETAL", "HINDALCO": "^CNXMETAL",
-    "VEDL": "^CNXMETAL", "JINDALSTEL": "^CNXMETAL",
-    # NIFTY REALTY
-    "DLF": "^CNXREALTY", "GODREJPROP": "^CNXREALTY", "OBEROIRLTY": "^CNXREALTY",
-    # NIFTY PSU BANK
-    "BANKBARODA": "^CNXBANK", "PNB": "^CNXBANK", "CANBK": "^CNXBANK",
-    # NIFTY INFRA (thematic). Membership pinned — not guessed — from four
-    # constituent lists read 2026-10-14: TradingView NSE:CNXINFRA components,
-    # Economic Times' Nifty Infrastructure constituents, Investing.com
-    # cnx-infrastructure components, and Yahoo's ^CNXINFRA quote/history
-    # (the live Yahoo ticker this map addresses). Both LT and ADANIPORTS
-    # appear in all four.
-    "LT": "^CNXINFRA", "ADANIPORTS": "^CNXINFRA",
-}
+# Symbol → NSE sectoral index ticker. Shared with stage 4, which resolves
+# the same ticker out of the same `uvest-market-context/1` bundle (ADR-010
+# decision 5 extracted the map here the moment a second consumer existed).
+# An unmapped symbol waives the stage — never a guessed index.
+from _sector_map import SECTOR_INDEX_MAP  # noqa: E402  (scripts dir spliced above)
 
 # Frozen check order for missing_inputs (TICK-007 §2): fixture, symbol,
 # series presence (index series first), axis alignment, then per-series

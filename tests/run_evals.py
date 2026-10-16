@@ -145,6 +145,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import re
 import subprocess
@@ -158,6 +159,13 @@ for _stream in (sys.stdout, sys.stderr):
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_BENCHMARK = REPO_ROOT / "tests" / "evals" / "golden_dataset.json"
+# Gate 5's scope: the corpus the shipped booster was trained on, read out of the
+# artifact's own disclosure (`provenance.corpus.row_window`) rather than a
+# constant beside the gate — a retrain moves the scope without a gate edit.
+CALIBRATION_FILE = REPO_ROOT / "models" / "lgbm_direction_v1.calibration.json"
+# Cached import of scripts/4_ml_direction.py (see `load_stage4`): gate 5's
+# miss diagnosis reuses the stage's own pool selection rather than a copy.
+_STAGE4 = None
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "evals"))
 
@@ -1721,9 +1729,110 @@ def gate_brier(trades: list[dict]) -> Gate:
 # --------------------------------------------------------------------------
 # Gate 5: Price Cone Range Coverage, evals.md §3 #5
 # --------------------------------------------------------------------------
-def gate_cone_coverage(trades: list[dict]) -> Gate:
+def trained_corpus_window(path: Path | None = None) -> tuple[str, str] | None:
+    """`(first_session, last_session)` of the corpus the cone's pools came from.
+
+    Read out of the shipped booster's own disclosure
+    (`models/lgbm_direction_v1.calibration.json` → `provenance.corpus.row_window`),
+    so the gate grades against what the artifact says it was trained on: a
+    retrain widens or narrows the scope without a gate edit, and a calibration
+    that is missing or malformed yields **no** window rather than an assumed one.
+    """
+    target = path if path is not None else CALIBRATION_FILE
+    try:
+        document = json.loads(target.read_text(encoding="utf-8"))
+        first, last = document["provenance"]["corpus"]["row_window"][:2]
+        first, last = str(first), str(last)
+    except (OSError, json.JSONDecodeError, KeyError, IndexError, TypeError,
+            ValueError):
+        return None
+    return (first, last) if first and last and first <= last else None
+
+
+def load_stage4():
+    """`scripts/4_ml_direction.py` — the stage that owns the cone's pools.
+
+    Gate 5's miss diagnosis has to name the pool the cone **actually read** for
+    each record, so it reuses the stage's own `samples_for` selection, its
+    `CONE_SPEC`/`CONE_MEASURES` mapping and its `SECTOR_INDEX_MAP` — one
+    implementation, imported, never re-derived here (the same reason the
+    trainer imports the stage instead of copying `feature_vector`).
+    """
+    global _STAGE4
+    if _STAGE4 is None:
+        spec = importlib.util.spec_from_file_location(
+            "uvest_stage4_ml_direction", REPO_ROOT / "scripts" / "4_ml_direction.py")
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+        _STAGE4 = module
+    return _STAGE4
+
+
+def load_calibration(path: Path | None = None) -> dict | None:
+    """The shipped calibration document, or None when it cannot be read.
+
+    The same bytes `trained_corpus_window` reads the scope from: the pools the
+    diagnosis counts are this artifact's, never a recomputed stand-in.
+    """
+    target = path if path is not None else CALIBRATION_FILE
+    try:
+        document = json.loads(target.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return document if isinstance(document, dict) else None
+
+
+def pool_percentile(stage4, samples: dict, measure: str, value: float) -> float | None:
+    """Where `value` sits in the pool's observed atoms (equal atom weight).
+
+    The cone's levels invert a class-probability-weighted mixture of these
+    same atoms, but the record's class weights are not in the frozen 8-key
+    payload, so the disclosure counts atoms: "the percentile of the pool" is
+    the share of observed excursions at or below the realised one. None when
+    the pool is empty — a diagnosis is never invented from no bytes.
+    """
+    atoms = [float(observed)
+             for cls in stage4.CLASSES
+             for observed in ((samples.get(measure) or {}).get(cls) or [])]
+    if not atoms:
+        return None
+    return 100.0 * sum(1 for observed in atoms if observed <= value) / len(atoms)
+
+
+def gate_cone_coverage(trades: list[dict], *, window: tuple[str, str] | None,
+                       spans: dict[str, tuple[str, str] | None],
+                       calibration: dict | None = None) -> Gate:
+    """Coverage of the forward *bars* by `[P10, P90]` — over the graded scope.
+
+    The scope is the trained corpus window (evals.md §3 #5): the envelope's
+    excursion pools were sourced from those sessions, so a forward tape outside
+    them is a regime the pools never saw, and grading it would measure the
+    corpus's age rather than the engine. Such a record is **named on the
+    coverage line — with its span and the window — and excluded from the
+    denominator**; it is ungraded, never a miss. The disclosure prints whatever
+    the verdict, because a percentage over a smaller graded set reads exactly
+    like one over the whole benchmark (the reason gate 2 carries its class
+    coverage for the same purpose).
+
+    **Each miss carries its own diagnosis** (`calibration` supplied): the
+    realised low/high as percent of the entry, and the percentile that value
+    occupies among the observed excursions of the pool the cone read *for that
+    record* — its own sector's block when it is deep enough to answer, the
+    pooled block otherwise, named either way (`pool_percentile`). The verdict
+    alone says the envelope was too shallow; the per-miss percentiles say by
+    how much, and against which population, so the red explains itself.
+
+    `spans` maps `trade_id` → the record's own pinned tape's first/last session
+    (`dataset_refs.forward_tape_span`), read before materialize because a
+    `$derive` is the only place a tape's dates live; `None` means the record
+    pins no tape and therefore cannot be placed in the window at all.
+    """
     g = Gate("Price Cone Range Coverage", COVERAGE_MIN, higher_is_pass=True)
     graded: list[float] = []
+    ungraded: list[str] = []
+    diagnoses: list[str] = []
+    candidates = 0
     for t in trades:
         cone_p10 = t.get("cone_p10")
         cone_p90 = t.get("cone_p90")
@@ -1731,12 +1840,89 @@ def gate_cone_coverage(trades: list[dict]) -> Gate:
         lo, hi = fwd.get("min"), fwd.get("max")
         if cone_p10 is None or cone_p90 is None or lo is None or hi is None:
             continue
-        graded.append(1.0 if cone_p10 <= lo and hi <= cone_p90 else 0.0)
+        candidates += 1
+        tid = str(t.get("trade_id"))
+        span = spans.get(tid)
+        if window is None:
+            ungraded.append(f"{tid} (trained corpus window unreadable)")
+            continue
+        if span is None:
+            ungraded.append(f"{tid} (no pinned tape to place in the window)")
+            continue
+        first, last = span
+        if not (window[0] <= first and last <= window[1]):
+            ungraded.append(f"{tid} (tape {first}..{last}, outside "
+                            f"{window[0]}..{window[1]})")
+            continue
+        covered_low = cone_p10 <= lo
+        covered_high = hi <= cone_p90
+        graded.append(1.0 if covered_low and covered_high else 0.0)
+        if (covered_low and covered_high) or calibration is None:
+            continue
+        entry = t.get("entry_price")
+        if not isinstance(entry, (int, float)) or entry <= 0:
+            # Counted as a miss above; only the percent excursion needs an
+            # entry to be measured against.
+            continue
+        try:
+            stage4 = load_stage4()
+            sector = stage4.SECTOR_INDEX_MAP.get(
+                str(t.get("symbol") or "").strip().upper())
+            samples = stage4.samples_for(calibration, sector)
+            pooled = (calibration.get("samples") or {})
+            pool = sector if (sector and samples is not pooled) else "pooled"
+            levels = {key: measure for key, measure, _lvl in stage4.CONE_SPEC}
+            if not covered_low:
+                realised = (lo / entry - 1.0) * 100.0
+                floor = (cone_p10 / entry - 1.0) * 100.0
+                pct = pool_percentile(stage4, samples,
+                                      stage4.CONE_MEASURES[levels["p10"]],
+                                      realised)
+                if pct is not None:
+                    diagnoses.append(
+                        f"{tid}: low {realised:+.2f}% = {pct:.1f}th pct of the "
+                        f"{pool} adverse pool (floor {floor:+.2f}%)")
+            if not covered_high:
+                realised = (hi / entry - 1.0) * 100.0
+                floor = (cone_p90 / entry - 1.0) * 100.0
+                pct = pool_percentile(stage4, samples,
+                                      stage4.CONE_MEASURES[levels["p90"]],
+                                      realised)
+                if pct is not None:
+                    diagnoses.append(
+                        f"{tid}: high {realised:+.2f}% = {pct:.1f}th pct of the "
+                        f"{pool} favourable pool (floor {floor:+.2f}%)")
+        except (ValueError, KeyError, TypeError, IndexError, ZeroDivisionError):
+            # A diagnosis that cannot be computed is disclosed as absent, the
+            # miss itself is already counted; the gate never dies on prose.
+            diagnoses.append(f"{tid}: pool percentile unavailable "
+                             "(calibration unreadable)")
     g.value = 100.0 * (sum(graded) / len(graded)) if graded else None
     g.skipped = not graded
-    g.detail = (f"{len(graded)} cone-labeled trades" if graded
-                else "no trades with an engine-produced cone envelope yet — "
-                     "stage 4 unimplemented")
+    if window is None:
+        g.coverage = (f"scope: trained corpus window unavailable "
+                      f"({CALIBRATION_FILE.name}); {candidates} cone-labeled "
+                      f"trade(s) ungraded until it reads")
+        g.detail = ("cannot scope the cone envelope: the shipped calibration "
+                    f"has no usable provenance.corpus.row_window "
+                    f"({CALIBRATION_FILE.name})")
+        return g
+    if graded:
+        misses = len(graded) - int(sum(graded))
+        g.detail = (f"{len(graded)} of {candidates} cone-labeled trades graded "
+                    f"inside the trained corpus window; {misses} of them "
+                    f"missed [P10, P90]"
+                    + (f"; {'; '.join(diagnoses)}" if diagnoses else ""))
+    else:
+        g.detail = (f"no cone-labeled trade lies inside the trained corpus "
+                    f"window {window[0]}..{window[1]} — all {candidates} "
+                    "candidate(s) are disclosed ungraded")
+    shown = ungraded[:3]
+    if len(ungraded) > 3:
+        shown.append(f"+{len(ungraded) - 3} more")
+    g.coverage = (f"scope: trained corpus window {window[0]}..{window[1]}; "
+                  f"{len(graded)} of {candidates} cone-labeled trades graded"
+                  + (f"; ungraded: {'; '.join(shown)}" if ungraded else ""))
     return g
 
 
@@ -2002,6 +2188,13 @@ def main(argv: list[str] | None = None) -> int:
     # Before materializing: the files the payloads resolve to are the bytes the
     # gates read, and coverage has to compare those, not the resolved values.
     payload_targets = dataset_payload_targets(raw)
+    # …and gate 5's scope is read here too, for the same reason: a record's tape
+    # span lives only in its `$derive`, which materialize resolves away, and the
+    # trained window is the shipped booster's own disclosure of the corpus it saw.
+    cone_window = trained_corpus_window()
+    cone_calibration = load_calibration()
+    cone_spans = {str(t.get("trade_id")): dataset_refs.forward_tape_span(t)
+                  for t in raw.get("trades", [])}
     try:
         data, ref_notes, derive_notes = dataset_refs.materialize(raw)
     except dataset_refs.RefError as exc:
@@ -2074,7 +2267,11 @@ def main(argv: list[str] | None = None) -> int:
                            data.get("meta", {}).get("class_counts_expected")),
         gate_hallucination(trades, proof=proof),
         gate_brier(trades),
-        gate_cone_coverage(trades),
+        # The graded set is the in-window half of the cone-labeled records; the
+        # rest are named on the coverage line (evals.md §3 #5), and every miss
+        # carries the percentile of the pool it fell out of.
+        gate_cone_coverage(trades, window=cone_window, spans=cone_spans,
+                           calibration=cone_calibration),
         gate_mae_reduction(trades),
         gate_html_validity(trades, proof=proof),
     ]

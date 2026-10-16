@@ -3,3 +3,7 @@
 # where core.autocrlf would otherwise convert them on checkout.
 githooks/* text eol=lf
 scripts/*.sh text eol=lf
+
+# LightGBM model artifacts are line-sensitive: the booster parser rejects CRLF
+# ("Model format error, expect a tree here"), and core.autocrlf would rewrite it.
+models/*.txt -text

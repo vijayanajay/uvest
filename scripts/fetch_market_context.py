@@ -23,7 +23,9 @@ next):
 Every series is fetched independently and a source that fails leaves its
 series OUT of the bundle with the failure recorded in `provenance.sources` —
 stage 7 then waives naming `series:<key>:absent`/`:short` (the tri-state
-contract), never an invented value. Exit 0 whenever a bundle was written;
+contract), never an invented value. An index series too thin to join (below
+`MIN_JOIN_SESSIONS`) is likewise omitted and disclosed, so a single stub
+series cannot cut the others' evidence down to its own dates. Exit 0 whenever a bundle was written;
 exit 2 on usage errors (unmapped symbol, bad dates).
 
 The network layer is injectable (`fetch_bundle`'s `sources=` argument), so
@@ -65,6 +67,11 @@ FII_DII_TABLE_URL = "https://www.5paisa.com/share-market-today/fii-dii-data"
 BREADTH_DMA = 200          # the "% above 200 DMA" definition itself
 DEFAULT_SESSIONS = 260     # >= 200 (NIFTY 200-DMA) + buffer for eligible stocks
 FLOW_CACHE_MAX = 60
+# One trading month of aligned sessions. Below it a series cannot anchor a
+# *joint* estimate (the shortest joint window any consumer aligns is stage 4's
+# 20-session cross-asset window), so it is omitted and disclosed instead of
+# being allowed to cut the series that can.
+MIN_JOIN_SESSIONS = 21
 
 _HEADERS = {
     "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -289,20 +296,37 @@ def truncate(pairs: list[tuple[str, float]], as_of: date) -> list[tuple[str, flo
 
 
 def align_axes(series: dict[str, list[tuple[str, float]]],
-               ) -> dict[str, list[tuple[str, float]]]:
+               *, min_sessions: int = MIN_JOIN_SESSIONS,
+               ) -> tuple[dict[str, list[tuple[str, float]]],
+                          list[tuple[str, int]]]:
     """Inner-join the index series on one date axis, first series' order.
 
     Stage 7 waives on a misaligned axis; joining real sessions against each
     other (never inventing a date) is the fetcher's side of that contract.
+
+    What the join must not do is let one thin series destroy the others. A
+    member with fewer than `min_sessions` sessions cannot anchor a joint
+    estimate, and joining it in would intersect *every* series down to its
+    own handful of dates — an energy-sector trade whose `^CNXENERGY` came back
+    as a single session would take `^NSEI`'s trend and `^INDIAVIX`'s panic
+    evidence down with it, silently. So such members are omitted from the
+    join and returned as `(name, sessions)` for the caller to disclose in
+    `provenance.sources` (stage 7 then waives naming that one series, which is
+    the honest tri-state outcome). Members that participate are still
+    intersected, so no consumer ever sees a date another one lacked.
+
+    Returns `(aligned, omitted)`.
     """
-    if not series:
-        return {}
-    names = list(series)
-    common = {d for d, _ in series[names[0]]}
-    for name in names[1:]:
+    omitted = sorted((name, len(pairs)) for name, pairs in series.items()
+                     if len(pairs) < min_sessions)
+    keep = [name for name in series if len(series[name]) >= min_sessions]
+    if not keep:
+        return {}, omitted
+    common = {d for d, _ in series[keep[0]]}
+    for name in keep[1:]:
         common &= {d for d, _ in series[name]}
-    return {name: [(d, v) for d, v in series[name] if d in common]
-            for name in names}
+    return ({name: [(d, v) for d, v in series[name] if d in common]
+             for name in keep}, omitted)
 
 
 def breadth_from_closes(closes: dict[str, list[tuple[str, float]]],
@@ -509,8 +533,13 @@ def fetch_bundle(symbol: str, as_of: date, *, sessions: int = DEFAULT_SESSIONS,
             status(sector, "yahoo:yf.download", False, "no data returned")
     except Exception as exc:
         status(sector, "yahoo:yf.download", False, f"{type(exc).__name__}: {exc}")
-    index_series = align_axes({k: truncate(v, as_of)
-                               for k, v in index_series.items() if v})
+    index_series, thin = align_axes({k: truncate(v, as_of)
+                                     for k, v in index_series.items() if v})
+    for key, sessions in thin:
+        status(key, "yahoo:yf.download", False,
+               f"too thin to join: {sessions} session(s) below the "
+               f"{MIN_JOIN_SESSIONS}-session floor — omitted so the other "
+               "index series keep their own sessions")
     for key in list(index_series):
         if not index_series[key]:
             del index_series[key]
