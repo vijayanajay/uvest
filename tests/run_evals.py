@@ -269,6 +269,102 @@ class Gate:
         )
 
 
+def baseline_gate_regressions(gates: list[Gate],
+                              baseline: dict) -> tuple[list[str], list[str]]:
+    """(regressions, improvements) of this run's gates against the frozen bank.
+
+    The baseline's `gates` block is the *deliberate publication* of the scorecard
+    as it stands (`run_evals.py --re-freeze-gates`): verdict and value per gate.
+    The pre-commit hook exits through this instead of the absolute verdict,
+    because gates 4/5 are red **by policy** (published, not tuned) and an
+    absolute exit-1 made every commit need `--no-verify` — the hook then caught
+    nothing at all.
+
+    Blocks (a regression): a PASS that stops passing, grading that disappears
+    (any verdict → SKIP), a banked red that gets *worse*, and a red nobody ever
+    banked — a published red must be an act, never an accident. A SKIP → FAIL is
+    also a regression: it is a newly graded red that must be banked explicitly
+    (stage 8's arrival is the case). Never a block: a banked red that sits still
+    (the policy itself), and any improvement — which returns as a re-bank hint,
+    because a stale bank is how a later regression goes unnoticed.
+    """
+    banked = baseline.get("gates") or {}
+    regressions: list[str] = []
+    improvements: list[str] = []
+    for gate in gates:
+        verdict = gate.evaluate()[0].strip("[]")  # PASS | FAIL | SKIP
+        frozen = banked.get(gate.name)
+        if frozen is None:
+            if verdict == "FAIL":
+                regressions.append(
+                    f"{gate.name}: FAIL at {gate.fmt.format(gate.value)} but "
+                    "never banked — a red is published deliberately "
+                    "(run_evals.py --re-freeze-gates)")
+            continue
+        was = frozen.get("verdict")
+        was_value = frozen.get("value")
+        if verdict == was:
+            # Same verdict both sides: PASS→PASS says nothing either way; a
+            # banked red moving while staying red is the only signal here.
+            if verdict == "FAIL" and was_value is not None \
+                    and gate.value is not None:
+                worse = (gate.value < was_value) if gate.higher_is_pass \
+                    else (gate.value > was_value)
+                better = (gate.value > was_value) if gate.higher_is_pass \
+                    else (gate.value < was_value)
+                if worse:
+                    regressions.append(
+                        f"{gate.name}: {gate.fmt.format(was_value)} → "
+                        f"{gate.fmt.format(gate.value)} — worse than the "
+                        "banked red")
+                elif better:
+                    improvements.append(
+                        f"{gate.name}: {gate.fmt.format(was_value)} → "
+                        f"{gate.fmt.format(gate.value)} — improved")
+            continue
+        if verdict == "FAIL":
+            if was == "SKIP":
+                regressions.append(
+                    f"{gate.name}: SKIP → FAIL — a newly graded red must be "
+                    "banked (run_evals.py --re-freeze-gates)")
+            else:
+                regressions.append(f"{gate.name}: {was} → FAIL")
+        elif verdict == "SKIP":
+            regressions.append(
+                f"{gate.name}: {was} → SKIP — grading lost, and a smaller "
+                "graded set hides behind the same percentage")
+        else:  # PASS
+            improvements.append(f"{gate.name}: {was} → PASS — re-bank it")
+    return regressions, improvements
+
+
+def bank_gate_values(gates: list[Gate], path: Path | None = None) -> dict:
+    """Write this run's verdict+value per gate into the baseline's `gates` block.
+
+    The deliberate publication act: afterwards `baseline_gate_regressions`
+    tolerates exactly these reds and fails on any move for the worse. Every other
+    key (hashs, census, rosters — owned by `scaffold_catalog.re_freeze_baseline`
+    and the quarantine tools) is read back and preserved, and the bytes follow
+    the proof-root write convention (`scaffold_catalog.write_text_utf8`:
+    indent-2 dumps, CRLF on disk), so the two writers of one file cannot churn
+    each other's lines. The file is required: a clone without a baseline is a
+    broken clone, and this command invents nothing.
+    """
+    target = path or BASELINE_FILE
+    baseline = json.loads(target.read_text(encoding="utf-8"))
+    baseline["gates"] = {
+        gate.name: {"verdict": gate.evaluate()[0].strip("[]"),
+                    "value": gate.value}
+        for gate in gates
+    }
+    text = json.dumps(baseline, indent=2, ensure_ascii=False) + "\n"
+    # Exactly scaffold_catalog.write_json + write_text_utf8's bytes: LF-normalize,
+    # then CRLF (proof-root files are CRLF on disk), UTF-8, trailing newline.
+    target.write_bytes(text.replace("\r\n", "\n").replace("\n", "\r\n")
+                       .encode("utf-8"))
+    return baseline
+
+
 # --------------------------------------------------------------------------
 # Rule arms — what a breaker *checks*, one arm per comparison
 # --------------------------------------------------------------------------
@@ -2182,6 +2278,18 @@ def main(argv: list[str] | None = None) -> int:
                              "prove stage executions, e.g. a scripts/run_pipeline.py "
                              "chain run. Repeatable. The record beside the graded "
                              "reports is always read.")
+    parser.add_argument("--regression-exit", action="store_true",
+                        help="exit 1 only on regressions against the frozen "
+                             "baseline's `gates` block (plus the non-gate "
+                             "correctness failures), instead of on the absolute "
+                             "verdict: a banked red stays red on the scorecard "
+                             "without failing the run — the pre-commit hook's "
+                             "policy (githooks/pre-commit).")
+    parser.add_argument("--re-freeze-gates", action="store_true",
+                        help="bank this run's gate verdicts/values into "
+                             "baseline_scorecard.json's `gates` block — the "
+                             "deliberate publication of the current reds, after "
+                             "which --regression-exit tolerates exactly them.")
     args = parser.parse_args(argv)
 
     raw = load_benchmark(Path(args.benchmark))
@@ -2306,9 +2414,13 @@ def main(argv: list[str] | None = None) -> int:
     coverage_ok, coverage_reason, unproven, payload_excluded = check_evidence_coverage(
         trades, reports_dir, proof, payload_coverage=payload_coverage,
         targets=payload_targets)
-    verdict_ok = ((not failed) and dist_ok and probes_ok and refusals_ok
-                  and not regen_failures and not integrity and coverage_ok
-                  and rules_ok and rosters_ok)
+    # Everything except the gate verdicts: dataset/probe correctness, evidence
+    # provenance, and the floors that are already baseline-compared
+    # (rule census, roster sizes/ids). These block in *every* exit mode —
+    # only the gate verdicts get the published-red treatment below.
+    hard_ok = (dist_ok and probes_ok and refusals_ok and not regen_failures
+               and not integrity and coverage_ok and rules_ok and rosters_ok)
+    verdict_ok = ((not failed) and hard_ok)
 
     print(render_scorecard(gates, verdict_ok))
     for line in render_provenance(proof, report_coverage[0], len(trades),
@@ -2346,6 +2458,32 @@ def main(argv: list[str] | None = None) -> int:
               f"{len(derive_notes)} derived field(s) from tests/proof{suffix}")
         for note in [*ref_notes, *derive_notes]:
             print(f"    ↳ {note}")
+
+    baseline_mode = args.regression_exit or args.re_freeze_gates
+    if args.re_freeze_gates:
+        banked = bank_gate_values(gates)
+        print(f"  Baseline gates banked: {len(banked['gates'])} gate(s) written "
+              f"to {BASELINE_FILE.name} — the current scorecard is now the "
+              "published reference (--regression-exit tolerates exactly it).")
+    if baseline_mode:
+        # Compared after a bank on purpose: banking *is* acceptance, so a
+        # --re-freeze-gates run walks away green (unless a non-gate
+        # correctness half failed). Without the bank, every red is unbanked
+        # and blocks — the first run says "publish me" instead of lying.
+        regressions, improvements = baseline_gate_regressions(
+            gates, load_baseline())
+        print(f"  Baseline regression check: "
+              f"{'OK' if not regressions else 'REGRESSION'} "
+              f"({len(regressions)} regression(s), {len(improvements)} "
+              f"improvement(s) vs the frozen bank)")
+        for item in regressions:
+            print(f"    ✗ {item}")
+        for item in improvements:
+            print(f"    ▲ {item} — re-bank with run_evals.py --re-freeze-gates")
+        if not hard_ok:
+            print("    ✗ non-gate failure(s) above (integrity, probes, "
+                  "evidence, floors) — these block in every mode")
+        return 0 if (hard_ok and not regressions) else 1
 
     return 0 if verdict_ok else 1
 

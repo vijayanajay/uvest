@@ -31,5 +31,43 @@
     "pledge_hazard": 5,
     "regime_shock": 6,
     "tight_stop": 5
+  },
+  "gates": {
+    "Option Rejection Guardrail": {
+      "verdict": "PASS",
+      "value": 100.0
+    },
+    "Unrecognized Instrument Guardrail": {
+      "verdict": "PASS",
+      "value": 100.0
+    },
+    "Ingestion Chain Abort": {
+      "verdict": "PASS",
+      "value": 100.0
+    },
+    "Hard Circuit Breaker Accuracy": {
+      "verdict": "PASS",
+      "value": 100.0
+    },
+    "Zero Hallucination Audit": {
+      "verdict": "PASS",
+      "value": 100.0
+    },
+    "Directional Brier Score": {
+      "verdict": "FAIL",
+      "value": 0.4829451633333333
+    },
+    "Price Cone Range Coverage": {
+      "verdict": "FAIL",
+      "value": 0.0
+    },
+    "Optimal Limit Slippage Reduction": {
+      "verdict": "SKIP",
+      "value": null
+    },
+    "HTML Visualizer Validation": {
+      "verdict": "PASS",
+      "value": 100.0
+    }
   }
 }

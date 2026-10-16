@@ -1232,6 +1232,169 @@ class TestProbeRosterFloor(unittest.TestCase):
         self.assertIn("10 seeded stage-0 probe(s)", out)
 
 
+class TestBaselineRegressionExit(unittest.TestCase):
+    """The pre-commit hook tolerates banked reds, never regressions.
+
+    `githooks/pre-commit` runs the scorecard with `--regression-exit`: gates 4
+    and 5 are red *by policy* (published, not tuned), so an absolute exit-1 made
+    every commit need `--no-verify` — the hook caught nothing. The frozen
+    baseline's `gates` block (banked by `run_evals.py --re-freeze-gates`, the
+    deliberate publication) is what the run is measured against instead:
+
+    * a banked red that sits still is not a regression — that is the policy;
+    * a PASS that stops passing, or grading that disappears (→ SKIP), blocks;
+    * a banked red that gets *worse* blocks; a red that improves is a hint to
+      re-bank, never a block;
+    * a red nobody ever banked blocks — a published red must be deliberate.
+
+    Non-gate failures (dataset integrity, probe rosters, evidence coverage,
+    rule census) are not part of this function: they are absolute correctness
+    or already floor-compared, and `main` keeps failing on them in every mode.
+    """
+
+    @staticmethod
+    def gate(name="Gate", value=50.0, threshold=80.0, higher_is_pass=True,
+             skipped=False):
+        g = run_evals.Gate(name, threshold, higher_is_pass, fmt="{:.3f}")
+        g.value = value
+        g.skipped = skipped
+        return g
+
+    @staticmethod
+    def bank(*entries):
+        return {"gates": {name: entry for name, entry in entries}}
+
+    def compare(self, gates, baseline):
+        return run_evals.baseline_gate_regressions(gates, baseline)
+
+    def test_an_unbanked_red_blocks(self):
+        """No `gates` block (or no entry): a FAIL has never been published."""
+        for baseline in ({}, {"gates": {}}):
+            with self.subTest(baseline=baseline):
+                regressions, improvements = self.compare(
+                    [self.gate("Directional Brier Score", value=0.483,
+                               threshold=0.18, higher_is_pass=False)],
+                    baseline)
+                self.assertEqual(improvements, [])
+                self.assertEqual(len(regressions), 1)
+                self.assertIn("never banked", regressions[0])
+                self.assertIn("Directional Brier Score", regressions[0])
+
+    def test_unbanked_pass_and_skip_never_block(self):
+        """Nothing red, nothing to publish: green and ungraded both stand."""
+        regressions, improvements = self.compare(
+            [self.gate("Option", value=100.0, threshold=100.0),
+             self.gate("Limit", value=None, skipped=True)], {})
+        self.assertEqual((regressions, improvements), ([], []))
+
+    def test_a_banked_red_that_is_unchanged_is_not_a_regression(self):
+        """The published-red case itself: same verdict, same value."""
+        regressions, improvements = self.compare(
+            [self.gate("Cone", value=0.0, threshold=80.0)],
+            self.bank(("Cone", {"verdict": "FAIL", "value": 0.0})))
+        self.assertEqual((regressions, improvements), ([], []))
+
+    def test_a_banked_red_that_gets_worse_blocks_and_better_hints(self):
+        """Both directions, both threshold polarities."""
+        worse = self.gate("Brier", value=0.55, threshold=0.18,
+                          higher_is_pass=False)
+        better = self.gate("Brier", value=0.40, threshold=0.18,
+                           higher_is_pass=False)
+        baseline = self.bank(("Brier", {"verdict": "FAIL", "value": 0.483}))
+        regressions, improvements = self.compare([worse], baseline)
+        self.assertEqual(improvements, [])
+        self.assertEqual(len(regressions), 1)
+        self.assertIn("worse than the banked red", regressions[0])
+        regressions, improvements = self.compare([better], baseline)
+        self.assertEqual(regressions, [])
+        self.assertEqual(len(improvements), 1)
+        self.assertIn("improved", improvements[0])
+        # higher_is_pass: a coverage red sinking from the banked 76.02 blocks.
+        regressions, _ = self.compare(
+            [self.gate("Coverage", value=70.0, threshold=80.0)],
+            self.bank(("Coverage", {"verdict": "FAIL", "value": 76.02})))
+        self.assertEqual(len(regressions), 1)
+        self.assertIn("worse than the banked red", regressions[0])
+
+    def test_a_pass_that_stops_passing_blocks(self):
+        """The regression the hook exists for: green went red."""
+        regressions, improvements = self.compare(
+            [self.gate("Breakers", value=80.0, threshold=100.0)],
+            self.bank(("Breakers", {"verdict": "PASS", "value": 100.0})))
+        self.assertEqual(improvements, [])
+        self.assertEqual(len(regressions), 1)
+        self.assertIn("PASS → FAIL", regressions[0])
+
+    def test_grading_that_disappears_blocks(self):
+        """PASS → SKIP and FAIL → SKIP both mean: the gate stopped showing its
+        work, which is exactly how a smaller graded set hides behind a number."""
+        for was, frozen_value in (("PASS", 100.0), ("FAIL", 60.0)):
+            with self.subTest(was=was):
+                regressions, _ = self.compare(
+                    [self.gate("Gate", value=None, skipped=True)],
+                    self.bank(("Gate", {"verdict": was,
+                                        "value": frozen_value})))
+                self.assertEqual(len(regressions), 1)
+                self.assertIn(f"{was} → SKIP", regressions[0])
+                self.assertIn("grading lost", regressions[0])
+
+    def test_a_red_that_turns_green_is_an_improvement_hint(self):
+        """Never a block — but it must ask for a re-bank, or the stale bank is
+        how a later regression goes unnoticed."""
+        regressions, improvements = self.compare(
+            [self.gate("Gate", value=100.0, threshold=80.0)],
+            self.bank(("Gate", {"verdict": "FAIL", "value": 60.0})))
+        self.assertEqual(regressions, [])
+        self.assertEqual(len(improvements), 1)
+        self.assertIn("FAIL → PASS", improvements[0])
+
+    def test_a_newly_graded_red_must_be_banked(self):
+        """A gate that finally grades — and fails — is a *new* published red:
+        deliberate banking, not a quiet ship (stage 8's arrival is the case)."""
+        regressions, improvements = self.compare(
+            [self.gate("Limit", value=50.0, threshold=75.0)],
+            self.bank(("Limit", {"verdict": "SKIP", "value": None})))
+        self.assertEqual(improvements, [])
+        self.assertEqual(len(regressions), 1)
+        self.assertIn("SKIP → FAIL", regressions[0])
+        self.assertIn("re-freeze-gates", regressions[0])
+
+    def test_banking_writes_verdict_and_value_and_keeps_the_other_keys(self):
+        """`bank_gate_values` is a surgical write: the hashes and floors the
+        other writers own must survive it byte-for-byte."""
+        import tempfile
+        scratch = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        target = scratch / "baseline_scorecard.json"
+        target.write_text(json.dumps({
+            "schema": "uvest-baseline-scorecard/1",
+            "rule_exercises": {"clean_bullish": 18},
+            "manifest_sha256": "f" * 64,
+        }, indent=2) + "\n", encoding="utf-8")
+        gates = [self.gate("A", value=100.0, threshold=100.0),
+                 self.gate("B", value=None, skipped=True),
+                 self.gate("C", value=0.0, threshold=80.0)]
+        banked = run_evals.bank_gate_values(gates, path=target)
+        self.assertEqual(banked["gates"], {
+            "A": {"verdict": "PASS", "value": 100.0},
+            "B": {"verdict": "SKIP", "value": None},
+            "C": {"verdict": "FAIL", "value": 0.0},
+        })
+        on_disk = json.loads(target.read_text(encoding="utf-8"))
+        self.assertEqual(on_disk["rule_exercises"], {"clean_bullish": 18})
+        self.assertEqual(on_disk["manifest_sha256"], "f" * 64)
+        self.assertEqual(on_disk["schema"], "uvest-baseline-scorecard/1")
+        # Round-trip: banking once makes every current gate non-regressing.
+        regressions, _ = run_evals.baseline_gate_regressions(gates, on_disk)
+        self.assertEqual(regressions, [])
+        # The proof-root write convention (scaffold_catalog.write_text_utf8:
+        # CRLF on disk, LF-normalized dumps): the two writers of one file must
+        # produce the same line endings or every re-freeze churns the diff.
+        raw = target.read_bytes()
+        self.assertTrue(raw.endswith(b"}\r\n"))
+        self.assertEqual(raw.count(b"\r\n"), raw.count(b"\n"),
+                         "no bare LF — proof-root files are CRLF on disk")
+
+
 class TestGoldenDatasetContract(unittest.TestCase):
     """The dataset enforces its own schema before the runner has to."""
 

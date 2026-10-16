@@ -1,11 +1,22 @@
 #!/bin/sh
 # UVEST pre-commit hook — runs the full invariant & gate suite, then the
-# behavioral evals scorecard.
+# behavioral evals scorecard against the frozen baseline.
 #
 # Tracked in githooks/ and activated via `git config core.hooksPath githooks`
 # (run scripts/setup_hooks.sh once per clone). Failing either blocks the
 # commit, treating spec drift like a build failure — capital-risk invariants
 # and eval-gate regressions must never ship on a broken baseline.
+#
+# The scorecard half is BASELINE-AWARE (`run_evals.py --regression-exit`):
+# gates 4/5 are red by policy — published numbers, not defects — so demanding
+# an absolute SUITE PASSED made every commit need `--no-verify`, which caught
+# nothing at all. What blocks now is a *regression against the frozen
+# baseline's `gates` block*: a PASS that stops passing, grading that disappears,
+# a banked red that gets worse, or a red nobody deliberately banked. Publishing
+# a changed scorecard (a new red, or an improvement worth recording) is the
+# deliberate act: `python tests/run_evals.py --re-freeze-gates`.
+# Non-gate failures — dataset integrity, probe rosters, evidence coverage,
+# the rule census — still block absolutely, in every mode.
 
 # Anchor to the repo root, wherever git invokes us from, so `python tests/...`
 # paths resolve correctly under submodules, worktrees, and unusual cwd.
@@ -40,17 +51,19 @@ fi
 echo "✅ Invariant suite passed."
 
 echo ""
-echo "📊 UVEST behavioral evals scorecard (pre-commit)..."
-"$PY" tests/run_evals.py
+echo "📊 UVEST behavioral evals scorecard (pre-commit, baseline-aware)..."
+"$PY" tests/run_evals.py --regression-exit
 evals_status=$?
 
 if [ $evals_status -ne 0 ]; then
     echo ""
-    echo "❌ Pre-commit blocked: eval-gate regression detected (exit $evals_status)."
-    echo "   Behavioral evals must pass before committing."
+    echo "❌ Pre-commit blocked: eval regression against the frozen baseline (exit $evals_status)."
+    echo "   Banked reds pass; a lost PASS, lost grading, a worse red, or an"
+    echo "   unbanked red blocks. Publish a deliberate change with:"
+    echo "     python tests/run_evals.py --re-freeze-gates"
     echo "   Bypass deliberately with: git commit --no-verify"
     exit $evals_status
 fi
-echo "✅ Evals scorecard passed."
+echo "✅ Evals scorecard: no regression vs the frozen baseline (banked reds tolerated)."
 
 exit 0

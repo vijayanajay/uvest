@@ -276,6 +276,7 @@
 *Ref: [BRD.md §15](file:///d:/Code/uvest/BRD.md#L595), [docs/agents/evals.md](file:///d:/Code/uvest/docs/agents/evals.md), [docs/tickets/EVAL-001-benchmark-suite.md](file:///d:/Code/uvest/docs/tickets/EVAL-001-benchmark-suite.md)*
 
 - [x] Evaluation runner harness ([tests/run_evals.py](file:///d:/Code/uvest/tests/run_evals.py)).
+- [x] Baseline-aware pre-commit exit policy ([githooks/pre-commit](githooks/pre-commit) + `run_evals.py --regression-exit` / `--re-freeze-gates`): the hook's scorecard half compares against the frozen baseline's `gates` block (9 gate verdicts/values banked from the published-red scorecard) instead of the absolute verdict, so the policy reds (gates 4/5) stop making every commit need `--no-verify` while a lost PASS, lost grading, a worse red, or an unbanked red still blocks — non-gate failures (integrity, probes, evidence, floors) keep blocking absolutely. Seam: [tests/test_run_evals.py](file:///d:/Code/uvest/tests/test_run_evals.py) `TestBaselineRegressionExit` (9); policy in [evals.md §4](file:///d:/Code/uvest/docs/agents/evals.md).
 - [x] Hard Circuit Breaker Accuracy grade: 100% enforcement pass.
 - [x] Zero Hallucination Audit grade: 100% exact JSON match pass.
 - [x] Price Cone Range Coverage grade: $\ge 80\%$ pass.
