@@ -47,6 +47,7 @@ FROZEN_ARTIFACTS = {
     5: "out_5_flow.json",
     6: "out_6_fundamental.json",
     7: "out_7_regime.json",
+    8: "out_8_dhan.json",
     9: "out_9_decision.json",
     10: "out_10_triage.json",
 }

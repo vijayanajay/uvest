@@ -147,14 +147,11 @@ class TestOneInvocationChain(unittest.TestCase):
 
             # 1. Ascending canonical order for every stage that exists.
             runs = [int(s) for s in re.findall(r"\[RUN\] stage (\d+)", out)]
-            self.assertEqual(runs, [0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 12],
+            self.assertEqual(runs, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12],
                              f"chain order wrong: {runs}\n{out}")
 
-            # 2. Every absent stage is disclosed, and stage 11 is named as the
-            #    conditional stage — silence would be a hidden gap.
-            for stage in (8,):
-                self.assertIn(f"[SKIP] stage {stage}:", out,
-                              f"missing disclosure for stage {stage}")
+            # 2. Stage 11 is disclosed by name as the conditional stage —
+            #    silence would be a hidden gap.
             self.assertIn("[SKIP] stage 11:", out)
             self.assertIn("conditional", out.split("[SKIP] stage 11:")[1][:120].lower())
 
@@ -163,7 +160,8 @@ class TestOneInvocationChain(unittest.TestCase):
                          "out_2_market.json", "out_3_dtw.json",
                          "out_4_ml.json",
                          "out_5_flow.json", "out_6_fundamental.json",
-                         "out_7_regime.json", "out_9_decision.json",
+                         "out_7_regime.json", "out_8_dhan.json",
+                         "out_9_decision.json",
                          "out_10_triage.json"):
                 path = wd / name
                 self.assertTrue(path.exists(), f"artifact missing: {name}")

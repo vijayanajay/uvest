@@ -160,6 +160,23 @@ def _rule_market_mae_pct(bars: list[dict], trade: dict) -> float:
     return round((entry - min(b["low"] for b in bars)) / entry * 100.0, 4)
 
 
+def _rule_limit_mae_pct(bars: list[dict], trade: dict) -> float | None:
+    """The tape's worst low against the engine's own limit price (gate 6).
+
+    An **unfilled** limit — the tape never traded at or below it — derives
+    `null`, not `0.0`: no position, no MAE, and gate 6 excludes nulls from its
+    denominator, so a deep limit can never inflate the pass rate by never
+    trading. The limit price itself is an engine claim read out of the
+    recorded stage-8 artifact (`record_stage8_evidence.py`), never retyped.
+    """
+    limit = _number(trade.get("limit_entry_price"),
+                    "limit_entry_price (limit_mae_pct)")
+    low = min(b["low"] for b in bars)
+    if low > limit:
+        return None
+    return round((limit - low) / limit * 100.0, 4)
+
+
 def _rule_resolution_date(bars: list[dict], trade: dict) -> str:
     """The frozen convention: the last forward bar's date (the horizon end)."""
     return bars[-1]["date"]
@@ -204,6 +221,7 @@ def _rule_realized_direction(bars: list[dict], trade: dict) -> int:
 FORWARD_TAPE_RULES = {
     "forward_min_max": _rule_forward_min_max,
     "market_mae_pct": _rule_market_mae_pct,
+    "limit_mae_pct": _rule_limit_mae_pct,
     "resolution_date": _rule_resolution_date,
     "resolution_outcome": _rule_resolution_outcome,
     "realized_direction": _rule_realized_direction,

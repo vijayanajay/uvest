@@ -1,0 +1,15 @@
+{
+  "anchored_vwap": 1734.6014665648543,
+  "orderblock_support": 1733.6,
+  "optimal_limit_range": [
+    1733.6,
+    1734.6
+  ],
+  "optimal_limit_buy": 1734.1,
+  "spread_impact_cost_pct": null,
+  "cache_hit": false,
+  "waived": true,
+  "precision_source": "daily_tier1",
+  "waived_reason": "dhan:not-requested",
+  "missing_inputs": []
+}

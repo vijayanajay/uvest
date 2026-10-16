@@ -166,9 +166,16 @@ class TestEvalRunnerContract(unittest.TestCase):
         self.assertIn("Refusal probes: OK", scorecard)
         self.assertLess(scorecard.count("[SKIP]"), 7,
                         "runner hardcoded a full-skip beat instead of grading")
-        # Gate 6's engine (stage 8) does not exist yet, so it still skips — and a
-        # skip names what is missing rather than reading as a pass.
-        self.assertIn("[SKIP] Optimal Limit Slippage Reduction", scorecard)
+        # Gate 6's engine (stage 8) now exists and its evidence is recorded on
+        # every eligible record, so the gate grades — a graded red is still not
+        # a silent skip, and the skip branch names what is missing whenever a
+        # dataset carries no stage-8 limit entry at all.
+        self.assertNotIn("[SKIP] Optimal Limit Slippage Reduction", scorecard)
+        self.assertRegex(scorecard,
+                         r"\[(PASS|FAIL)\] Optimal Limit Slippage Reduction")
+        bare = run_evals.gate_mae_reduction([])
+        self.assertTrue(bare.skipped)
+        self.assertIn("record stage-8 evidence", bare.detail)
         # The verdict follows the gates rather than being asserted beside them:
         # a graded gate that misses its threshold is published, and the run is
         # red for it — never a green percentage that hides a failed dimension.
@@ -1582,8 +1589,8 @@ class TestRunRecordProvenance(unittest.TestCase):
         self.assertIn("Evidence provenance (run records)", block)
         self.assertIn(f"{self.workdir.name}/run_record.json", block,
                       "a record outside the repo is named by its directory")
-        self.assertIn("stages ran: [0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 12]", block)
-        self.assertIn("skipped: [8, 11]", block)
+        self.assertIn("stages ran: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12]", block)
+        self.assertIn("skipped: [11]", block)
         self.assertIn("Stage-12 reports proven: 1/1", block)
 
         disclosed = "\n".join(run_evals.render_provenance(

@@ -2038,8 +2038,16 @@ def gate_mae_reduction(trades: list[dict]) -> Gate:
         graded.append(1.0 if lim < mkt else 0.0)
     if not graded:
         g.skipped = True
-        g.detail = ("no market/limit MAE pairs with an engine-derived limit entry "
-                    "yet — stage 8 unimplemented")
+        with_limit = sum(1 for t in trades if t.get("limit_entry_price") is not None)
+        if not with_limit:
+            g.detail = ("no record carries a stage-8 limit entry yet — "
+                        "record stage-8 evidence (tests/evals/"
+                        "record_stage8_evidence.py)")
+        else:
+            g.detail = (f"{with_limit} stage-8 limit entr(ies) recorded, but "
+                        "none traded at their limit on its tape — an unfilled "
+                        "limit is no position and is excluded, never graded "
+                        "as a free win")
         return g
     # Report pass-fraction as the headline metric (threshold is a fraction),
     g.value = 100.0 * (sum(graded) / len(graded))

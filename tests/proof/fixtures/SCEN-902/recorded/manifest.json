@@ -10,6 +10,16 @@
       "stage": 2,
       "artifact": "out_2_market.json",
       "recorded_at": "2026-10-10T17:09:51+00:00"
+    },
+    {
+      "stage": 8,
+      "artifact": "out_8_dhan.json",
+      "recorded_at": "2026-10-16T08:08:21+00:00"
+    },
+    {
+      "stage": 8,
+      "artifact": "out_8_dhan.json",
+      "recorded_at": "2026-10-16T08:11:42+00:00"
     }
   ]
 }

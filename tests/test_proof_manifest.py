@@ -87,6 +87,12 @@ RERUNNABLE = {
     # is byte-compared to a fresh run exactly like stages 1–2 — the regime row's
     # panic-breaker evidence is verified, not taken on trust.
     7: "7_sector_macro_regime.py",
+    # Stage 8 is offline-runnable through the row's own OHLCV prefix (the
+    # daily-tier precision zone; its Dhan half is operator-gated and the
+    # chain never passes `--live`), so a recorded `out_8_dhan.json` is
+    # byte-compared to a fresh run exactly like stages 1–2 — the limit entry
+    # gate 6 grades is verified, not taken on trust.
+    8: "8_dhan_precision.py",
 }
 
 
@@ -115,6 +121,8 @@ def fresh_stage_stdout(row: dict, artifact: dict) -> bytes | None:
         cmd += ["--financials-fixture", str(PROOF_ROOT / inputs["financials_fixture"])]
     if stage == 7:
         cmd += ["--regime-fixture", str(PROOF_ROOT / inputs["regime_fixture"])]
+    if stage == 8:
+        cmd += ["--ohlcv-fixture", str(PROOF_ROOT / inputs["truncated_fixtures"][0])]
     proc = subprocess.run(cmd, capture_output=True, check=False, cwd=REPO_ROOT)
     return proc.stdout if proc.returncode == 0 else None
 

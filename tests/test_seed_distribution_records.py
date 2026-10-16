@@ -219,7 +219,7 @@ class TestSeedDistributionRecords(unittest.TestCase):
             with self.subTest(scenario=sid):
                 raw_record = self.raw_by_id[sid]
                 for artifact in ("out_1_math.json", "out_2_market.json",
-                                 "out_5_flow.json"):
+                                 "out_5_flow.json", "out_8_dhan.json"):
                     self.assertTrue(
                         dr.is_ref(raw_record["script_outputs"][artifact]),
                         f"{sid}: {artifact} must be a $ref, never inline bytes")
@@ -228,12 +228,14 @@ class TestSeedDistributionRecords(unittest.TestCase):
                     self.assertTrue(target.exists(), f"{sid}: missing {target}")
                 for field in ("forward_prices_22d", "resolution_date",
                               "resolution_outcome", "market_mae_pct",
-                              "actual_direction"):
+                              "actual_direction", "limit_mae_pct"):
                     self.assertTrue(dr.is_derive(raw_record[field]),
                                     f"{sid}.{field} must derive from the pinned tape")
                 self.assertIsNone(raw_record["cone_p10"])
                 self.assertIsNone(raw_record["predicted_direction"])
-                self.assertIsNone(raw_record["limit_mae_pct"])
+                # The limit price itself is the recorded stage-8 zone read out
+                # of `out_8_dhan.json` (the $ref above), never a typed number.
+                self.assertIsInstance(raw_record["limit_entry_price"], (int, float))
 
     def test_the_tape_resolves_loss_under_the_frozen_rule(self):
         """AVOID expected, LOSS realized, TN — decided by the tape, not the tool."""

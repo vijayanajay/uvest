@@ -47,8 +47,9 @@ from support.pipeline import (  # noqa: E402
 FIXTURE_PASTE = TESTS_DIR / "fixtures" / "_input_reliance_20261009.txt"
 
 # Every chain stage that reads `current_trade.json` and declares what it needs.
-# Stage 0 is the producer (not checked against itself) and stage 8 does not
-# exist yet, so it declares nothing and belongs to no contract.
+# Stage 0 is the producer (not checked against itself) and stage 8 waives whole
+# on a symbolless payload (its frozen tri-state — never a crash), so it declares
+# no REQUIRED_FIELDS and belongs to no contract.
 CONTRACT_STAGES = (1, 2, 3, 4, 5, 6, 7, 9, 10, 12)
 
 

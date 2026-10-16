@@ -87,10 +87,9 @@ ORDER: list[int] = sorted([*CHAIN, *EXCLUDED])
 # source, so a rename can never leave the runner and the recorder disagreeing.
 # Stages that do not exist yet keep the BRD §9.1 name here as a skip-row audit
 # label only, and must move into `_recorder.FROZEN_ARTIFACTS` when they land
-# (`artifact_filename()` refuses to guess for them until then).
-PENDING_ARTIFACTS: dict[int, str] = {
-    8: "out_8_dhan.json",
-}
+# (`artifact_filename()` refuses to guess for them until then). Stage 8 moved
+# there when it landed (2026-10-16); the next unimplemented stage starts here.
+PENDING_ARTIFACTS: dict[int, str] = {}
 ARTIFACTS: dict[int, str | None] = {
     **{stage: _recorder.FROZEN_ARTIFACTS[stage]
        for stage in sorted(_recorder.FROZEN_ARTIFACTS)},
@@ -112,10 +111,14 @@ FIXTURE_FLAG: dict[int, tuple[tuple[str, int], ...]] = {
     5: (("--bhavcopy-fixture", 5),),
     6: (("--financials-fixture", 6),),
     7: (("--regime-fixture", 7),),
+    # Stage 8 draws the same daily OHLCV stage 2 reads (the Tier-1 half of
+    # the precision zone); its Dhan half is operator-gated (`--live`) and
+    # the chain never passes it, so recorded artifacts stay deterministic.
+    8: (("--ohlcv-fixture", 2),),
 }
 
 # Stages whose CLI carries _recorder.add_record_arg (stage 12 has no recorder).
-RECORD_STAGES = {0, 1, 2, 3, 4, 5, 6, 7, 9, 10}
+RECORD_STAGES = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
 # BRD §9.1 pipeline block: stage 10 logs the new trade before the report.
 STAGE10_ARGS = ["--action", "track"]
