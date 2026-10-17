@@ -34,7 +34,9 @@
           "cutoff": "2022-04-11",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/GB-2022-0001/regime_context.json",
+        "history_fixture": "fixtures/GB-2022-0001/history.json"
       },
       "recorded_artifacts": [
         {
@@ -50,6 +52,18 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2022-0001/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2022-0001/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 6,
           "artifact": "out_6_fundamental.json",
           "path": null,
@@ -60,6 +74,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2022-0001/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2022-0001/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -167,7 +187,9 @@
           "cutoff": "2022-06-20",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/GB-2022-0002/regime_context.json",
+        "history_fixture": "fixtures/GB-2022-0002/history.json"
       },
       "recorded_artifacts": [
         {
@@ -183,6 +205,18 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2022-0002/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2022-0002/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 6,
           "artifact": "out_6_fundamental.json",
           "path": null,
@@ -193,6 +227,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2022-0002/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2022-0002/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -312,7 +352,9 @@
           "cutoff": "2022-04-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/GB-2022-0006/regime_context.json",
+        "history_fixture": "fixtures/GB-2022-0006/history.json"
       },
       "recorded_artifacts": [
         {
@@ -328,9 +370,27 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2022-0006/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2022-0006/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2022-0006/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2022-0006/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -407,7 +467,9 @@
           "cutoff": "2022-04-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/GB-2022-0007/regime_context.json",
+        "history_fixture": "fixtures/GB-2022-0007/history.json"
       },
       "recorded_artifacts": [
         {
@@ -423,9 +485,27 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2022-0007/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2022-0007/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2022-0007/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2022-0007/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -495,7 +575,9 @@
           "cutoff": "2022-04-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/GB-2022-0008/regime_context.json",
+        "history_fixture": "fixtures/GB-2022-0008/history.json"
       },
       "recorded_artifacts": [
         {
@@ -511,9 +593,27 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2022-0008/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2022-0008/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2022-0008/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2022-0008/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -641,7 +741,9 @@
           "cutoff": "2022-04-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/GB-2022-0009/regime_context.json",
+        "history_fixture": "fixtures/GB-2022-0009/history.json"
       },
       "recorded_artifacts": [
         {
@@ -657,9 +759,27 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2022-0009/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2022-0009/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2022-0009/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2022-0009/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -763,7 +883,9 @@
           "cutoff": "2022-04-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/GB-2022-0010/regime_context.json",
+        "history_fixture": "fixtures/GB-2022-0010/history.json"
       },
       "recorded_artifacts": [
         {
@@ -779,9 +901,27 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2022-0010/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2022-0010/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2022-0010/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2022-0010/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -901,7 +1041,9 @@
           "cutoff": "2022-04-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/GB-2022-0011/regime_context.json",
+        "history_fixture": "fixtures/GB-2022-0011/history.json"
       },
       "recorded_artifacts": [
         {
@@ -917,9 +1059,27 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2022-0011/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2022-0011/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2022-0011/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2022-0011/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -989,7 +1149,9 @@
           "cutoff": "2022-04-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/GB-2022-0012/regime_context.json",
+        "history_fixture": "fixtures/GB-2022-0012/history.json"
       },
       "recorded_artifacts": [
         {
@@ -1005,9 +1167,27 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2022-0012/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2022-0012/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2022-0012/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2022-0012/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -1077,7 +1257,9 @@
           "cutoff": "2022-04-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/GB-2022-0013/regime_context.json",
+        "history_fixture": "fixtures/GB-2022-0013/history.json"
       },
       "recorded_artifacts": [
         {
@@ -1093,9 +1275,27 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2022-0013/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2022-0013/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2022-0013/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2022-0013/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -1172,7 +1372,9 @@
           "cutoff": "2022-04-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/GB-2022-0014/regime_context.json",
+        "history_fixture": "fixtures/GB-2022-0014/history.json"
       },
       "recorded_artifacts": [
         {
@@ -1188,9 +1390,27 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2022-0014/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2022-0014/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2022-0014/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2022-0014/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -1260,7 +1480,8 @@
           "cutoff": "2022-04-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "history_fixture": "fixtures/GB-2022-0015/history.json"
       },
       "recorded_artifacts": [
         {
@@ -1276,9 +1497,21 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2022-0015/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2022-0015/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2022-0015/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -1382,7 +1615,8 @@
           "cutoff": "2022-04-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "history_fixture": "fixtures/GB-2022-0016/history.json"
       },
       "recorded_artifacts": [
         {
@@ -1398,9 +1632,21 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2022-0016/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2022-0016/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2022-0016/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -1512,7 +1758,8 @@
           "cutoff": "2022-04-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "history_fixture": "fixtures/GB-2022-0017/history.json"
       },
       "recorded_artifacts": [
         {
@@ -1528,9 +1775,21 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2022-0017/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2022-0017/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2022-0017/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -1650,7 +1909,8 @@
           "cutoff": "2022-04-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "history_fixture": "fixtures/GB-2022-0018/history.json"
       },
       "recorded_artifacts": [
         {
@@ -1666,9 +1926,21 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2022-0018/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2022-0018/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2022-0018/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -1795,7 +2067,9 @@
           "cutoff": "2022-09-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/GB-2022-0020/regime_context.json",
+        "history_fixture": "fixtures/GB-2022-0020/history.json"
       },
       "recorded_artifacts": [
         {
@@ -1811,9 +2085,27 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2022-0020/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2022-0020/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2022-0020/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2022-0020/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -1953,7 +2245,8 @@
           "cutoff": "2022-04-05",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "history_fixture": "fixtures/GB-2022-0033/history.json"
       },
       "recorded_artifacts": [
         {
@@ -1969,6 +2262,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2022-0033/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 5,
           "artifact": "out_5_flow.json",
           "path": "fixtures/GB-2022-0033/recorded/out_5_flow.json",
@@ -1978,6 +2277,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2022-0033/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2022-0033/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -2056,7 +2361,8 @@
           "cutoff": "2022-04-12",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "history_fixture": "fixtures/GB-2022-0034/history.json"
       },
       "recorded_artifacts": [
         {
@@ -2072,6 +2378,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2022-0034/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 5,
           "artifact": "out_5_flow.json",
           "path": "fixtures/GB-2022-0034/recorded/out_5_flow.json",
@@ -2081,6 +2393,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2022-0034/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2022-0034/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -2159,7 +2477,8 @@
           "cutoff": "2022-04-13",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "history_fixture": "fixtures/GB-2022-0035/history.json"
       },
       "recorded_artifacts": [
         {
@@ -2175,6 +2494,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2022-0035/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 5,
           "artifact": "out_5_flow.json",
           "path": "fixtures/GB-2022-0035/recorded/out_5_flow.json",
@@ -2184,6 +2509,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2022-0035/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2022-0035/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -2262,7 +2593,8 @@
           "cutoff": "2022-04-21",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "history_fixture": "fixtures/GB-2022-0036/history.json"
       },
       "recorded_artifacts": [
         {
@@ -2278,6 +2610,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2022-0036/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 5,
           "artifact": "out_5_flow.json",
           "path": "fixtures/GB-2022-0036/recorded/out_5_flow.json",
@@ -2287,6 +2625,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2022-0036/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2022-0036/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -2365,7 +2709,8 @@
           "cutoff": "2022-04-21",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "history_fixture": "fixtures/GB-2022-0037/history.json"
       },
       "recorded_artifacts": [
         {
@@ -2381,6 +2726,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2022-0037/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 5,
           "artifact": "out_5_flow.json",
           "path": "fixtures/GB-2022-0037/recorded/out_5_flow.json",
@@ -2390,6 +2741,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2022-0037/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2022-0037/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -2468,7 +2825,8 @@
           "cutoff": "2022-09-20",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "history_fixture": "fixtures/GB-2022-0038/history.json"
       },
       "recorded_artifacts": [
         {
@@ -2484,6 +2842,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2022-0038/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 5,
           "artifact": "out_5_flow.json",
           "path": "fixtures/GB-2022-0038/recorded/out_5_flow.json",
@@ -2493,6 +2857,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2022-0038/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2022-0038/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -2567,7 +2937,8 @@
           "rule": "date <= T_rec",
           "min_bars": 200
         },
-        "financials_fixture": "fixtures/GB-2023-0003/financials.json"
+        "financials_fixture": "fixtures/GB-2023-0003/financials.json",
+        "history_fixture": "fixtures/GB-2023-0003/history.json"
       },
       "recorded_artifacts": [
         {
@@ -2583,6 +2954,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2023-0003/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 6,
           "artifact": "out_6_fundamental.json",
           "path": "fixtures/GB-2023-0003/recorded/out_6_fundamental.json",
@@ -2592,6 +2969,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2023-0003/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2023-0003/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -2641,7 +3024,9 @@
           "cutoff": "2023-03-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/GB-2023-0021/regime_context.json",
+        "history_fixture": "fixtures/GB-2023-0021/history.json"
       },
       "recorded_artifacts": [
         {
@@ -2657,9 +3042,27 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2023-0021/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2023-0021/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2023-0021/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2023-0021/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -2762,7 +3165,9 @@
           "cutoff": "2023-03-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/GB-2023-0022/regime_context.json",
+        "history_fixture": "fixtures/GB-2023-0022/history.json"
       },
       "recorded_artifacts": [
         {
@@ -2778,9 +3183,27 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2023-0022/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2023-0022/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2023-0022/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2023-0022/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -2915,7 +3338,9 @@
           "cutoff": "2023-03-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "history_fixture": "fixtures/GB-2023-0023/history.json",
+        "regime_fixture": "fixtures/GB-2023-0023/regime_context.json"
       },
       "recorded_artifacts": [
         {
@@ -2931,9 +3356,27 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2023-0023/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2023-0023/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2023-0023/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2023-0023/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -3092,7 +3535,9 @@
           "cutoff": "2023-03-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/GB-2023-0024/regime_context.json",
+        "history_fixture": "fixtures/GB-2023-0024/history.json"
       },
       "recorded_artifacts": [
         {
@@ -3108,9 +3553,27 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2023-0024/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2023-0024/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2023-0024/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2023-0024/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -3314,7 +3777,8 @@
           "cutoff": "2023-03-02",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "history_fixture": "fixtures/GB-2023-0039/history.json"
       },
       "recorded_artifacts": [
         {
@@ -3330,6 +3794,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2023-0039/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 5,
           "artifact": "out_5_flow.json",
           "path": "fixtures/GB-2023-0039/recorded/out_5_flow.json",
@@ -3339,6 +3809,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2023-0039/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2023-0039/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -3417,7 +3893,8 @@
           "cutoff": "2023-03-06",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "history_fixture": "fixtures/GB-2023-0040/history.json"
       },
       "recorded_artifacts": [
         {
@@ -3433,6 +3910,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2023-0040/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 5,
           "artifact": "out_5_flow.json",
           "path": "fixtures/GB-2023-0040/recorded/out_5_flow.json",
@@ -3442,6 +3925,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2023-0040/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2023-0040/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -3520,7 +4009,8 @@
           "cutoff": "2023-03-06",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "history_fixture": "fixtures/GB-2023-0041/history.json"
       },
       "recorded_artifacts": [
         {
@@ -3536,6 +4026,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2023-0041/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 5,
           "artifact": "out_5_flow.json",
           "path": "fixtures/GB-2023-0041/recorded/out_5_flow.json",
@@ -3545,6 +4041,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2023-0041/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2023-0041/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -3623,7 +4125,8 @@
           "cutoff": "2023-10-11",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "history_fixture": "fixtures/GB-2023-0042/history.json"
       },
       "recorded_artifacts": [
         {
@@ -3639,6 +4142,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2023-0042/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 5,
           "artifact": "out_5_flow.json",
           "path": "fixtures/GB-2023-0042/recorded/out_5_flow.json",
@@ -3648,6 +4157,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2023-0042/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2023-0042/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -3697,7 +4212,9 @@
           "cutoff": "2024-07-08",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/GB-2024-0004/regime_context.json",
+        "history_fixture": "fixtures/GB-2024-0004/history.json"
       },
       "recorded_artifacts": [
         {
@@ -3713,6 +4230,18 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2024-0004/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2024-0004/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 6,
           "artifact": "out_6_fundamental.json",
           "path": null,
@@ -3723,6 +4252,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2024-0004/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2024-0004/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -3826,7 +4361,9 @@
           "cutoff": "2024-04-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/GB-2024-0025/regime_context.json",
+        "history_fixture": "fixtures/GB-2024-0025/history.json"
       },
       "recorded_artifacts": [
         {
@@ -3842,9 +4379,27 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2024-0025/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2024-0025/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2024-0025/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2024-0025/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -3913,7 +4468,9 @@
           "cutoff": "2024-04-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/GB-2024-0026/regime_context.json",
+        "history_fixture": "fixtures/GB-2024-0026/history.json"
       },
       "recorded_artifacts": [
         {
@@ -3929,9 +4486,27 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2024-0026/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2024-0026/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2024-0026/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2024-0026/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -4138,7 +4713,9 @@
           "cutoff": "2024-09-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/GB-2024-0027/regime_context.json",
+        "history_fixture": "fixtures/GB-2024-0027/history.json"
       },
       "recorded_artifacts": [
         {
@@ -4154,9 +4731,27 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2024-0027/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2024-0027/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2024-0027/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2024-0027/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -4225,7 +4820,9 @@
           "cutoff": "2024-09-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/GB-2024-0028/regime_context.json",
+        "history_fixture": "fixtures/GB-2024-0028/history.json"
       },
       "recorded_artifacts": [
         {
@@ -4241,9 +4838,27 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2024-0028/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2024-0028/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2024-0028/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2024-0028/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -4313,7 +4928,8 @@
           "cutoff": "2025-01-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "history_fixture": "fixtures/GB-2025-0005/history.json"
       },
       "recorded_artifacts": [
         {
@@ -4329,9 +4945,21 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2025-0005/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2025-0005/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2025-0005/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -4399,7 +5027,9 @@
           "cutoff": "2025-01-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "regime_fixture": "fixtures/GB-2025-0029/regime_context.json",
+        "history_fixture": "fixtures/GB-2025-0029/history.json"
       },
       "recorded_artifacts": [
         {
@@ -4415,9 +5045,27 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2025-0029/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2025-0029/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2025-0029/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2025-0029/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -4486,7 +5134,9 @@
           "cutoff": "2025-01-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "history_fixture": "fixtures/GB-2025-0030/history.json",
+        "regime_fixture": "fixtures/GB-2025-0030/regime_context.json"
       },
       "recorded_artifacts": [
         {
@@ -4502,9 +5152,27 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2025-0030/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2025-0030/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2025-0030/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2025-0030/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -4573,7 +5241,9 @@
           "cutoff": "2025-10-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "history_fixture": "fixtures/GB-2025-0031/history.json",
+        "regime_fixture": "fixtures/GB-2025-0031/regime_context.json"
       },
       "recorded_artifacts": [
         {
@@ -4589,9 +5259,27 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2025-0031/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2025-0031/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2025-0031/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2025-0031/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -4660,7 +5348,9 @@
           "cutoff": "2025-10-15",
           "rule": "date <= T_rec",
           "min_bars": 200
-        }
+        },
+        "history_fixture": "fixtures/GB-2025-0032/history.json",
+        "regime_fixture": "fixtures/GB-2025-0032/regime_context.json"
       },
       "recorded_artifacts": [
         {
@@ -4676,9 +5366,27 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/GB-2025-0032/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 4,
+          "artifact": "out_4_ml.json",
+          "path": "fixtures/GB-2025-0032/recorded/out_4_ml.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/GB-2025-0032/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/GB-2025-0032/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -4772,7 +5480,8 @@
           "rule": "date <= T_rec",
           "min_bars": 200
         },
-        "regime_fixture": "fixtures/SCEN-001/regime_context.json"
+        "regime_fixture": "fixtures/SCEN-001/regime_context.json",
+        "history_fixture": "fixtures/SCEN-001/history.json"
       },
       "recorded_artifacts": [
         {
@@ -4785,6 +5494,12 @@
           "stage": 2,
           "artifact": "out_2_market.json",
           "path": "fixtures/SCEN-001/recorded/out_2_market.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/SCEN-001/recorded/out_3_dtw.json",
           "evidence": "recorded"
         },
         {
@@ -4803,6 +5518,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/SCEN-001/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/SCEN-001/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -4878,7 +5599,8 @@
           "rule": "date <= T_rec",
           "min_bars": 200
         },
-        "regime_fixture": "fixtures/SCEN-002/regime_context.json"
+        "regime_fixture": "fixtures/SCEN-002/regime_context.json",
+        "history_fixture": "fixtures/SCEN-002/history.json"
       },
       "recorded_artifacts": [
         {
@@ -4891,6 +5613,12 @@
           "stage": 2,
           "artifact": "out_2_market.json",
           "path": "fixtures/SCEN-002/recorded/out_2_market.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/SCEN-002/recorded/out_3_dtw.json",
           "evidence": "recorded"
         },
         {
@@ -4909,6 +5637,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/SCEN-002/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/SCEN-002/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -4986,7 +5720,8 @@
           "rule": "date <= T_rec",
           "min_bars": 200
         },
-        "regime_fixture": "fixtures/SCEN-003/regime_context.json"
+        "regime_fixture": "fixtures/SCEN-003/regime_context.json",
+        "history_fixture": "fixtures/SCEN-003/history.json"
       },
       "recorded_artifacts": [
         {
@@ -4999,6 +5734,12 @@
           "stage": 2,
           "artifact": "out_2_market.json",
           "path": "fixtures/SCEN-003/recorded/out_2_market.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/SCEN-003/recorded/out_3_dtw.json",
           "evidence": "recorded"
         },
         {
@@ -5017,6 +5758,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/SCEN-003/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/SCEN-003/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -5092,7 +5839,8 @@
           "rule": "date <= T_rec",
           "min_bars": 200
         },
-        "regime_fixture": "fixtures/SCEN-004/regime_context.json"
+        "regime_fixture": "fixtures/SCEN-004/regime_context.json",
+        "history_fixture": "fixtures/SCEN-004/history.json"
       },
       "recorded_artifacts": [
         {
@@ -5105,6 +5853,12 @@
           "stage": 2,
           "artifact": "out_2_market.json",
           "path": "fixtures/SCEN-004/recorded/out_2_market.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/SCEN-004/recorded/out_3_dtw.json",
           "evidence": "recorded"
         },
         {
@@ -5123,6 +5877,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/SCEN-004/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/SCEN-004/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -5282,7 +6042,8 @@
           "rule": "date <= T_rec",
           "min_bars": 200
         },
-        "regime_fixture": "fixtures/SCEN-006/regime_context.json"
+        "regime_fixture": "fixtures/SCEN-006/regime_context.json",
+        "history_fixture": "fixtures/SCEN-006/history.json"
       },
       "recorded_artifacts": [
         {
@@ -5295,6 +6056,12 @@
           "stage": 2,
           "artifact": "out_2_market.json",
           "path": "fixtures/SCEN-006/recorded/out_2_market.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/SCEN-006/recorded/out_3_dtw.json",
           "evidence": "recorded"
         },
         {
@@ -5313,6 +6080,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/SCEN-006/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/SCEN-006/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -5391,7 +6164,8 @@
           "rule": "date <= T_rec",
           "min_bars": 200
         },
-        "financials_fixture": "fixtures/SCEN-007/financials.json"
+        "financials_fixture": "fixtures/SCEN-007/financials.json",
+        "history_fixture": "fixtures/SCEN-007/history.json"
       },
       "recorded_artifacts": [
         {
@@ -5407,6 +6181,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/SCEN-007/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 6,
           "artifact": "out_6_fundamental.json",
           "path": "fixtures/SCEN-007/recorded/out_6_fundamental.json",
@@ -5416,6 +6196,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/SCEN-007/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/SCEN-007/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -5491,7 +6277,8 @@
           "rule": "date <= T_rec",
           "min_bars": 200
         },
-        "regime_fixture": "fixtures/SCEN-008/regime_context.json"
+        "regime_fixture": "fixtures/SCEN-008/regime_context.json",
+        "history_fixture": "fixtures/SCEN-008/history.json"
       },
       "recorded_artifacts": [
         {
@@ -5504,6 +6291,12 @@
           "stage": 2,
           "artifact": "out_2_market.json",
           "path": "fixtures/SCEN-008/recorded/out_2_market.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/SCEN-008/recorded/out_3_dtw.json",
           "evidence": "recorded"
         },
         {
@@ -5522,6 +6315,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/SCEN-008/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/SCEN-008/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -5600,7 +6399,8 @@
           "rule": "date <= T_rec",
           "min_bars": 200
         },
-        "financials_fixture": "fixtures/SCEN-009/financials.json"
+        "financials_fixture": "fixtures/SCEN-009/financials.json",
+        "history_fixture": "fixtures/SCEN-009/history.json"
       },
       "recorded_artifacts": [
         {
@@ -5616,6 +6416,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/SCEN-009/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 6,
           "artifact": "out_6_fundamental.json",
           "path": "fixtures/SCEN-009/recorded/out_6_fundamental.json",
@@ -5625,6 +6431,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/SCEN-009/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/SCEN-009/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -5790,7 +6602,8 @@
           "rule": "date <= T_rec",
           "min_bars": 200
         },
-        "financials_fixture": "fixtures/SCEN-011/financials.json"
+        "financials_fixture": "fixtures/SCEN-011/financials.json",
+        "history_fixture": "fixtures/SCEN-011/history.json"
       },
       "recorded_artifacts": [
         {
@@ -5806,6 +6619,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/SCEN-011/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 6,
           "artifact": "out_6_fundamental.json",
           "path": "fixtures/SCEN-011/recorded/out_6_fundamental.json",
@@ -5815,6 +6634,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/SCEN-011/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/SCEN-011/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -5893,7 +6718,8 @@
           "rule": "date <= T_rec",
           "min_bars": 200
         },
-        "financials_fixture": "fixtures/SCEN-012/financials.json"
+        "financials_fixture": "fixtures/SCEN-012/financials.json",
+        "history_fixture": "fixtures/SCEN-012/history.json"
       },
       "recorded_artifacts": [
         {
@@ -5909,6 +6735,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/SCEN-012/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 6,
           "artifact": "out_6_fundamental.json",
           "path": "fixtures/SCEN-012/recorded/out_6_fundamental.json",
@@ -5918,6 +6750,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/SCEN-012/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/SCEN-012/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -5996,7 +6834,8 @@
           "rule": "date <= T_rec",
           "min_bars": 200
         },
-        "financials_fixture": "fixtures/SCEN-013/financials.json"
+        "financials_fixture": "fixtures/SCEN-013/financials.json",
+        "history_fixture": "fixtures/SCEN-013/history.json"
       },
       "recorded_artifacts": [
         {
@@ -6012,6 +6851,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/SCEN-013/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 6,
           "artifact": "out_6_fundamental.json",
           "path": "fixtures/SCEN-013/recorded/out_6_fundamental.json",
@@ -6021,6 +6866,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/SCEN-013/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/SCEN-013/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -6099,7 +6950,8 @@
           "rule": "date <= T_rec",
           "min_bars": 200
         },
-        "financials_fixture": "fixtures/SCEN-014/financials.json"
+        "financials_fixture": "fixtures/SCEN-014/financials.json",
+        "history_fixture": "fixtures/SCEN-014/history.json"
       },
       "recorded_artifacts": [
         {
@@ -6115,6 +6967,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/SCEN-014/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 6,
           "artifact": "out_6_fundamental.json",
           "path": "fixtures/SCEN-014/recorded/out_6_fundamental.json",
@@ -6124,6 +6982,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/SCEN-014/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/SCEN-014/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -6202,7 +7066,8 @@
           "rule": "date <= T_rec",
           "min_bars": 200
         },
-        "financials_fixture": "fixtures/SCEN-015/financials.json"
+        "financials_fixture": "fixtures/SCEN-015/financials.json",
+        "history_fixture": "fixtures/SCEN-015/history.json"
       },
       "recorded_artifacts": [
         {
@@ -6218,6 +7083,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/SCEN-015/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 6,
           "artifact": "out_6_fundamental.json",
           "path": "fixtures/SCEN-015/recorded/out_6_fundamental.json",
@@ -6227,6 +7098,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/SCEN-015/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/SCEN-015/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -6305,7 +7182,8 @@
           "rule": "date <= T_rec",
           "min_bars": 200
         },
-        "financials_fixture": "fixtures/SCEN-016/financials.json"
+        "financials_fixture": "fixtures/SCEN-016/financials.json",
+        "history_fixture": "fixtures/SCEN-016/history.json"
       },
       "recorded_artifacts": [
         {
@@ -6321,6 +7199,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/SCEN-016/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 6,
           "artifact": "out_6_fundamental.json",
           "path": "fixtures/SCEN-016/recorded/out_6_fundamental.json",
@@ -6330,6 +7214,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/SCEN-016/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/SCEN-016/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -6408,7 +7298,8 @@
           "rule": "date <= T_rec",
           "min_bars": 200
         },
-        "financials_fixture": "fixtures/SCEN-017/financials.json"
+        "financials_fixture": "fixtures/SCEN-017/financials.json",
+        "history_fixture": "fixtures/SCEN-017/history.json"
       },
       "recorded_artifacts": [
         {
@@ -6424,6 +7315,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/SCEN-017/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 6,
           "artifact": "out_6_fundamental.json",
           "path": "fixtures/SCEN-017/recorded/out_6_fundamental.json",
@@ -6433,6 +7330,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/SCEN-017/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/SCEN-017/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -6511,7 +7414,8 @@
           "rule": "date <= T_rec",
           "min_bars": 200
         },
-        "financials_fixture": "fixtures/SCEN-062/financials.json"
+        "financials_fixture": "fixtures/SCEN-062/financials.json",
+        "history_fixture": "fixtures/SCEN-062/history.json"
       },
       "recorded_artifacts": [
         {
@@ -6527,6 +7431,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/SCEN-062/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 6,
           "artifact": "out_6_fundamental.json",
           "path": "fixtures/SCEN-062/recorded/out_6_fundamental.json",
@@ -6536,6 +7446,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/SCEN-062/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/SCEN-062/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],
@@ -6614,7 +7530,8 @@
           "rule": "date <= T_rec",
           "min_bars": 200
         },
-        "financials_fixture": "fixtures/SCEN-063/financials.json"
+        "financials_fixture": "fixtures/SCEN-063/financials.json",
+        "history_fixture": "fixtures/SCEN-063/history.json"
       },
       "recorded_artifacts": [
         {
@@ -6630,6 +7547,12 @@
           "evidence": "recorded"
         },
         {
+          "stage": 3,
+          "artifact": "out_3_dtw.json",
+          "path": "fixtures/SCEN-063/recorded/out_3_dtw.json",
+          "evidence": "recorded"
+        },
+        {
           "stage": 6,
           "artifact": "out_6_fundamental.json",
           "path": "fixtures/SCEN-063/recorded/out_6_fundamental.json",
@@ -6639,6 +7562,12 @@
           "stage": 8,
           "artifact": "out_8_dhan.json",
           "path": "fixtures/SCEN-063/recorded/out_8_dhan.json",
+          "evidence": "recorded"
+        },
+        {
+          "stage": 9,
+          "artifact": "out_9_decision.json",
+          "path": "fixtures/SCEN-063/recorded/out_9_decision.json",
           "evidence": "recorded"
         }
       ],

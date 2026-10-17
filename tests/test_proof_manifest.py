@@ -65,6 +65,14 @@ ENGINE_CLAIM_STAGES = {
 RERUNNABLE = {
     1: "1_math_and_rr.py",
     2: "2_market_data.py",
+    # Stage 3 is offline-runnable through the row's own T_rec-truncated history
+    # bundle (`replay_inputs.history_fixture`, a view of the symbol-month tape
+    # the row's geometry was authored from), so a recorded `out_3_dtw.json` is
+    # byte-compared to a fresh run exactly like stages 1–2 — the analog win
+    # rate and confidence stage 9's §10.2 Quant & ML block scores (and the
+    # §10.4 waiver check releases its cap from) are verified, not taken on
+    # trust.
+    3: "3_dtw_pattern.py",
     # Stage 4 is offline-runnable through the row's own OHLCV prefix plus the
     # same market-context bundle stage 7 classifies (`replay_inputs`), so a
     # recorded `out_4_ml.json` is byte-compared to a fresh run exactly like
@@ -93,6 +101,12 @@ RERUNNABLE = {
     # byte-compared to a fresh run exactly like stages 1–2 — the limit entry
     # gate 6 grades is verified, not taken on trust.
     8: "8_dhan_precision.py",
+    # Stage 9 is offline-runnable through the row's own recorded payloads (the
+    # artifacts it scores, in stage order), so a recorded `out_9_decision.json`
+    # is byte-compared to a fresh run exactly like stages 1–2 — the verdict,
+    # composite score, calibrated P(win) and expectancy the report's header
+    # badge transcribes are verified, not taken on trust.
+    9: "9_decision_engine.py",
 }
 
 
@@ -112,6 +126,8 @@ def fresh_stage_stdout(row: dict, artifact: dict) -> bytes | None:
            "--input", str(PROOF_ROOT / inputs["canonical_trade"])]
     if stage == 2:
         cmd += ["--ohlcv-fixture", str(PROOF_ROOT / inputs["truncated_fixtures"][0])]
+    if stage == 3:
+        cmd += ["--history-fixture", str(PROOF_ROOT / inputs["history_fixture"])]
     if stage == 4:
         cmd += ["--ohlcv-fixture", str(PROOF_ROOT / inputs["truncated_fixtures"][0]),
                 "--context-fixture", str(PROOF_ROOT / inputs["regime_fixture"])]
@@ -123,6 +139,16 @@ def fresh_stage_stdout(row: dict, artifact: dict) -> bytes | None:
         cmd += ["--regime-fixture", str(PROOF_ROOT / inputs["regime_fixture"])]
     if stage == 8:
         cmd += ["--ohlcv-fixture", str(PROOF_ROOT / inputs["truncated_fixtures"][0])]
+    if stage == 9:
+        # The evidence stage 9 scores is the row's own recorded payloads in
+        # stage order — exactly what `record_stage9_evidence.py` passed, minus
+        # stage 9's own entry so the replay never scores its previous verdict.
+        for artifact in sorted(
+                (a for a in row.get("recorded_artifacts") or []
+                 if isinstance(a, dict) and a.get("evidence") == "recorded"
+                 and a.get("stage") != 9 and a.get("path")),
+                key=lambda a: a["stage"] if isinstance(a.get("stage"), int) else 99):
+            cmd += ["--payload", str(PROOF_ROOT / artifact["path"])]
     proc = subprocess.run(cmd, capture_output=True, check=False, cwd=REPO_ROOT)
     return proc.stdout if proc.returncode == 0 else None
 

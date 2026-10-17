@@ -1,0 +1,49 @@
+{
+  "symbol": "VEDL",
+  "final_score": 15.33,
+  "max_possible_score": 47.5,
+  "effective_score_pct": 32.27,
+  "decision": "AVOID",
+  "verdict": "AVOID",
+  "p_win": 0.4791,
+  "expectancy": 0.4373,
+  "circuit_breakers_tripped": [
+    "tighter_than_0_75x_atr",
+    "promoter_pledge_gt_25pct"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.106276,
+      "dtw_win_rate_22d": 0.8,
+      "prob_target_hit_22d": null
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": null,
+      "mae_projected": null
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 278.52,
+      "zone_above_market": false,
+      "recommended_band_low": 282.05,
+      "recommended_band_high": 284.05
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 283.05,
+      "r_r": 2.0
+    },
+    "limit_order": {
+      "entry": 278.52,
+      "r_r": 15.1942,
+      "unavailable": null
+    },
+    "p_win": 0.4791
+  },
+  "what_would_flip_me": [
+    "promoter pledge disclosed below 25% of equity",
+    "a stop placed at or beyond 0.75x daily ATR is available"
+  ],
+  "avoid_reason": "hard circuit breaker(s) tripped: tighter_than_0_75x_atr, promoter_pledge_gt_25pct",
+  "confidence_deficit": null
+}

@@ -1,0 +1,51 @@
+{
+  "symbol": "TITAN",
+  "final_score": 16.65,
+  "max_possible_score": 45.0,
+  "effective_score_pct": 37.0,
+  "decision": "GO_WEAK",
+  "verdict": "GO_WEAK",
+  "p_win": 0.498,
+  "expectancy": 0.3944,
+  "circuit_breakers_tripped": [],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.084594,
+      "dtw_win_rate_22d": 0.2,
+      "prob_target_hit_22d": 0.2232
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": {
+        "p10": 2166.53,
+        "p25": 2254.66,
+        "p50": 2456.29,
+        "p75": 2634.7,
+        "p90": 2720.44
+      },
+      "mae_projected": -68.85
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 2397.82,
+      "zone_above_market": false,
+      "recommended_band_low": 2396.7,
+      "recommended_band_high": 2401.5
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 2399.1,
+      "r_r": 1.8000177446544232
+    },
+    "limit_order": {
+      "entry": 2397.82,
+      "r_r": 1.8322,
+      "unavailable": null
+    },
+    "p_win": 0.498
+  },
+  "what_would_flip_me": [
+    "live price improves to the limit band or the model/flow evidence strengthens P(win) above the 55% floor"
+  ],
+  "avoid_reason": null,
+  "confidence_deficit": "P(win) 49.8% below the 55% floor with positive expectancy (+0.39R)"
+}

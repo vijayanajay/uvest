@@ -1,0 +1,47 @@
+{
+  "symbol": "BAJFINANCE",
+  "final_score": 18.37,
+  "max_possible_score": 32.5,
+  "effective_score_pct": 56.52,
+  "decision": "AVOID",
+  "verdict": "AVOID",
+  "p_win": 0.5761,
+  "expectancy": 1.0163,
+  "circuit_breakers_tripped": [
+    "tighter_than_0_75x_atr"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.109858,
+      "dtw_win_rate_22d": 0.4,
+      "prob_target_hit_22d": null
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": null,
+      "mae_projected": null
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 701.93,
+      "zone_above_market": false,
+      "recommended_band_low": 731.85,
+      "recommended_band_high": 733.85
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 732.85,
+      "r_r": 2.4999999999999925
+    },
+    "limit_order": {
+      "entry": 701.93,
+      "r_r": null,
+      "unavailable": null
+    },
+    "p_win": 0.5761
+  },
+  "what_would_flip_me": [
+    "a stop placed at or beyond 0.75x daily ATR is available"
+  ],
+  "avoid_reason": "hard circuit breaker(s) tripped: tighter_than_0_75x_atr",
+  "confidence_deficit": null
+}

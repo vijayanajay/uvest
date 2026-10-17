@@ -87,6 +87,15 @@ must stay bit-stable:
 - [ ] Byte-identical payload for repeated runs over the same fixture.
 - [ ] `tests/run_evals.py` stays green (Brier gate remains `[SKIP]` until
       stage 4 supplies calibrated probabilities).
+- [x] **Golden evidence recorded** (2026-10-17): every eligible golden row
+      records `out_3_dtw.json` as real stage stdout over its own
+      `replay_inputs.history_fixture` (a T_rec-truncated view of the row's
+      symbol-month tape, derived by `tests/evals/record_stage3_evidence.py`,
+      V3/V4/V5/V7-checked like every replay bundle and V10 byte-compared via
+      `RERUNNABLE`). Stage 3 was the one retained scoring source waived on
+      every golden record, so BRD §10.4's waiver cap made `GO` unreachable
+      across the whole corpus; with the evidence recorded the cap now fires
+      only where a source is genuinely absent.
 
 ### 5. Implementation Checklist
 

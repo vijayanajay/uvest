@@ -1,0 +1,51 @@
+{
+  "symbol": "MARUTI",
+  "final_score": 17.83,
+  "max_possible_score": 45.0,
+  "effective_score_pct": 39.62,
+  "decision": "GO_WEAK",
+  "verdict": "GO_WEAK",
+  "p_win": 0.5085,
+  "expectancy": 0.6272,
+  "circuit_breakers_tripped": [],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.075866,
+      "dtw_win_rate_22d": 0.0,
+      "prob_target_hit_22d": 0.1344
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": {
+        "p10": 10737.54,
+        "p25": 11177.26,
+        "p50": 12176.19,
+        "p75": 13085.2,
+        "p90": 13519.09
+      },
+      "mae_projected": -397.63
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 11563.42,
+      "zone_above_market": false,
+      "recommended_band_low": 11935.45,
+      "recommended_band_high": 11959.35
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 11947.4,
+      "r_r": 2.1999999999999993
+    },
+    "limit_order": {
+      "entry": 11563.42,
+      "r_r": 9.5856,
+      "unavailable": null
+    },
+    "p_win": 0.5085
+  },
+  "what_would_flip_me": [
+    "live price improves to the limit band or the model/flow evidence strengthens P(win) above the 55% floor"
+  ],
+  "avoid_reason": null,
+  "confidence_deficit": "P(win) 50.8% below the 55% floor with positive expectancy (+0.63R)"
+}

@@ -1,0 +1,49 @@
+{
+  "symbol": "TECHM",
+  "final_score": 14.99,
+  "max_possible_score": 47.5,
+  "effective_score_pct": 31.56,
+  "decision": "AVOID",
+  "verdict": "AVOID",
+  "p_win": 0.4762,
+  "expectancy": 0.4286,
+  "circuit_breakers_tripped": [
+    "tighter_than_0_75x_atr",
+    "earnings_within_7d"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.079461,
+      "dtw_win_rate_22d": 0.6666666666666666,
+      "prob_target_hit_22d": null
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": null,
+      "mae_projected": null
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": null,
+      "zone_above_market": true,
+      "recommended_band_low": 1098.9,
+      "recommended_band_high": 1101.1
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 1100.0,
+      "r_r": 2.0
+    },
+    "limit_order": {
+      "entry": null,
+      "r_r": null,
+      "unavailable": "zone_above_market"
+    },
+    "p_win": 0.4762
+  },
+  "what_would_flip_me": [
+    "a stop placed at or beyond 0.75x daily ATR is available",
+    "quarterly results are published (binary risk cleared)"
+  ],
+  "avoid_reason": "hard circuit breaker(s) tripped: tighter_than_0_75x_atr, earnings_within_7d",
+  "confidence_deficit": null
+}

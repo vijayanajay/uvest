@@ -1,0 +1,51 @@
+{
+  "symbol": "ICICIBANK",
+  "final_score": 17.39,
+  "max_possible_score": 45.0,
+  "effective_score_pct": 38.64,
+  "decision": "GO_WEAK",
+  "verdict": "GO_WEAK",
+  "p_win": 0.5046,
+  "expectancy": 0.6147,
+  "circuit_breakers_tripped": [],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.055627,
+      "dtw_win_rate_22d": 0.0,
+      "prob_target_hit_22d": 0.1193
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": {
+        "p10": 973.48,
+        "p25": 1009.3,
+        "p50": 1085.41,
+        "p75": 1163.34,
+        "p90": 1204.34
+      },
+      "mae_projected": -42.3
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 1061.09,
+      "zone_above_market": false,
+      "recommended_band_low": 1077.27,
+      "recommended_band_high": 1079.43
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 1078.35,
+      "r_r": 2.199885942400919
+    },
+    "limit_order": {
+      "entry": 1061.09,
+      "r_r": 5.301,
+      "unavailable": null
+    },
+    "p_win": 0.5046
+  },
+  "what_would_flip_me": [
+    "live price improves to the limit band or the model/flow evidence strengthens P(win) above the 55% floor"
+  ],
+  "avoid_reason": null,
+  "confidence_deficit": "P(win) 50.5% below the 55% floor with positive expectancy (+0.61R)"
+}

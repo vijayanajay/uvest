@@ -1,0 +1,53 @@
+{
+  "symbol": "TCS",
+  "final_score": 12.18,
+  "max_possible_score": 45.0,
+  "effective_score_pct": 27.07,
+  "decision": "WAIT",
+  "verdict": "WAIT",
+  "p_win": 0.4583,
+  "expectancy": -0.1293,
+  "circuit_breakers_tripped": [
+    "inverted_risk_reward"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.099665,
+      "dtw_win_rate_22d": 0.13333333333333333,
+      "prob_target_hit_22d": 0.2824
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": {
+        "p10": 3289.0,
+        "p25": 3424.53,
+        "p50": 3730.02,
+        "p75": 4008.58,
+        "p90": 4141.66
+      },
+      "mae_projected": -123.59
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 3613.85,
+      "zone_above_market": false,
+      "recommended_band_low": 3658.29,
+      "recommended_band_high": 3665.61
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 3661.95,
+      "r_r": 0.899929228591659
+    },
+    "limit_order": {
+      "entry": 3613.85,
+      "r_r": 4.9525,
+      "unavailable": null
+    },
+    "p_win": 0.4583
+  },
+  "what_would_flip_me": [
+    "price returns to the limit band (<= 3658.29) so a limit order restores R:R >= 1.5"
+  ],
+  "avoid_reason": null,
+  "confidence_deficit": null
+}

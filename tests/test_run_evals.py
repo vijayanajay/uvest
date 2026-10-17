@@ -125,9 +125,9 @@ class TestEvalRunnerContract(unittest.TestCase):
         # and the promoted records declare the recorded artifact behind them, so
         # both engine gates grade real bytes — a [SKIP] here would mean those
         # bytes went missing, not that the engine is absent.
-        self.assertNotIn("[SKIP] Directional Brier Score", scorecard)
+        self.assertNotIn("[SKIP] Race Calibration Brier Score", scorecard)
         self.assertNotIn("[SKIP] Price Cone Range Coverage", scorecard)
-        self.assertIn("Directional Brier Score", scorecard)
+        self.assertIn("Race Calibration Brier Score", scorecard)
         self.assertIn("calibrated predictions", scorecard)
         self.assertIn("cone-labeled trades", scorecard)
         # Missing stage-12 artifacts are replayed from the proof root before
@@ -798,15 +798,24 @@ class TestConeCoverageScope(unittest.TestCase):
             {"trade_id": "x", "forward_prices_22d": {"min": 1.0, "max": 2.0}}))
 
     def test_the_covid_tapes_are_inside_the_scope_and_all_six_grade(self):
-        """End to end on the real dataset: the corpus reaches its own benchmark.
+        """End to end on the real dataset: what the window reaches stays graded.
 
         ADR-011 decision 10: the shipped window must open before the
         benchmark's earliest graded tape, so the two Covid tapes that decision
         9's disclosure had named ungraded are *graded* here — the reach gap is
-        a corpus defect, fixed by re-fetching and retraining, never by leaving
-        a tape out of the denominator. The disclosure machinery itself stays
-        covered by the synthetic seams above, which do not depend on where the
-        real window opens.
+        a corpus defect, fixed by re-fetching and retraining, never by leaving a
+        tape out of the denominator.
+
+        Owner rule, 2026-10-17: the campaign's last two rows (GB-2025-0031,
+        GB-2025-0032) now carry recorded stage-4 evidence while their *forward*
+        tapes (2025-10-16..2025-11-18) run past a window that closes
+        2025-10-20. Stage 4's inputs stop at T_rec, so the evidence is
+        point-in-time and is recorded; the coverage gate keeps grading only
+        tapes its pools could have produced (§3 #5) and must now *name*:
+        those two, with their spans — the disclosure machinery decision 9 wrote
+        is exercised by the real corpus instead of printing nothing. So both
+        halves are asserted: every Covid tape graded, every out-of-window tape
+        named and excluded from the denominator.
         """
         raw = json.loads(DATASET_FILE.read_text(encoding="utf-8"))
         window = self._window_from_calibration()
@@ -818,24 +827,33 @@ class TestConeCoverageScope(unittest.TestCase):
             hit = bool(span and window[0] <= span[0] and span[1] <= window[1])
             (inside if hit else outside).append(str(trade["trade_id"]))
         self.assertTrue(inside, "the benchmark must have an in-window record")
-        self.assertEqual(outside, [],
-                         "the shipped corpus must reach every graded tape "
-                         f"(out of scope: {outside})")
         self.assertIn("SCEN-001", inside,
                       "the Covid RELIANCE tape (2020-03-24..2020-04-28) must be gradeable")
         self.assertIn("SCEN-002", inside,
                       "the Covid SBIN tape (2020-03-25..2020-04-29) must be gradeable")
+        # The exclusion is the two rows signed in with tapes past the window:
+        # growing this list is a benchmark-authoring decision, not a side
+        # effect, so it is named right here.
+        self.assertEqual(outside, ["GB-2025-0031", "GB-2025-0032"],
+                         "only those two tapes lie outside the trained window "
+                         f"(window {window[0]}..{window[1]}; out of scope: {outside})")
         proc = run_run_evals(DATASET_FILE)
         scorecard = "\n".join(stdout_lines(proc))
         self.assertIn("trained corpus window", scorecard)
-        self.assertIn(f"{len(candidates)} of {len(candidates)} cone-labeled trades graded",
+        self.assertIn(f"{len(inside)} of {len(candidates)} cone-labeled trades graded",
                       scorecard)
         scope_lines = [ln for ln in stdout_lines(proc)
                        if "scope: trained corpus window" in ln]
         self.assertTrue(scope_lines, scorecard)
-        self.assertNotIn("ungraded", scope_lines[0],
-                         "no tape may fall outside the scope anymore: the "
-                         "coverage line must carry no exclusion")
+        for tid in outside:
+            with self.subTest(excluded=tid):
+                self.assertIn(tid, scope_lines[0],
+                              "an out-of-window record is disclosed by name, "
+                              "never dropped silently")
+            span = dataset_refs.forward_tape_span(
+                next(t for t in candidates if str(t["trade_id"]) == tid))
+            self.assertIn(f"{span[0]}..{span[1]}", scope_lines[0],
+                          "the exclusion must carry the tape's own span")
         self.assertEqual(proc.returncode, 1, scorecard)
 
 
@@ -1279,13 +1297,13 @@ class TestBaselineRegressionExit(unittest.TestCase):
         for baseline in ({}, {"gates": {}}):
             with self.subTest(baseline=baseline):
                 regressions, improvements = self.compare(
-                    [self.gate("Directional Brier Score", value=0.483,
+                    [self.gate("Race Calibration Brier Score", value=0.483,
                                threshold=0.18, higher_is_pass=False)],
                     baseline)
                 self.assertEqual(improvements, [])
                 self.assertEqual(len(regressions), 1)
                 self.assertIn("never banked", regressions[0])
-                self.assertIn("Directional Brier Score", regressions[0])
+                self.assertIn("Race Calibration Brier Score", regressions[0])
 
     def test_unbanked_pass_and_skip_never_block(self):
         """Nothing red, nothing to publish: green and ungraded both stand."""
@@ -2416,6 +2434,237 @@ class TestGateSixFillRateFloor(unittest.TestCase):
         gate = run_evals.gate_mae_reduction([])
         self.assertEqual(gate.evaluate()[0], "[SKIP]")
         self.assertIsNone(gate.floor)
+
+
+class TestGradedSetSlices(unittest.TestCase):
+    """Q3 signed (2026-10-16): gates 4/5 say *which* set they graded.
+
+    A percentage over a representative slice reads exactly like one over the
+    whole benchmark, and vice versa — which is why gate 2 prints its class
+    coverage and gate 5 its window scope. Option C adds the other half: the
+    denominator is now a **corpus-representative slice** (the catalog's
+    geometry advisories) plus a **tail slice** (the classes curated to trip
+    breakers), and both counts with both scores travel on the verdict line
+    itself (`Gate.coverage` prints for PASS too, never only for FAIL).
+
+    The split is frozen by class, not by outcome: `REPRESENTATIVE_CLASSES` /
+    `TAIL_CLASSES` in the runner are the signed roster, so re-rolling a row
+    into whichever slice scores better is not a thing the disclosure can be
+    talked into.
+    """
+
+    @staticmethod
+    def _brier(tid: str, cls: str, prob: float, outcome: str) -> dict:
+        """A graded race row: probability vs the tape's first-touch outcome.
+
+        `outcome` is the frozen `$derive: resolution_outcome` vocabulary —
+        WIN scored 1, LOSS and TIME scored 0 (decision D, 2026-10-16).
+        """
+        return {"trade_id": tid, "trade_class": cls,
+                "predicted_probability": prob, "resolution_outcome": outcome}
+
+    @staticmethod
+    def _cone(tid: str, cls: str, *, lo: float, hi: float,
+              p10: float = 90.0, p90: float = 110.0) -> dict:
+        return {"trade_id": tid, "trade_class": cls, "cone_p10": p10,
+                "cone_p90": p90, "forward_prices_22d": {"min": lo, "max": hi}}
+
+    def test_gate4_scores_the_whole_set_and_names_both_slices(self):
+        trades = [
+            self._brier("R1", "clean_bullish", 0.90, "WIN"),  # (0.9-1)^2 = 0.01
+            self._brier("R2", "inverted_rr", 0.80, "LOSS"),   # (0.8-0)^2 = 0.64
+            self._brier("T1", "regime_shock", 0.70, "TIME"),  # (0.7-0)^2 = 0.49
+        ]
+        gate = run_evals.gate_brier(trades)
+        self.assertAlmostEqual(gate.value, (0.01 + 0.64 + 0.49) / 3.0)
+        self.assertIn("representative 2 (0.325)", gate.coverage)
+        self.assertIn("tail 1 (0.490)", gate.coverage)
+        # The disclosure survives a PASS as well as a FAIL.
+        passing = run_evals.gate_brier(
+            [self._brier("R1", "clean_bullish", 0.90, "WIN")])
+        self.assertEqual(passing.evaluate()[0], "[PASS]")
+        self.assertIn("representative 1 (0.010)", passing.coverage)
+        self.assertIn("tail 0", passing.coverage)
+
+    def test_gate4_grades_the_race_and_counts_time_as_not_hit(self):
+        """Decision D's event, on the wire: WIN=1, LOSS=0, and TIME **0**.
+
+        A window that printed neither level did not hit the target either, so
+        it stays in the denominator — dropping it would shrink the graded set
+        around whatever the model got right, which is precisely the move the
+        gate exists to refuse. The count travels on the detail line.
+        """
+        trades = [self._brier("W", "clean_bullish", 0.90, "WIN"),
+                  self._brier("L", "clean_bullish", 0.90, "LOSS"),
+                  self._brier("E", "clean_bullish", 0.90, "TIME")]
+        gate = run_evals.gate_brier(trades)
+        self.assertAlmostEqual(gate.value, (0.01 + 0.81 + 0.81) / 3.0)
+        self.assertIn("3 calibrated predictions", gate.detail)
+        self.assertIn("1 TIME counted as not-hit", gate.detail)
+        self.assertIn("none dropped", gate.detail)
+        # A TIME row graded as not-hit is different from one excluded:
+        # excluding it would read 0.41, not 0.543.
+        without_time = run_evals.gate_brier(trades[:2])
+        self.assertAlmostEqual(without_time.value, (0.01 + 0.81) / 2.0)
+        self.assertNotAlmostEqual(gate.value, without_time.value)
+
+    def test_gate5_reports_coverage_per_slice_not_only_over_the_pool(self):
+        trades = [
+            self._cone("R1", "inverted_rr", lo=95.0, hi=105.0),   # covered
+            self._cone("T1", "regime_shock", lo=10.0, hi=999.0),  # missed
+        ]
+        gate = run_evals.gate_cone_coverage(
+            trades, window=("2020-01-01", "2025-12-31"),
+            spans={"R1": ("2024-06-05", "2024-07-05"),
+                   "T1": ("2024-06-05", "2024-07-05")})
+        self.assertEqual(gate.value, 50.0)
+        self.assertIn("representative 1 (100.0%)", gate.coverage)
+        self.assertIn("tail 1 (0.0%)", gate.coverage)
+
+    def test_an_empty_slice_is_named_rather_than_omitted(self):
+        """A tail-only grading set must read as such, not as 'the benchmark'."""
+        brier = run_evals.gate_brier(
+            [self._brier("T1", "regime_shock", 0.70, "LOSS")])
+        self.assertIn("representative 0", brier.coverage)
+        coverage = run_evals.gate_cone_coverage(
+            [self._cone("T1", "regime_shock", lo=95.0, hi=105.0)],
+            window=("2020-01-01", "2025-12-31"),
+            spans={"T1": ("2024-06-05", "2024-07-05")})
+        self.assertIn("representative 0", coverage.coverage)
+
+    def test_a_class_outside_the_frozen_split_is_counted_not_swallowed(self):
+        """rep + tail + unclassified = every graded row, always."""
+        trades = [self._brier("R1", "clean_bullish", 0.9, "WIN"),
+                  self._brier("T1", "regime_shock", 0.7, "LOSS"),
+                  self._brier("X1", "mystery_class", 0.5, "WIN")]
+        gate = run_evals.gate_brier(trades)
+        self.assertIn("representative 1", gate.coverage)
+        self.assertIn("tail 1", gate.coverage)
+        self.assertIn("unclassified 1", gate.coverage)
+        self.assertEqual(len(run_evals.REPRESENTATIVE_CLASSES &
+                             run_evals.TAIL_CLASSES), 0,
+                         "a class cannot live in both slices")
+
+    def test_the_shipped_scorecard_discloses_both_slices(self):
+        """End to end: the real dataset, the real runner, both gate lines."""
+        raw = json.loads(DATASET_FILE.read_text(encoding="utf-8"))
+        dataset, _refs, _derives = dataset_refs.materialize(raw)
+        graded = [t for t in dataset["trades"]
+                  if t.get("predicted_probability") is not None
+                  and t.get("resolution_outcome") in ("WIN", "LOSS", "TIME")]
+        rep = [t for t in graded
+               if t["trade_class"] in run_evals.REPRESENTATIVE_CLASSES]
+        tail = [t for t in graded
+                if t["trade_class"] in run_evals.TAIL_CLASSES]
+        self.assertTrue(rep, "the representative slice must have graded rows "
+                             "after the option-C campaign")
+        self.assertTrue(tail, "the tail slice keeps its crisis rows")
+        proc = run_run_evals(DATASET_FILE)
+        scorecard = "\n".join(stdout_lines(proc))
+        self.assertIn(f"representative {len(rep)} (", scorecard)
+        self.assertIn(f"tail {len(tail)} (", scorecard)
+        self.assertEqual(len(rep) + len(tail), len(graded),
+                         "every graded row belongs to a disclosed slice")
+
+
+class TestVerdictAlignmentSlice(unittest.TestCase):
+    """Gate 8 (evals.md §3 #8): expectation vs computed — graded, not printed.
+
+    The proof row's `expected_verdict` and the recorded `out_9_decision.json`'s
+    `decision` are two independent claims about the same trade. The gate pairs
+    them per record, prints the full expectation→computed transition slice on
+    the scorecard, and names every divergent record — a record missing either
+    half is abstained and disclosed, never counted as aligned, and a red is
+    published deliberately (`--re-freeze-gates`) exactly like gates 4/5.
+    """
+
+    @staticmethod
+    def _trade(tid: str, decision) -> dict:
+        outputs = {}
+        if decision is not None:
+            outputs["out_9_decision.json"] = {"decision": decision}
+        return {"trade_id": tid, "script_outputs": outputs}
+
+    def test_transitions_are_counted_and_every_divergence_is_named(self):
+        trades = [
+            self._trade("A1", "GO"),
+            self._trade("A2", "WAIT"),
+            self._trade("D1", "WAIT"),     # expected AVOID
+            self._trade("D2", "GO_WEAK"),  # expected GO
+            self._trade("D3", "GO_WEAK"),  # expected GO
+        ]
+        expected = {"A1": "GO", "A2": "WAIT", "D1": "AVOID",
+                    "D2": "GO", "D3": "GO"}
+        gate = run_evals.gate_verdict_alignment(trades, expected)
+        self.assertAlmostEqual(gate.value, 40.0)
+        status, _display = gate.evaluate()
+        self.assertEqual(status, "[FAIL]", "100% by policy — a published red")
+        self.assertIn("2/5 record(s) aligned", gate.coverage)
+        self.assertIn("GO→GO_WEAK ×2", gate.coverage)
+        self.assertIn("AVOID→WAIT ×1", gate.coverage)
+        self.assertIn("D1 AVOID→WAIT", gate.detail)
+        self.assertIn("D3 GO→GO_WEAK", gate.detail)
+        self.assertIn("never by tuning the scorecard", gate.detail)
+
+    def test_record_missing_either_half_abstains_and_is_disclosed(self):
+        trades = [
+            self._trade("A1", "GO"),
+            self._trade("X1", None),      # no recorded stage-9 payload
+            self._trade("X2", "AVOID"),   # no expectation on the row
+        ]
+        gate = run_evals.gate_verdict_alignment(trades, {"A1": "GO"})
+        self.assertAlmostEqual(gate.value, 100.0)
+        self.assertIn("1/1 record(s) aligned", gate.coverage)
+        self.assertIn("2 abstained", gate.coverage)
+        # The abstention is a disclosure next to the number, on a PASS too.
+        self.assertIn("never counted as aligned", gate.coverage)
+
+    def test_no_pair_at_all_is_a_skip_not_a_pass(self):
+        gate = run_evals.gate_verdict_alignment(
+            [self._trade("X1", None)], {"X1": "GO"})
+        self.assertTrue(gate.skipped)
+        status, _display = gate.evaluate()
+        self.assertEqual(status, "[SKIP]")
+
+    def test_committed_corpus_alignment_recounts_independently(self):
+        """The graded set is the committed corpus; the slice recounts it."""
+        raw = run_evals.load_benchmark(run_evals.DEFAULT_BENCHMARK)
+        data, _refs, _derives = dataset_refs.materialize(raw)
+        manifest = json.loads(
+            (run_evals.REPO_ROOT / "tests" / "proof" / "scenario_manifest.json"
+             ).read_text(encoding="utf-8"))
+        expected = {str(r.get("scenario_id")): r.get("expected_verdict")
+                    for r in manifest.get("scenarios", [])}
+        gate = run_evals.gate_verdict_alignment(data["trades"], expected)
+
+        def decision_of(trade):
+            return run_evals._field(trade, "out_9_decision.json", "decision")
+
+        graded = [t for t in data["trades"]
+                  if isinstance(expected.get(str(t.get("trade_id"))), str)
+                  and isinstance(decision_of(t), str)]
+        aligned = sum(1 for t in graded
+                      if decision_of(t) == expected[str(t.get("trade_id"))])
+        self.assertEqual(len(graded), len(data["trades"]),
+                         "every corpus record carries both halves")
+        self.assertAlmostEqual(gate.value, 100.0 * aligned / len(graded))
+        if aligned != len(graded):
+            self.assertIn(f"{len(graded) - aligned} divergent record(s)",
+                          gate.detail)
+            self.assertTrue(any(
+                str(t.get("trade_id")) in gate.detail
+                for t in data["trades"]
+                if decision_of(t) != expected[str(t.get("trade_id"))]),
+                "every divergent record is named")
+
+    def test_the_scorecard_prints_the_slice_whatever_the_verdict(self):
+        trades = [self._trade("A1", "GO"), self._trade("D1", "WAIT")]
+        gate = run_evals.gate_verdict_alignment(
+            trades, {"A1": "GO", "D1": "AVOID"})
+        rendered = run_evals.render_scorecard([gate], False)
+        self.assertIn("Verdict Alignment vs Expectation", rendered)
+        self.assertIn("AVOID→WAIT ×1", rendered)
+        self.assertIn("1/2 record(s) aligned", rendered)
 
 
 if __name__ == "__main__":

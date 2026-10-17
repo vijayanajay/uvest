@@ -1,0 +1,47 @@
+{
+  "symbol": "MARUTI",
+  "final_score": 17.8,
+  "max_possible_score": 32.5,
+  "effective_score_pct": 54.77,
+  "decision": "AVOID",
+  "verdict": "AVOID",
+  "p_win": 0.5691,
+  "expectancy": 0.9919,
+  "circuit_breakers_tripped": [
+    "tighter_than_0_75x_atr"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.064364,
+      "dtw_win_rate_22d": 0.13333333333333333,
+      "prob_target_hit_22d": null
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": null,
+      "mae_projected": null
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 7436.16,
+      "zone_above_market": false,
+      "recommended_band_low": 7462.03,
+      "recommended_band_high": 7476.97
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 7469.5,
+      "r_r": 2.500000000000013
+    },
+    "limit_order": {
+      "entry": 7436.16,
+      "r_r": 5.6987,
+      "unavailable": null
+    },
+    "p_win": 0.5691
+  },
+  "what_would_flip_me": [
+    "a stop placed at or beyond 0.75x daily ATR is available"
+  ],
+  "avoid_reason": "hard circuit breaker(s) tripped: tighter_than_0_75x_atr",
+  "confidence_deficit": null
+}

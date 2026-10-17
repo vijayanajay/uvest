@@ -20,10 +20,14 @@ Per eligible row (a row with both a point-in-time OHLCV prefix and the same
    `test_proof_manifest.RERUNNABLE`: a later edit that changed the cone or the
    probability is caught by a byte-compare, not by a reader's memory.
 2. **Declare it** on the row (`recorded_artifacts`, `evidence: recorded`).
-3. **Promote the claims the engine actually produced** — `cone_p10`, `cone_p90`,
-   `predicted_direction`, `predicted_probability` are read *out of the recorded
-   bytes* and the artifact is referenced from `script_outputs` with `$ref`, so
-   the dataset and the proof root cannot drift. A row whose artifact is waived
+3. **Promote the claims the engine actually produced** — `cone_p10`,
+   `cone_p90`, `predicted_direction` and `predicted_probability` are read *out
+   of the recorded bytes* and the artifact is referenced from `script_outputs`
+   with `$ref`, so the dataset and the proof root cannot drift.
+   `predicted_probability` is the stage's **`prob_target_hit_22d`** — the
+   target-versus-stop race at this trade's own geometry (decision D,
+   2026-10-16), which is the number gate 4 grades — and `predicted_direction`
+   is its race label (`direction_label`). A row whose artifact is waived
    keeps `null` claims: the engine ran and had nothing to say, which is not the
    same as a number someone supplied.
 4. **Republish** `manifest.sha256` and re-freeze the baseline in the same change
@@ -59,14 +63,15 @@ STAGE = 4
 PROMOTED_FIELDS = ("cone_p10", "cone_p90", "predicted_direction",
                    "predicted_probability")
 PROMOTION_NOTE = (
-    "stage 4 (BRD §5.2) promotion: {count} record(s) now carry a recorded "
-    "`out_4_ml.json` — the cone envelope ([P10, P90]), the direction label and "
-    "the calibrated direction probability (`direction_probability`, i.e. P(up) = "
-    "P(BULL) + φ·P(NEUTRAL)) read out of the stage's own stdout over the row's "
-    "pinned ≤T_rec tape and its market-context bundle, with the artifact "
-    "`$ref`d from `script_outputs`. Eval dimensions 4 and 5 grade those bytes "
-    "instead of skipping; a row whose artifact is waived keeps null claims. "
-    "Authored by tests/evals/record_stage4_evidence.py."
+    "stage 4 (BRD §5.2, decision D) promotion: {count} record(s) now carry a "
+    "recorded `out_4_ml.json` — the cone envelope ([P10, P90]), the race label "
+    "(`direction_label`) and the race probability `prob_target_hit_22d` (this "
+    "trade's target-versus-stop geometry read through the excursion pools, "
+    "promoted as `predicted_probability`) read out of the stage's own stdout "
+    "over the row's pinned ≤T_rec tape and its market-context bundle, with the "
+    "artifact `$ref`d from `script_outputs`. Eval dimensions 4 and 5 grade "
+    "those bytes instead of skipping; a row whose artifact is waived keeps "
+    "null claims. Authored by tests/evals/record_stage4_evidence.py."
 )
 
 
@@ -130,7 +135,7 @@ def promote(trade: dict, payload: dict, sid: str) -> dict:
         "cone_p10": cone.get("p10"),
         "cone_p90": cone.get("p90"),
         "predicted_direction": payload.get("direction_label"),
-        "predicted_probability": payload.get("direction_probability"),
+        "predicted_probability": payload.get("prob_target_hit_22d"),
     }
 
 
@@ -205,7 +210,7 @@ def main(argv: list[str] | None = None) -> int:
         preview = coverage_of(trade, values)
         print(f"  {sid} {trade['symbol']} {trade['recommendation_date']}: "
               f"{'waived' if payload.get('waived') else payload.get('direction_label')} "
-              f"P(up)={values['predicted_probability']} "
+              f"P(race)={values['predicted_probability']} "
               f"cone=[{values['cone_p10']}, {values['cone_p90']}] "
               f"tape-covered={preview.get('covered')}")
         for field, old in before.items():

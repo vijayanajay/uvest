@@ -1,42 +1,42 @@
 {
-  "prob_target_hit_22d": 0.7102,
+  "prob_target_hit_22d": 0.0832,
   "price_cone_p10_p50_p90": {
-    "p10": 3548.46,
-    "p25": 3679.24,
-    "p50": 4102.09,
-    "p75": 4353.16,
-    "p90": 4549.5
+    "p10": 3398.57,
+    "p25": 3537.16,
+    "p50": 3839.75,
+    "p75": 4149.8,
+    "p90": 4299.68
   },
-  "mae_projected": -82.46,
-  "mfe_projected": 352.93,
+  "mae_projected": -195.71,
+  "mfe_projected": 145.93,
   "shap_drivers": [
     {
-      "feature": "vol_ratio_14_60",
-      "value": 1.659947,
-      "contribution": 0.515479
+      "feature": "corr_20_sector",
+      "value": 0.018903,
+      "contribution": -0.312705
     },
     {
       "feature": "vol_14",
       "value": 3.950785,
-      "contribution": -0.202188
+      "contribution": 0.276579
     },
     {
       "feature": "beta_20_nifty",
       "value": 0.0,
-      "contribution": 0.201724
-    },
-    {
-      "feature": "ema20_slope_5",
-      "value": 1.315043,
-      "contribution": 0.181652
+      "contribution": 0.171508
     },
     {
       "feature": "bollinger_bw_20",
       "value": 17.758886,
-      "contribution": 0.125245
+      "contribution": 0.151064
+    },
+    {
+      "feature": "vol_ratio_14_60",
+      "value": 1.659947,
+      "contribution": -0.139129
     }
   ],
-  "direction_label": "STRONG_BULLISH",
-  "direction_probability": 0.8405,
+  "direction_label": "STOP_FIRST",
+  "direction_probability": 0.3383,
   "waived": false
 }

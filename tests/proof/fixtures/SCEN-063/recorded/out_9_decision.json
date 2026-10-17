@@ -1,0 +1,49 @@
+{
+  "symbol": "INFY",
+  "final_score": 15.39,
+  "max_possible_score": 47.5,
+  "effective_score_pct": 32.4,
+  "decision": "AVOID",
+  "verdict": "AVOID",
+  "p_win": 0.4796,
+  "expectancy": 0.4388,
+  "circuit_breakers_tripped": [
+    "tighter_than_0_75x_atr",
+    "earnings_within_7d"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.110806,
+      "dtw_win_rate_22d": 0.5333333333333333,
+      "prob_target_hit_22d": null
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": null,
+      "mae_projected": null
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 1577.43,
+      "zone_above_market": false,
+      "recommended_band_low": 1658.24,
+      "recommended_band_high": 1661.56
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 1659.9,
+      "r_r": 1.9999999999999845
+    },
+    "limit_order": {
+      "entry": 1577.43,
+      "r_r": null,
+      "unavailable": null
+    },
+    "p_win": 0.4796
+  },
+  "what_would_flip_me": [
+    "a stop placed at or beyond 0.75x daily ATR is available",
+    "quarterly results are published (binary risk cleared)"
+  ],
+  "avoid_reason": "hard circuit breaker(s) tripped: tighter_than_0_75x_atr, earnings_within_7d",
+  "confidence_deficit": null
+}

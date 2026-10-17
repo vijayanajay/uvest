@@ -1,0 +1,47 @@
+{
+  "symbol": "ADANIENT",
+  "final_score": 23.32,
+  "max_possible_score": 52.5,
+  "effective_score_pct": 44.42,
+  "decision": "AVOID",
+  "verdict": "AVOID",
+  "p_win": 0.5277,
+  "expectancy": 0.5831,
+  "circuit_breakers_tripped": [
+    "tighter_than_0_75x_atr"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.077853,
+      "dtw_win_rate_22d": 0.5333333333333333,
+      "prob_target_hit_22d": null
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": null,
+      "mae_projected": null
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 1383.68,
+      "zone_above_market": false,
+      "recommended_band_low": 1964.73,
+      "recommended_band_high": 1968.67
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 1966.7,
+      "r_r": 1.9999999999999973
+    },
+    "limit_order": {
+      "entry": 1383.68,
+      "r_r": null,
+      "unavailable": null
+    },
+    "p_win": 0.5277
+  },
+  "what_would_flip_me": [
+    "a stop placed at or beyond 0.75x daily ATR is available"
+  ],
+  "avoid_reason": "hard circuit breaker(s) tripped: tighter_than_0_75x_atr",
+  "confidence_deficit": null
+}

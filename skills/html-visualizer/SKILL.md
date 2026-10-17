@@ -16,7 +16,7 @@ Generate a standalone, zero-dependency, dark-mode interactive HTML report card f
    - Canonical 7-state verdict badge (pre-entry 🟢 GO / 🟡 GO_WEAK / ⏳ WAIT / 🔴 AVOID; post-entry 🔵 HOLD / 🟠 PRESSURE / ⛔ EXIT) with final score (0–100), calibrated P(Win), and expectancy.
    - Ticker, instrument type (EQUITY / FUTURES), lot size, and margin.
 2. **The Three Core Predictions:**
-   - **Direction Speedometer:** Visual probability gauge for $P(\text{Bullish})$, $P(\text{Neutral})$, $P(\text{Bearish})$.
+   - **Direction (1-Month Swing) — Target-vs-Stop Race Gauge:** Semi-circular SVG gauge for this trade's own race, whichever level price touches first (`TARGET_FIRST` / `STOP_FIRST` / `NEITHER`). The needle is the stage-4 artifact's own $P(\text{TARGET\_FIRST})$, $\theta = P(\text{TARGET\_FIRST}) \times 180^\circ$ from the left.
    - **22-Day Volatility Price Cone Chart:** SVG/Canvas fan chart showing $[P_{10}, P_{25}, P_{50}, P_{75}, P_{90}]$ vs Target and Stop Loss, with MAE/MFE markers.
    - **Optimal Execution Zone Bar:** Visual range bar comparing slipped market price against institutional limit entry zone (Anchored VWAP + order block support).
 3. **Institutional Microstructure Matrix:**

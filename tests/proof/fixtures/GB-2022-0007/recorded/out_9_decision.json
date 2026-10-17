@@ -1,0 +1,53 @@
+{
+  "symbol": "HDFCBANK",
+  "final_score": 12.33,
+  "max_possible_score": 45.0,
+  "effective_score_pct": 27.4,
+  "decision": "AVOID",
+  "verdict": "AVOID",
+  "p_win": 0.4596,
+  "expectancy": -0.1267,
+  "circuit_breakers_tripped": [
+    "inverted_risk_reward"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.09029,
+      "dtw_win_rate_22d": 0.26666666666666666,
+      "prob_target_hit_22d": 0.3038
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": {
+        "p10": 661.3,
+        "p25": 686.1,
+        "p50": 738.91,
+        "p75": 792.07,
+        "p90": 819.38
+      },
+      "mae_projected": -28.44
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": null,
+      "zone_above_market": true,
+      "recommended_band_low": 731.48,
+      "recommended_band_high": 733.48
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 732.48,
+      "r_r": 0.900068212824009
+    },
+    "limit_order": {
+      "entry": null,
+      "r_r": null,
+      "unavailable": "zone_above_market"
+    },
+    "p_win": 0.4596
+  },
+  "what_would_flip_me": [
+    "price returns to the limit band (<= 731.48) so a limit order restores R:R >= 1.5"
+  ],
+  "avoid_reason": "inverted R:R at market and no limit order restores R:R >= 1.5 (limit view: None)",
+  "confidence_deficit": null
+}

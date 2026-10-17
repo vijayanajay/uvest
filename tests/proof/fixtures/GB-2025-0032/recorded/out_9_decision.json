@@ -1,0 +1,51 @@
+{
+  "symbol": "SBIN",
+  "final_score": 19.43,
+  "max_possible_score": 45.0,
+  "effective_score_pct": 43.18,
+  "decision": "GO_WEAK",
+  "verdict": "GO_WEAK",
+  "p_win": 0.5227,
+  "expectancy": 0.6727,
+  "circuit_breakers_tripped": [],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.080026,
+      "dtw_win_rate_22d": 0.3333333333333333,
+      "prob_target_hit_22d": 0.2582
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": {
+        "p10": 816.19,
+        "p25": 843.13,
+        "p50": 904.92,
+        "p75": 967.39,
+        "p90": 997.83
+      },
+      "mae_projected": -21.38
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 838.45,
+      "zone_above_market": false,
+      "recommended_band_low": 885.1,
+      "recommended_band_high": 887.1
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 886.1,
+      "r_r": 2.2001610954490496
+    },
+    "limit_order": {
+      "entry": 838.45,
+      "r_r": null,
+      "unavailable": null
+    },
+    "p_win": 0.5227
+  },
+  "what_would_flip_me": [
+    "live price improves to the limit band or the model/flow evidence strengthens P(win) above the 55% floor"
+  ],
+  "avoid_reason": null,
+  "confidence_deficit": "P(win) 52.3% below the 55% floor with positive expectancy (+0.67R)"
+}

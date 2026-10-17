@@ -94,3 +94,20 @@ The owner signed Q1–Q3 as B; implemented end-to-end the same day:
   exactly the proposal's measured P5 row. Suite 621/621.
 - Watch: the 16 unfilled (4 near-misses) are the next lever; the AVWAP-side
   anchor (P8) is the signed-off alternative if fill rate ever drops under 60%.
+
+## Follow-up 3 (same day) — the clamp's downstream half + the horizon question
+
+- **Stage 9 consumed the clamp** (`_limit_claim`): a clamped or waived zone
+  now ships a null limit leg with an `unavailable` reason and can no longer
+  rescue the inverted-RR WAIT exception via the reco band's low. Caught
+  mid-implementation: my own first `limit_rr` rewrite still fell back to
+  `entry_range_min` unconditionally — the fallback must key on the
+  *reason being None* (stage 8 absent), not on the limit being None. The
+  seam that would have caught it (breaker exception) was written first.
+- **Horizon measured**: fills arrive 14 within sess 1, 21 within 3, 21 within
+  5, 26 within 10, 30 within 22 (none between 3 and 5) — the frozen 60%
+  floor only clears because of the 22-session window. Per-advisory
+  expectancy (misses = 0): +9.81/+13.10/+13.10/+16.55/+20.31%. Proposal on
+  the desk: `docs/agents/proposal-fill-horizon.md` (3-session validity,
+  expectancy ≥ 10% headline, symmetric market-MAE window).
+- Suite 625/625 after both halves.

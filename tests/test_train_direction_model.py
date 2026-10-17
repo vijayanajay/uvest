@@ -195,6 +195,39 @@ class TestGroundTruthIsPointInTime(unittest.TestCase):
             self.assertLessEqual(row["mae_pct"], row["forward_return_pct"])
             self.assertGreaterEqual(row["mfe_pct"], row["forward_return_pct"])
 
+    def test_the_label_is_the_reference_band_race_on_the_rows_own_window(self):
+        """Decision D: `class` is which ±3% level printed *first*.
+
+        Recomputed here from the row's own forward bars with the frozen
+        convention (a bar carrying both levels resolves to the stop), so a
+        label that quietly became a terminal-return class again — or one that
+        scanned in a different order than the benchmark's recorded
+        `resolution_outcome` — fails against the tape it was built from.
+        """
+        rows, _ = self._rows()
+        stocks, _ = synthetic_corpus()
+        self.assertTrue(rows)
+        seen: set[str] = set()
+        for row in rows:
+            series = stocks[row["symbol"]]
+            index = [s["date"] for s in series].index(row["date"])
+            entry = series[index]["close"]
+            window = series[index + 1:index + 1 + self.stage4.HORIZON]
+            target, stop = entry * 1.03, entry * 0.97
+            expected = "NEITHER"
+            for bar in window:
+                if bar["low"] <= stop:
+                    expected = "STOP_FIRST"
+                    break
+                if bar["high"] >= target:
+                    expected = "TARGET_FIRST"
+                    break
+            self.assertEqual(row["class"], expected,
+                             f"{row['symbol']} {row['date']}")
+            seen.add(row["class"])
+        self.assertTrue(seen & {"TARGET_FIRST", "STOP_FIRST"},
+                        "this corpus was expected to exercise both race arms")
+
     def test_a_row_never_reads_a_session_after_its_date(self):
         full, _ = self._rows()
         cut, _ = self._rows(truncate_at=REGIME_INDEX)
@@ -670,6 +703,11 @@ class TestSectorConditionedPools(unittest.TestCase):
         stocks, indices = synthetic_corpus()
         energy = _series(SESSIONS, factor=1.6, seed=5.5)
         stocks["RELIANCE"] = bars(_series(SESSIONS, factor=1.1, seed=3.1))
+        # A second bank-sector name. Race labels split every block by class, so
+        # the bank block needs enough rows for *every* class to clear
+        # MIN_SECTOR_ATOMS_PER_CLASS — the deep half of the contrast below —
+        # while the energy block stays deliberately thin.
+        stocks["ICICIBANK"] = bars(_series(SESSIONS + 40, factor=1.25, seed=8.8))
         indices["^CNXENERGY"] = energy
         return stocks, indices
 
@@ -727,6 +765,13 @@ class TestSectorConditionedPools(unittest.TestCase):
                            self.trainer.calibration_samples_by_sector(rows)}
         self.assertIs(self.stage4.samples_for(calibration, "^NSEBANK"),
                       calibration["samples_by_sector"]["^NSEBANK"])
+        deep = calibration["samples_by_sector"]["^NSEBANK"]
+        self.assertGreaterEqual(
+            min(len(values) for block in deep.values()
+                for values in block.values()),
+            self.stage4.MIN_SECTOR_ATOMS_PER_CLASS,
+            "this corpus's bank block is meant to be deep enough in every "
+            "race class — the contrast needs both halves to be real")
         thin = calibration["samples_by_sector"]["^CNXENERGY"]
         self.assertLess(
             min(len(values) for block in thin.values()
@@ -750,7 +795,7 @@ class TestPurgedGroupTimeSeriesSplit(unittest.TestCase):
             load_stage4(), cls.trainer.load_sector_map(), stocks, indices)
 
     def _calendar_rows(self, count: int, symbol: str = "SBIN") -> list[dict]:
-        return [{"symbol": symbol, "date": d, "features": [0.0], "class": "NEUTRAL",
+        return [{"symbol": symbol, "date": d, "features": [0.0], "class": "NEITHER",
                  "forward_return_pct": 0.0, "mae_pct": 0.0, "mfe_pct": 0.0}
                 for d in _dates(count)]
 
@@ -879,7 +924,11 @@ class TestTrainedArtifacts(unittest.TestCase):
         self.assertEqual(self.calibration["horizon"], stage4.HORIZON)
         self.assertEqual(set(self.calibration["samples"]),
                          {"forward_return_pct", "mae_pct", "mfe_pct"})
-        self.assertTrue(0.0 <= self.calibration["neutral_up_share"] <= 1.0)
+        self.assertEqual(self.calibration["race_band_pct"], stage4.RACE_BAND_PCT)
+        self.assertNotIn("neutral_up_share", self.calibration,
+                         "the retired direction bridge must not survive")
+        self.assertIn("stage4.race_probability", self.calibration["race_estimator"],
+                      "the graded estimator must be disclosed in the artifact")
         # The trade's own sector's excursions ship beside the pooled block, in
         # the shape the stage's selector reads.
         by_sector = self.calibration["samples_by_sector"]
@@ -984,7 +1033,7 @@ class TestTrainedArtifacts(unittest.TestCase):
         for fold in cv["per_fold"]:
             self.assertGreater(fold["train_rows"], 0)
             self.assertGreater(fold["purged_rows"], 0)
-            self.assertGreater(fold["oof_brier_up"], 0.0)
+            self.assertGreater(fold["oof_brier_race"], 0.0)
             self.assertTrue(0.0 <= fold["oof_cone_coverage_pct"] <= 100.0)
 
     def test_training_twice_produces_the_same_bytes(self):
@@ -1117,7 +1166,20 @@ class TestTheCorpusReachesTheGradedTapes(unittest.TestCase):
         self.assertTrue(rows, f"the committed corpus builds no rows: {disclosure}")
         first = min(row["date"] for row in rows)
         last = max(row["date"] for row in rows)
+        window = tuple(str(v) for v in json.loads(
+            SHIPPED_CALIBRATION.read_text(encoding="utf-8")
+        )["provenance"]["corpus"]["row_window"][:2])
+        out_of_window: list[str] = []
         for tid, (tape_first, tape_last) in sorted(self.tapes.items()):
+            # Gate 5 grades a cone-labeled tape only when the trained window
+            # contains it (evals.md §3 #5); a tape outside it is that gate's
+            # *named* exclusion, not a tape this seam may demand the corpus
+            # reach. The owner signed the two below in on 2026-10-17 — stage 4
+            # reads ≤ T_rec, so their evidence is recorded while gate 5 keeps
+            # its denominator inside the pools' window.
+            if not (window[0] <= tape_first and tape_last <= window[1]):
+                out_of_window.append(tid)
+                continue
             with self.subTest(tape=tid, span=(tape_first, tape_last)):
                 self.assertLessEqual(
                     first, tape_first,
@@ -1128,6 +1190,11 @@ class TestTheCorpusReachesTheGradedTapes(unittest.TestCase):
                     last, tape_last,
                     "the row window would close before this tape ends "
                     f"(last row {last}, tape ends {tape_last})")
+        self.assertEqual(
+            out_of_window, ["GB-2025-0031", "GB-2025-0032"],
+            "a cone claim whose tape the trained window cannot reach is only "
+            "legal as gate 5's named exclusion — say which rows, never grow "
+            "the set unexamined")
 
 
 if __name__ == "__main__":

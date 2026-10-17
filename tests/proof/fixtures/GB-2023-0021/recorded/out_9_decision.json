@@ -1,0 +1,51 @@
+{
+  "symbol": "HDFCBANK",
+  "final_score": 16.75,
+  "max_possible_score": 45.0,
+  "effective_score_pct": 37.22,
+  "decision": "GO_WEAK",
+  "verdict": "GO_WEAK",
+  "p_win": 0.4989,
+  "expectancy": 0.3969,
+  "circuit_breakers_tripped": [],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.073707,
+      "dtw_win_rate_22d": 0.8,
+      "prob_target_hit_22d": 0.2425
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": {
+        "p10": 703.34,
+        "p25": 727.57,
+        "p50": 784.24,
+        "p75": 839.02,
+        "p90": 866.15
+      },
+      "mae_projected": -23.75
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": null,
+      "zone_above_market": true,
+      "recommended_band_low": 769.95,
+      "recommended_band_high": 771.95
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 770.95,
+      "r_r": 1.7998570407433834
+    },
+    "limit_order": {
+      "entry": null,
+      "r_r": null,
+      "unavailable": "zone_above_market"
+    },
+    "p_win": 0.4989
+  },
+  "what_would_flip_me": [
+    "live price improves to the limit band or the model/flow evidence strengthens P(win) above the 55% floor"
+  ],
+  "avoid_reason": null,
+  "confidence_deficit": "P(win) 49.9% below the 55% floor with positive expectancy (+0.40R)"
+}

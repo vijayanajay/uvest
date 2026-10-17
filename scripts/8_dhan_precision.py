@@ -32,6 +32,15 @@ Frozen definitions (each one pinned by `tests/test_8_dhan_precision.py`):
   daily zone still ships, exactly BRD §8.1's "completes the validation using
   daily OHLCV from Tier 1". The validation chain passes no `--live`, so every
   recorded artifact is byte-deterministic (the proof root's rerun contract).
+* **Tier-2 evidence arrives two ways** (plan-tier2-dhan-collection.md §7,
+  signed 2026-10-16): recorded fixtures (`--intraday-fixture`,
+  `--depth-fixture`) run offline, byte-deterministically, with zero network;
+  the operator-gated live half (`--live`) speaks Dhan's **documented** v2
+  API — `api.dhan.co`, `POST /v2/charts/intraday` with the documented body
+  keys and parallel-array candles (epoch timestamps read in IST), and
+  `POST /v2/marketfeed/quote` with the `access-token` header and the 5-level
+  book under `data.<segment>.<id>.depth`. A fixture replaces the network for
+  its half; every half that did not run is named in `waived_reason`.
 * `dhan_cache.db` — intraday candle queries cache for `CACHE_TTL_SECONDS`
   (15 minutes, BRD §8.1) so an evaluation window never re-hits the API.
   Depth is real-time by definition and is never cached.
@@ -60,6 +69,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 for _stream in (sys.stdout, sys.stderr):
@@ -69,9 +79,17 @@ for _stream in (sys.stdout, sys.stderr):
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _recorder import add_record_arg, record_artifact, resolve_bundle_dir  # noqa: E402
 
-# BRD §8.1 endpoints (Tier 2, operator-gated above).
-DHAN_CHARTS_URL = "https://api.dhantrade.com/v2/charts/historical"
-DHAN_MARKETFEED_URL = "https://api.dhantrade.com/v2/marketfeed/quote"
+# BRD §8.1 endpoints (Tier 2): Dhan's **documented** v2 API — host, routes
+# and bodies per plan-tier2-dhan-collection.md §2 (researched 2026-10-16;
+# sources: dhanhq.co/docs/v2/historical-data/, …/market-quote/). The
+# intraday route, never the daily one; auth is the `access-token` header.
+DHAN_INTRADAY_URL = "https://api.dhan.co/v2/charts/intraday"
+DHAN_MARKETFEED_URL = "https://api.dhan.co/v2/marketfeed/quote"
+DHAN_EXCHANGE_SEGMENT = "NSE_EQ"
+DHAN_INSTRUMENT = "EQUITY"
+# The exchange's clock: epoch timestamps become bar dates in IST, so a
+# fixture's bytes never depend on the machine's local timezone.
+IST = timezone(timedelta(hours=5, minutes=30), "IST")
 CACHE_DB = "dhan_cache.db"
 CACHE_TTL_SECONDS = 15 * 60
 
@@ -229,8 +247,57 @@ def put_cached(key: str, payload: dict, *, now: float,
         return None
 
 
+def _ist_timestamp(value) -> str | None:
+    """An epoch (seconds or milliseconds) → 'YYYY-MM-DD HH:MM' in IST."""
+    try:
+        stamp = float(value)
+    except (TypeError, ValueError):
+        return None
+    if stamp > 1e12:  # a millisecond feed is still an epoch
+        stamp /= 1000.0
+    try:
+        return datetime.fromtimestamp(stamp, IST).strftime("%Y-%m-%d %H:%M")
+    except (OverflowError, OSError, ValueError):
+        return None
+
+
+def _parallel_candles(doc: dict) -> list[dict] | None:
+    """The documented v2 candle shape: parallel OHLCV arrays + epoch
+    `timestamp`s. Ragged arrays are not candles — a miss, never a guess."""
+    stamp_col = doc.get("timestamp")
+    columns = {k: doc.get(k) for k in ("open", "high", "low", "close")}
+    if not isinstance(stamp_col, list) or not all(
+            isinstance(columns[k], list) for k in columns):
+        return None
+    n = len(stamp_col)
+    if n == 0 or any(len(columns[k]) != n for k in columns):
+        return None
+    if "volume" in doc:
+        if not isinstance(doc["volume"], list) or len(doc["volume"]) != n:
+            return None
+        volume = doc["volume"]
+    else:
+        volume = [0.0] * n
+    bars = []
+    for i in range(n):
+        date = _ist_timestamp(stamp_col[i])
+        if date is None:
+            return None
+        try:
+            bars.append({"date": date, "open": float(columns["open"][i]),
+                         "high": float(columns["high"][i]),
+                         "low": float(columns["low"][i]),
+                         "close": float(columns["close"][i]),
+                         "volume": float(volume[i] or 0.0)})
+        except (TypeError, ValueError):
+            return None
+    return bars
+
+
 def _candles_to_bars(raw) -> list[dict] | None:
-    """Dhan candles as dicts or v2 arrays → normalized bars."""
+    """Dhan candles: the documented parallel arrays, or dicts/arrays lists."""
+    if isinstance(raw, dict):
+        return _parallel_candles(raw)
     bars = []
     for candle in raw if isinstance(raw, list) else []:
         if isinstance(candle, dict) and {"high", "low", "close"} <= set(candle):
@@ -259,60 +326,116 @@ def _dhan_half(symbol: str, session_date: str, security_id: str,
         return None, f"dhan:credentials missing ({', '.join(missing)})", False
     if not security_id:
         return None, "dhan:--dhan-security-id required for live intraday", False
-    headers = {"ACCESS-TOKEN": creds["DHAN_ACCESS_TOKEN"],
-               "CLIENT-ID": creds["DHAN_CLIENT_ID"]}
+    # The documented auth header, and a session date the body can speak:
+    # 'YYYY-MM-DD' (a prefixed bar that carries a time is sliced to its day).
+    session_date = str(session_date).strip()[:10]
+    if len(session_date) < 10:
+        return None, "dhan:ohlcv prefix carries no session date", False
+    headers = {"access-token": creds["DHAN_ACCESS_TOKEN"]}
     cache_key = f"dhan:intraday:{security_id}:{session_date}"
     cached = get_cached(cache_key, now=now, db_path=db_path)
     if cached is not None:
         bars = _candles_to_bars(cached.get("candles"))
         if bars:
             return bars, None, True
+    body = {
+        "securityId": str(security_id),
+        "exchangeSegment": DHAN_EXCHANGE_SEGMENT,
+        "instrument": DHAN_INSTRUMENT,
+        "interval": "5",   # the documented set is {1,5,15,25,60}; no 10
+        "oi": False,
+        "fromDate": f"{session_date} 09:15:00",
+        "toDate": f"{session_date} 15:30:00",
+    }
     try:
-        doc = fetcher(DHAN_CHARTS_URL, headers,
-                      {"security_id": security_id, "interval": "5",
-                       "oi": False})
+        doc = fetcher(DHAN_INTRADAY_URL, headers, body)
     except urllib.error.HTTPError as exc:
-        return None, f"dhan:HTTP {exc.code} on charts/historical", False
+        return None, f"dhan:HTTP {exc.code} on charts/intraday", False
     except Exception as exc:  # noqa: BLE001 — any transport failure waives
-        return None, f"dhan:{type(exc).__name__} on charts/historical", False
-    bars = _candles_to_bars(doc.get("candles") if isinstance(doc, dict) else None)
+        return None, f"dhan:{type(exc).__name__} on charts/intraday", False
+    bars = _candles_to_bars(doc if isinstance(doc, dict) else None)
     if not bars:
         return None, "dhan:unexpected candles payload", False
     put_cached(cache_key, {"candles": bars}, now=now, db_path=db_path)
     return bars, None, False
 
 
+def _quote_dicts(data) -> list[dict]:
+    """Every dict that might carry the book: the payload itself, each
+    segment map, and each security row (the documented
+    `data.<segment>.<securityId>` shape), plus any legacy flat quote."""
+    if not isinstance(data, dict):
+        return []
+    out = [data]
+    for level1 in data.values():
+        if isinstance(level1, dict):
+            out.append(level1)
+            for level2 in level1.values():
+                if isinstance(level2, dict):
+                    out.append(level2)
+    return out
+
+
+def spread_from_quote(doc, *, security_id: str = "") \
+        -> tuple[float | None, str | None]:
+    """(spread_pct, waived_reason) from a marketfeed/quote body.
+
+    The documented shape first — the 5-level book at
+    `data.<segment>.<id>.depth.buy/sell[0].price` (our own id's row when the
+    map is keyed, so a second instrument in a snapshot can never answer for
+    this one), then a flat bid/ask quote. Never raises.
+    """
+    if not isinstance(doc, dict):
+        return None, "dhan:unexpected depth payload"
+    candidates = _quote_dicts(doc.get("data", doc))
+    if security_id:
+        for seg in (doc.get("data") or {}).values() \
+                if isinstance(doc.get("data"), dict) else []:
+            row = seg.get(security_id) if isinstance(seg, dict) else None
+            if isinstance(row, dict):
+                candidates.insert(0, row)
+                break
+    for cand in candidates:
+        depth = cand.get("depth")
+        bid = ask = None
+        if isinstance(depth, dict):
+            try:
+                bid = float(depth["buy"][0]["price"])
+                ask = float(depth["sell"][0]["price"])
+            except (KeyError, IndexError, TypeError, ValueError):
+                bid = ask = None
+        if bid is None:  # the legacy flat quote shape
+            try:
+                bid = float(cand["best_bid"] if "best_bid" in cand
+                            else cand["bid"])
+                ask = float(cand["best_ask"] if "best_ask" in cand
+                            else cand["ask"])
+            except (KeyError, TypeError, ValueError):
+                continue
+        if bid is None or ask is None:
+            continue
+        mid = (bid + ask) / 2.0
+        if mid <= 0:
+            return None, "dhan:degenerate depth (mid <= 0)"
+        return round((ask - bid) / mid * 100.0, 4), None
+    return None, "dhan:unexpected depth payload"
+
+
 def spread_impact_pct(bars: list[dict], *, now: float, db_path: str,
-                      fetcher) -> tuple[float | None, str | None]:
+                      fetcher, creds: dict[str, str] | None = None,
+                      security_id: str = "") \
+        -> tuple[float | None, str | None]:
     """(spread_pct, waived_reason): top-of-book spread as % of the mid."""
+    creds = dict(os.environ) if creds is None else creds
+    headers = {"access-token": creds.get("DHAN_ACCESS_TOKEN") or ""}
     try:
-        doc = fetcher(DHAN_MARKETFEED_URL, {}, {})
+        doc = fetcher(DHAN_MARKETFEED_URL, headers,
+                      {"NSE_EQ": [str(security_id)]})
     except urllib.error.HTTPError as exc:
         return None, f"dhan:HTTP {exc.code} on marketfeed/quote"
     except Exception as exc:  # noqa: BLE001
         return None, f"dhan:{type(exc).__name__} on marketfeed/quote"
-    data = doc.get("data", doc) if isinstance(doc, dict) else {}
-    # Two real shapes: the v2 feed keyed by instrument id
-    # (data.<id>.bid/ask) or a flat quote carrying best_bid/best_ask.
-    candidates: list[dict] = []
-    if isinstance(data, dict):
-        if "best_bid" in data or "bid" in data:
-            candidates.append(data)
-        candidates.extend(v for v in data.values() if isinstance(v, dict))
-    bid = ask = None
-    for depth in candidates:
-        try:
-            bid = float(depth["best_bid"] if "best_bid" in depth else depth["bid"])
-            ask = float(depth["best_ask"] if "best_ask" in depth else depth["ask"])
-            break
-        except (TypeError, KeyError, ValueError):
-            continue
-    if bid is None or ask is None:
-        return None, "dhan:unexpected depth payload"
-    mid = (bid + ask) / 2.0
-    if mid <= 0:
-        return None, "dhan:degenerate depth (mid <= 0)"
-    return round((ask - bid) / mid * 100.0, 4), None
+    return spread_from_quote(doc, security_id=str(security_id))
 
 
 def _waived_payload(reasons: list[str]) -> dict:
@@ -355,8 +478,16 @@ def _apply_discount_clamp(zone: dict, entry) -> tuple[dict, bool | None]:
 def precision_payload(bars: list[dict] | None, trade: dict, *,
                       live: bool = False, security_id: str | None = None,
                       now: float | None = None, db_path: str = CACHE_DB,
-                      fetcher=None) -> dict:
-    """The canonical `out_8_dhan.json` body — never raises, always exits 0."""
+                      fetcher=None, intraday_fixture: list[dict] | None = None,
+                      depth_fixture: dict | None = None) -> dict:
+    """The canonical `out_8_dhan.json` body — never raises, always exits 0.
+
+    Evidence precedence: a recorded fixture replaces the network for its
+    half (`--intraday-fixture` / `--depth-fixture`, offline and
+    byte-deterministic); the operator-gated live half (`--live`) runs only
+    when no fixture was given for that half. Every half that did not run is
+    named in `waived_reason` — absence is disclosed, never silent.
+    """
     fetcher = fetcher or http_post_json
     now = time.time() if now is None else now
     if bars is None:
@@ -366,11 +497,21 @@ def precision_payload(bars: list[dict] | None, trade: dict, *,
     zone = _zone(bars)
     if zone["optimal_limit_buy"] is None:
         return _waived_payload(["ohlcv_fixture: no computable zone"])
-    intraday, reason, cache_hit = _dhan_half(
-        str(trade.get("symbol") or ""), str(bars[-1].get("date") or ""),
-        security_id or "", dict(os.environ), live=live, now=now,
-        db_path=db_path, fetcher=fetcher)
-    spread, depth_reason = (None, None)
+    creds = dict(os.environ)
+    if intraday_fixture is not None:
+        # Offline recorded evidence: the flag was given, so its file is the
+        # authority — a malformed one waives with its name (E3), never a
+        # silent fall-through to the live half.
+        intraday = intraday_fixture
+        intraday_reason = None if intraday else \
+            "intraday_fixture: absent, malformed or empty"
+        cache_hit = False
+    else:
+        intraday, intraday_reason, cache_hit = _dhan_half(
+            str(trade.get("symbol") or ""), str(bars[-1].get("date") or ""),
+            security_id or "", creds, live=live, now=now, db_path=db_path,
+            fetcher=fetcher)
+    spread = None
     source = "daily_tier1"
     if intraday:
         # The intraday pivot refines the anchor; the demand block stays the
@@ -378,9 +519,20 @@ def precision_payload(bars: list[dict] | None, trade: dict, *,
         zone = _zone(bars, refined_vwap=anchored_vwap_from(
             intraday, swing_low_pivot(intraday)))
         source = "dhan_intraday"
+    depth_reason = None
+    if depth_fixture is not None:
+        spread, depth_reason = (
+            spread_from_quote(depth_fixture, security_id=security_id or "")
+            if depth_fixture else
+            (None, "depth_fixture: absent, malformed or empty"))
+    elif intraday_fixture is not None and intraday:
+        # The intraday half ran from its fixture; depth was never requested.
+        depth_reason = "dhan:not-requested"
+    elif intraday:
         spread, depth_reason = spread_impact_pct(
-            intraday, now=now, db_path=db_path, fetcher=fetcher)
-    reasons = [r for r in (reason, depth_reason) if r]
+            intraday, now=now, db_path=db_path, fetcher=fetcher, creds=creds,
+            security_id=str(security_id or ""))
+    reasons = [r for r in (intraday_reason, depth_reason) if r]
     # The clamp rides on the FINAL zone (post-refinement): the claim is what
     # the Dhan tier may have moved, and gate 6 grades the shipped claim.
     zone, above_market = _apply_discount_clamp(zone, trade.get("entry_price"))
@@ -396,6 +548,40 @@ def precision_payload(bars: list[dict] | None, trade: dict, *,
     }
 
 
+def load_intraday_fixture(path: str | None) -> list[dict] | None:
+    """Recorded intraday evidence (offline): Dhan's documented
+    parallel-array response, a {bars: […]} / {sessions: […]} bundle, or a
+    bare bar list.
+
+    None = no flag (the live half decides); [] = the flag was given but the
+    file is absent or unparsable — the caller waives naming the fixture (E3),
+    never silently pretends the flag was absent.
+    """
+    if not path:
+        return None
+    try:
+        doc = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    raw = doc
+    if isinstance(doc, dict):
+        raw = doc.get("bars") or doc.get("sessions") or doc
+    bars = _candles_to_bars(raw)
+    return bars or []
+
+
+def load_depth_fixture(path: str | None) -> dict | None:
+    """Recorded depth evidence (offline): the documented marketfeed/quote
+    body. None = no flag; {} = given but unparsable (the caller waives)."""
+    if not path:
+        return None
+    try:
+        doc = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Stage 8: precision execution zone (Dhan intraday & depth)")
@@ -404,6 +590,14 @@ def main() -> int:
     parser.add_argument("--ohlcv-fixture", default=None,
                         help="recorded daily-OHLCV bundle (offline mode); "
                              "omit for the waiver path")
+    parser.add_argument("--intraday-fixture", default=None,
+                        help="recorded intraday evidence (offline) — Dhan's "
+                             "documented parallel-array response or a "
+                             "{bars: […]} bundle; replaces the live half")
+    parser.add_argument("--depth-fixture", default=None,
+                        help="recorded depth snapshot (offline) — the "
+                             "documented marketfeed/quote body; replaces "
+                             "the live quote call")
     parser.add_argument("--live", action="store_true",
                         help="opt in to the Dhan Tier-2 half (BRD §8.1); "
                              "the validation chain never passes this")
@@ -422,7 +616,9 @@ def main() -> int:
     else:
         payload = precision_payload(
             bars, trade, live=args.live,
-            security_id=args.dhan_security_id, db_path=args.cache_db)
+            security_id=args.dhan_security_id, db_path=args.cache_db,
+            intraday_fixture=load_intraday_fixture(args.intraday_fixture),
+            depth_fixture=load_depth_fixture(args.depth_fixture))
 
     stdout_text = json.dumps(payload, indent=2) + "\n"
     bundle = resolve_bundle_dir(args.record, trade.get("symbol") or "UNSPECIFIED",

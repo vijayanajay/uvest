@@ -1,0 +1,47 @@
+{
+  "symbol": "IBULHSGFIN",
+  "final_score": 21.95,
+  "max_possible_score": 52.5,
+  "effective_score_pct": 41.81,
+  "decision": "AVOID",
+  "verdict": "AVOID",
+  "p_win": 0.5172,
+  "expectancy": 0.5516,
+  "circuit_breakers_tripped": [
+    "tighter_than_0_75x_atr"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.076268,
+      "dtw_win_rate_22d": 0.2,
+      "prob_target_hit_22d": null
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": null,
+      "mae_projected": null
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 139.73,
+      "zone_above_market": false,
+      "recommended_band_low": 141.09,
+      "recommended_band_high": 143.09
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 142.09,
+      "r_r": 2.0
+    },
+    "limit_order": {
+      "entry": 139.73,
+      "r_r": 11.5676,
+      "unavailable": null
+    },
+    "p_win": 0.5172
+  },
+  "what_would_flip_me": [
+    "a stop placed at or beyond 0.75x daily ATR is available"
+  ],
+  "avoid_reason": "hard circuit breaker(s) tripped: tighter_than_0_75x_atr",
+  "confidence_deficit": null
+}

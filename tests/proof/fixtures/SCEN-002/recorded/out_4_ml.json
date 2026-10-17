@@ -1,42 +1,42 @@
 {
-  "prob_target_hit_22d": 0.05,
+  "prob_target_hit_22d": 0.0427,
   "price_cone_p10_p50_p90": {
-    "p10": 178.7,
-    "p25": 182.81,
-    "p50": 198.42,
-    "p75": 209.97,
-    "p90": 216.12
+    "p10": 172.23,
+    "p25": 178.52,
+    "p50": 192.25,
+    "p75": 206.14,
+    "p90": 213.32
   },
-  "mae_projected": -4.4,
-  "mfe_projected": 12.93,
+  "mae_projected": -7.73,
+  "mfe_projected": 8.27,
   "shap_drivers": [
     {
       "feature": "sma200_dist",
       "value": -40.859586,
-      "contribution": 1.18145
+      "contribution": -0.301524
     },
     {
       "feature": "ret_5",
       "value": -14.850105,
-      "contribution": -0.442565
-    },
-    {
-      "feature": "vol_ratio_14_60",
-      "value": 1.705913,
-      "contribution": 0.403797
+      "contribution": 0.255087
     },
     {
       "feature": "vol_14",
       "value": 6.694314,
-      "contribution": -0.257238
+      "contribution": 0.251552
+    },
+    {
+      "feature": "corr_20_sector",
+      "value": 0.030595,
+      "contribution": -0.207254
     },
     {
       "feature": "sma50_dist",
       "value": -37.471842,
-      "contribution": -0.187709
+      "contribution": 0.122672
     }
   ],
-  "direction_label": "BULLISH",
-  "direction_probability": 0.7701,
+  "direction_label": "STOP_FIRST",
+  "direction_probability": 0.4638,
   "waived": false
 }

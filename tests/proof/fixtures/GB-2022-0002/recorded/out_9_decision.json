@@ -1,0 +1,53 @@
+{
+  "symbol": "TATAMOTORS",
+  "final_score": 13.85,
+  "max_possible_score": 45.0,
+  "effective_score_pct": 30.78,
+  "decision": "AVOID",
+  "verdict": "AVOID",
+  "p_win": 0.4731,
+  "expectancy": -0.1011,
+  "circuit_breakers_tripped": [
+    "inverted_risk_reward"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.063477,
+      "dtw_win_rate_22d": 0.06666666666666667,
+      "prob_target_hit_22d": 0.4527
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": {
+        "p10": 345.67,
+        "p25": 359.68,
+        "p50": 391.88,
+        "p75": 420.34,
+        "p90": 434.0
+      },
+      "mae_projected": -10.97
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": null,
+      "zone_above_market": true,
+      "recommended_band_low": 381.7,
+      "recommended_band_high": 383.7
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 382.7,
+      "r_r": 0.9000644745325626
+    },
+    "limit_order": {
+      "entry": null,
+      "r_r": null,
+      "unavailable": "zone_above_market"
+    },
+    "p_win": 0.4731
+  },
+  "what_would_flip_me": [
+    "price returns to the limit band (<= 381.7) so a limit order restores R:R >= 1.5"
+  ],
+  "avoid_reason": "inverted R:R at market and no limit order restores R:R >= 1.5 (limit view: None)",
+  "confidence_deficit": null
+}

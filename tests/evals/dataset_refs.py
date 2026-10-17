@@ -58,6 +58,7 @@ grades it from, never by a second copy of the dates.
 from __future__ import annotations
 
 import copy
+import importlib.util
 import json
 import re
 from pathlib import Path
@@ -182,27 +183,26 @@ def _rule_resolution_date(bars: list[dict], trade: dict) -> str:
     return bars[-1]["date"]
 
 
-def resolution_of(bars: list[dict], stop: float, target: float) -> tuple[str, str]:
-    """The frozen resolution rule: `(outcome, basis)`, first touch wins.
+# The race scan lives in production code (BRD §5.2, decision D 2026-10-16):
+# stage 4's corpus label rule and this module's `$derive` rule must be **one**
+# implementation, so the function is aliased here instead of copied — a corpus
+# row's TARGET_FIRST/STOP_FIRST label and a benchmark trade's recorded
+# resolution can never scan differently under one name.
+_STAGE4_PATH = REPO_ROOT / "scripts" / "4_ml_direction.py"
+_stage4_spec = importlib.util.spec_from_file_location("uvest_stage4_race",
+                                                      _STAGE4_PATH)
+if _stage4_spec is None or _stage4_spec.loader is None:
+    raise ImportError(f"cannot load the race scan from {_STAGE4_PATH}")
+_stage4 = importlib.util.module_from_spec(_stage4_spec)
+_stage4_spec.loader.exec_module(_stage4)
 
-    Bars are scanned in order and the first level touched decides — the trade is
-    flat the moment either level prints. Daily bars cannot order touches *within*
-    a bar, so    a bar carrying both levels resolves to the worse one (LOSS). This
-    is the single implementation behind the `$derive` rule below, the curator's
-    seed scan (`curate.outcome`), the catalog scaffolder's tape comparison
-    (`scaffold_catalog.resolve`) and the migration tool's row scan
-    (`pin_legacy_records.outcome_of`): admission, authoring, stored resolution
-    and migrated records can never disagree about what the tape did.
-    """
-    for bar in bars:
-        hit_stop, hit_target = bar["low"] <= stop, bar["high"] >= target
-        if hit_stop and hit_target:
-            return "LOSS", "both_hit_conservative_loss"
-        if hit_stop:
-            return "LOSS", "stop_first"
-        if hit_target:
-            return "WIN", "target_first"
-    return "TIME", "horizon_end"
+#: The frozen resolution rule: `(outcome, basis)`, first touch wins.
+#: Aliased from `scripts/4_ml_direction.py:first_touch_outcome` — see the
+#: loader above. Its four consumers are the `$derive` rule below, the
+#: curator's seed scan (`curate.outcome`), the catalog scaffolder's tape
+#: comparison (`scaffold_catalog.resolve`) and the migration tool's row scan
+#: (`pin_legacy_records.outcome_of`).
+resolution_of = _stage4.first_touch_outcome
 
 
 def _rule_resolution_outcome(bars: list[dict], trade: dict) -> str:

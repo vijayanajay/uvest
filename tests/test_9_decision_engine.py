@@ -482,5 +482,158 @@ class TestTheFrozenWeightsAreReviewable(unittest.TestCase):
                                places=6, msg="module weights no longer sum to 100")
 
 
+class TestTheClampedZoneNeverFabricatesALimitLeg(unittest.TestCase):
+    """Signed proposal B's downstream half (2026-10-16): when stage 8
+    disowns its midpoint (`optimal_limit_buy: null`, `zone_above_market:
+    true`), stage 9 must honor the silence — the flip table's limit leg is
+    disclosed as unavailable, never substituted from a different price, and
+    a limit that does not exist can never rescue the inverted-RR WAIT
+    exception (BRD §10.3) with a fictional R:R.
+    """
+
+    CLAMPED = {"optimal_limit_buy": None,
+               "optimal_limit_range": [1480.0, 1505.0],
+               "zone_above_market": True,
+               "spread_impact_cost_pct": None}
+
+    @staticmethod
+    def payloads(out8):
+        p = strong_payloads()
+        p["out_8_dhan.json"] = out8
+        return p
+
+    def test_a_clamped_zone_yields_no_limit_leg_and_no_substitution(self):
+        out = verdict_of(run_stage9(trade(), self.payloads(dict(self.CLAMPED))))
+        leg = out["flip_table"]["limit_order"]
+        self.assertIsNone(
+            leg["entry"],
+            "entry_range_min must never stand in for a disowned limit")
+        self.assertIsNone(leg["r_r"])
+        self.assertEqual(leg["unavailable"], "zone_above_market")
+        zone = out["three_predictions"]["optimal_price_range"]
+        self.assertTrue(zone["zone_above_market"],
+                        "the disclosure must reach the engine's own payload")
+        self.assertIsNone(zone["optimal_limit_buy"])
+
+    def test_a_clamped_zone_cannot_rescue_the_inverted_rr_exception(self):
+        """The capital-relevant half: "a limit order restores R:R >= 1.5"
+        must be a real limit claim, not the reco band's low wearing its hat."""
+        math_p = {"live_rr": 0.8, "outside_range_pct": 0.0,
+                  "inverted_rr_flag": True}
+        clamped = dict(self.payloads(dict(self.CLAMPED)))
+        clamped["out_1_math.json"] = math_p
+        out = verdict_of(run_stage9(trade(), clamped))
+        self.assertEqual(out["verdict"], "AVOID")
+        self.assertIn("no limit order restores", out["avoid_reason"])
+
+        real = dict(self.payloads({"optimal_limit_buy": 1497.0,
+                                   "spread_impact_cost_pct": 0.05}))
+        real["out_1_math.json"] = math_p
+        self.assertEqual(verdict_of(run_stage9(trade(), real))["verdict"],
+                         "WAIT", "a real limit claim still restores R:R")
+
+    def test_an_absent_stage8_payload_keeps_the_legacy_band_reference(self):
+        """Back-compat: stage 9 alone (no stage 8 in the chain at all) keeps
+        the reco's own band low as its historical limit reference."""
+        p = strong_payloads()
+        del p["out_8_dhan.json"]
+        out = verdict_of(run_stage9(trade(), p))
+        leg = out["flip_table"]["limit_order"]
+        self.assertEqual(leg["entry"], 1498.0)
+        self.assertIsNotNone(leg["r_r"])
+        self.assertIsNone(leg["unavailable"])
+
+    def test_a_wholly_waived_zone_discloses_no_zone(self):
+        """Stage 8 ran and had nothing to say at all: unavailable, named as
+        such — still never the band substitution."""
+        waived8 = {"optimal_limit_buy": None, "zone_above_market": None,
+                   "spread_impact_cost_pct": None, "waived": True}
+        out = verdict_of(run_stage9(trade(), self.payloads(waived8)))
+        leg = out["flip_table"]["limit_order"]
+        self.assertIsNone(leg["entry"])
+        self.assertEqual(leg["unavailable"], "zone_unavailable")
+
+
+class TestScorePrecisionNeverRewardsAbsentSpread(unittest.TestCase):
+    """Honesty seam — plan-tier2-dhan-collection §1 / Phase 1.3 (TDD, red first).
+
+    Stage 9 reads its precision dimension straight off
+    `spread_impact_cost_pct`. When that value is absent — the key missing,
+    null, or not a number — the score must be **0.0**, because BRD §10.4's
+    rule is that absence is disclosed and deducted, never rewarded. The old
+    `float(doc.get(...) or 0.0)` fall-through read "no evidence" as "zero
+    cost" and therefore paid out a perfect 1.0 for evidence nobody collected.
+
+    A waived `out_8` payload is the *other* half of that rule and already
+    behaves correctly (its weight leaves `max_possible_score`, §10.4); it is
+    pinned here so the two halves can never drift apart.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("stage9_precision", STAGE9)
+        cls.stage9 = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(cls.stage9)
+
+    @staticmethod
+    def zone(spread) -> dict:
+        return {"optimal_limit_buy": 1497.0, "spread_impact_cost_pct": spread}
+
+    def test_an_absent_spread_scores_zero_never_one(self):
+        for label, doc in (
+                ("key missing", {"optimal_limit_buy": 1497.0}),
+                ("null", self.zone(None)),
+                ("not a number", self.zone("n/a"))):
+            with self.subTest(label=label):
+                self.assertEqual(self.stage9.score_precision(doc), 0.0,
+                                 f"{label}: unmeasured evidence must not score")
+
+    def test_unmeasured_is_not_the_same_number_as_measured_free(self):
+        """The falsifiable pair: a *measured* zero-cost spread is a 1.0; an
+        unmeasured spread can never be that same number."""
+        self.assertEqual(self.stage9.score_precision(self.zone(0.0)), 1.0)
+        self.assertEqual(self.stage9.score_precision(self.zone(None)), 0.0)
+
+    def test_a_measured_spread_keeps_the_frozen_formula(self):
+        self.assertAlmostEqual(self.stage9.score_precision(self.zone(0.05)),
+                               0.9, places=6)
+        self.assertEqual(self.stage9.score_precision(self.zone(0.60)), 0.0)
+
+    def test_no_zone_still_scores_zero(self):
+        self.assertEqual(
+            self.stage9.score_precision({"optimal_limit_buy": None,
+                                         "spread_impact_cost_pct": 0.0}),
+            0.0)
+
+    def test_a_waived_stage8_payload_is_deducted_not_scored(self):
+        """§10.4's waived source: its weight leaves `max_possible_score`
+        instead of contributing a score of any kind."""
+        payloads = strong_payloads()
+        payloads["out_8_dhan.json"] = {
+            "optimal_limit_buy": 1497.0, "spread_impact_cost_pct": None,
+            "waived": True}
+        out = verdict_of(run_stage9(trade(), payloads))
+        self.assertAlmostEqual(out["max_possible_score"],
+                               100.0 - self.stage9.DEFAULT_WEIGHTS[
+                                   "out_8_dhan.json"], places=2)
+
+    def test_the_engine_actually_charges_for_the_missing_spread(self):
+        """End to end: two payloads differing only in whether the spread was
+        measured. Before the fix both scored 1.0 and the engine could not
+        tell them apart."""
+        absent = strong_payloads()
+        absent["out_8_dhan.json"] = self.zone(None)
+        measured = strong_payloads()
+        measured["out_8_dhan.json"] = self.zone(0.0)
+        a = verdict_of(run_stage9(trade(), absent))
+        b = verdict_of(run_stage9(trade(), measured))
+        self.assertLess(
+            a["final_score"], b["final_score"],
+            "an unmeasured spread must cost the verdict points, not earn "
+            "the same 5.0 weight credit a measured free one does")
+
+
 if __name__ == "__main__":
     unittest.main()

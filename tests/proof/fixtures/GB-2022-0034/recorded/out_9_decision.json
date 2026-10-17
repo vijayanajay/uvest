@@ -1,0 +1,47 @@
+{
+  "symbol": "RBLBANK",
+  "final_score": 23.05,
+  "max_possible_score": 52.5,
+  "effective_score_pct": 43.9,
+  "decision": "AVOID",
+  "verdict": "AVOID",
+  "p_win": 0.5256,
+  "expectancy": 0.5768,
+  "circuit_breakers_tripped": [
+    "tighter_than_0_75x_atr"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.05629,
+      "dtw_win_rate_22d": 0.3333333333333333,
+      "prob_target_hit_22d": null
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": null,
+      "mae_projected": null
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 129.53,
+      "zone_above_market": false,
+      "recommended_band_low": 130.25,
+      "recommended_band_high": 132.25
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 131.25,
+      "r_r": 1.9999999999999891
+    },
+    "limit_order": {
+      "entry": 129.53,
+      "r_r": 7.7978,
+      "unavailable": null
+    },
+    "p_win": 0.5256
+  },
+  "what_would_flip_me": [
+    "a stop placed at or beyond 0.75x daily ATR is available"
+  ],
+  "avoid_reason": "hard circuit breaker(s) tripped: tighter_than_0_75x_atr",
+  "confidence_deficit": null
+}

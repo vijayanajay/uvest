@@ -1,0 +1,53 @@
+{
+  "symbol": "ICICIBANK",
+  "final_score": 8.92,
+  "max_possible_score": 45.0,
+  "effective_score_pct": 19.82,
+  "decision": "WAIT",
+  "verdict": "WAIT",
+  "p_win": 0.4293,
+  "expectancy": -0.3346,
+  "circuit_breakers_tripped": [
+    "inverted_risk_reward"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.109689,
+      "dtw_win_rate_22d": 0.0,
+      "prob_target_hit_22d": 0.1803
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": {
+        "p10": 678.22,
+        "p25": 703.51,
+        "p50": 754.22,
+        "p75": 806.02,
+        "p90": 834.88
+      },
+      "mae_projected": -38.98
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 734.91,
+      "zone_above_market": false,
+      "recommended_band_low": 761.25,
+      "recommended_band_high": 763.25
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 762.25,
+      "r_r": 0.549934725848565
+    },
+    "limit_order": {
+      "entry": 734.91,
+      "r_r": 13.3909,
+      "unavailable": null
+    },
+    "p_win": 0.4293
+  },
+  "what_would_flip_me": [
+    "price returns to the limit band (<= 761.25) so a limit order restores R:R >= 1.5"
+  ],
+  "avoid_reason": null,
+  "confidence_deficit": null
+}

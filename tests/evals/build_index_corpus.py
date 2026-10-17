@@ -106,6 +106,12 @@ NSE_ARCHIVE_NAMES = {
     "^CNXENERGY": "Nifty Energy",
     "^CNXINFRA": "Nifty Infrastructure",
     "^CNXBANK": "Nifty PSU Bank",
+    # The two pins added 2026-10-17 (TITAN, BAJFINANCE — see the map's own
+    # note): neither index is a Yahoo symbol, so the archive's official
+    # `Index Name` is what both the fallback fan-out and the bundle keys
+    # resolve to.
+    "^CNXCD": "Nifty Consumer Durables",
+    "^CNXFINSERV25": "Nifty Financial Services 25/50",
 }
 ARCHIVE_NAME_COLUMN = "Index Name"
 ARCHIVE_DATE_COLUMN = "Index Date"

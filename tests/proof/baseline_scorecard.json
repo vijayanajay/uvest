@@ -1,7 +1,7 @@
 {
   "schema": "uvest-baseline-scorecard/1",
-  "scenario_manifest_sha256": "45ff2e7c050dd1ee72b274aaa8117d22b019683919a3ba6b9d442b8ca29cafdc",
-  "manifest_sha256": "c5cf565e94a96ddd3da29e87732f88ff627792e3089a3d832829ea47253b83af",
+  "scenario_manifest_sha256": "d150009e04d50475974771cf7186c7d3a82c334ab635dee768d728fadfa9c05c",
+  "manifest_sha256": "589336bce1760eda85f46fbeeeaec04b866ca602963d711bf5a35fbf753ba716",
   "quarantined_count": 0,
   "quarantine_register_sha256": "440b46cb3f9865af6a2a672c2f3e62a0d25744a5bfef1d4b44a6bd910e0c4929",
   "probe_rosters": {
@@ -53,13 +53,13 @@
       "verdict": "PASS",
       "value": 100.0
     },
-    "Directional Brier Score": {
+    "Race Calibration Brier Score": {
       "verdict": "FAIL",
-      "value": 0.4829451633333333
+      "value": 0.4097269493548388
     },
     "Price Cone Range Coverage": {
       "verdict": "FAIL",
-      "value": 0.0
+      "value": 55.172413793103445
     },
     "Optimal Limit Slippage Reduction": {
       "verdict": "PASS",
@@ -68,6 +68,10 @@
     "HTML Visualizer Validation": {
       "verdict": "PASS",
       "value": 100.0
+    },
+    "Verdict Alignment vs Expectation": {
+      "verdict": "FAIL",
+      "value": 65.51724137931035
     }
   }
 }

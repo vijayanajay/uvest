@@ -344,6 +344,58 @@ class ManifestFixture(unittest.TestCase):
         self.root = Path(self._tmp.name)
 
 
+class TestHistoryFixtureReplayInput(ManifestFixture):
+    """`replay_inputs.history_fixture` (stage 3's DTW tape) joins the discipline.
+
+    The bundle carries `date`-keyed bars by design, so it is exactly the shape
+    V7's look-ahead scan exists for: every session must sit at or before T_rec,
+    and the file is a hash-frozen input like every other replay bundle.
+    """
+
+    def _with_history(self, sessions: list[dict]) -> dict:
+        manifest = build(self.root)
+        row = manifest["scenarios"][0]
+        row["replay_inputs"]["history_fixture"] = "fixtures/SCEN-001/history.json"
+        _write_json(self.root / "fixtures" / "SCEN-001" / "history.json",
+                    {"symbol": row["symbol"], "rec_date": T_REC,
+                     "sessions": sessions})
+        refresh(self.root, manifest)
+        return manifest
+
+    def test_in_window_history_fixture_passes_and_stays_hash_frozen(self):
+        manifest = self._with_history([
+            {"date": "2023-03-01", "close": 99.0},
+            {"date": T_REC, "close": 102.0},
+        ])
+        report = vm.validate_manifest(manifest, self.root)
+        self.assertTrue(report.ok, [f.code for f in report.errors])
+        # The bundle is evidence: touching the committed bytes breaks V4.
+        (self.root / "fixtures" / "SCEN-001" / "history.json").write_text(
+            "{}", encoding="utf-8")
+        report = vm.validate_manifest(load(self.root), self.root)
+        self.assertTrue(any(f.code == "V4_HASH_MISMATCH" for f in report.errors),
+                        report.codes())
+
+    def test_post_t_rec_session_is_a_v7_lookahead_error(self):
+        manifest = self._with_history([
+            {"date": "2023-03-01", "close": 99.0},
+            {"date": T_REC, "close": 102.0},
+            {"date": "2023-03-16", "close": 95.0},  # after T_rec — look-ahead
+        ])
+        report = vm.validate_manifest(manifest, self.root)
+        self.assertTrue(any(f.code == "V7_POST_CUTOFF_BAR" for f in report.errors),
+                        report.codes())
+
+    def test_declared_but_missing_history_fixture_is_a_v3_error(self):
+        manifest = build(self.root)
+        manifest["scenarios"][0]["replay_inputs"]["history_fixture"] = \
+            "fixtures/SCEN-001/history.json"  # never written
+        refresh(self.root, manifest)
+        report = vm.validate_manifest(manifest, self.root)
+        self.assertTrue(any(f.code == "V3_MISSING_PATH" for f in report.errors),
+                        report.codes())
+
+
 class TestValidManifest(ManifestFixture):
     def test_valid_synthetic_proof_passes_with_zero_errors(self):
         manifest = build(self.root)

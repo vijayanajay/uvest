@@ -1,0 +1,53 @@
+{
+  "symbol": "ITC",
+  "final_score": 9.81,
+  "max_possible_score": 45.0,
+  "effective_score_pct": 21.8,
+  "decision": "AVOID",
+  "verdict": "AVOID",
+  "p_win": 0.4372,
+  "expectancy": -0.1691,
+  "circuit_breakers_tripped": [
+    "inverted_risk_reward"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.106293,
+      "dtw_win_rate_22d": 0.0,
+      "prob_target_hit_22d": 0.086
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": {
+        "p10": 227.6,
+        "p25": 237.07,
+        "p50": 256.65,
+        "p75": 277.23,
+        "p90": 287.21
+      },
+      "mae_projected": -14.5
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 237.19,
+      "zone_above_market": false,
+      "recommended_band_low": 258.55,
+      "recommended_band_high": 260.55
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 259.55,
+      "r_r": 0.9003880983182359
+    },
+    "limit_order": {
+      "entry": 237.19,
+      "r_r": null,
+      "unavailable": null
+    },
+    "p_win": 0.4372
+  },
+  "what_would_flip_me": [
+    "price returns to the limit band (<= 258.55) so a limit order restores R:R >= 1.5"
+  ],
+  "avoid_reason": "inverted R:R at market and no limit order restores R:R >= 1.5 (limit view: None)",
+  "confidence_deficit": null
+}

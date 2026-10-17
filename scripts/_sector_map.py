@@ -49,4 +49,18 @@ SECTOR_INDEX_MAP = {
     # (the live Yahoo ticker this map addresses). Both LT and ADANIPORTS
     # appear in all four.
     "LT": "^CNXINFRA", "ADANIPORTS": "^CNXINFRA",
+    # NIFTY CONSUMER DURABLES / NIFTY FINANCIAL SERVICES 25/50 — the two pins
+    # whose absence kept TITAN and BAJFINANCE unmapped and their advisories
+    # short a stage-4 (LightGBM) half. Membership pinned — not guessed — from
+    # NSE's own constituent lists read 2026-10-17:
+    # `nsearchives.nseindia.com/content/indices/ind_niftyconsumerdurableslist.csv`
+    # ("Titan Company Ltd., Consumer Durables, TITAN") and
+    # `.../ind_niftyfinancialservices25_50list.csv`
+    # ("Bajaj Finance Ltd., Financial Services, BAJFINANCE") — the plain
+    # NIFTY FIN SERVICE list publishes no stable CSV path, so the pin went to
+    # the family index NSE *does* publish constituents for, never to a proxy
+    # the symbol is not a member of. Yahoo serves neither index, so both panel
+    # labels resolve to their official `Index Name` through
+    # `build_index_corpus.NSE_ARCHIVE_NAMES` (`^CNXBANK` precedent).
+    "TITAN": "^CNXCD", "BAJFINANCE": "^CNXFINSERV25",
 }

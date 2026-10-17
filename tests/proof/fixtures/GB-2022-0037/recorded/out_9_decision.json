@@ -1,0 +1,47 @@
+{
+  "symbol": "SAIL",
+  "final_score": 21.92,
+  "max_possible_score": 52.5,
+  "effective_score_pct": 41.75,
+  "decision": "AVOID",
+  "verdict": "AVOID",
+  "p_win": 0.517,
+  "expectancy": 0.551,
+  "circuit_breakers_tripped": [
+    "tighter_than_0_75x_atr"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.07392,
+      "dtw_win_rate_22d": 0.0,
+      "prob_target_hit_22d": null
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": null,
+      "mae_projected": null
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 101.21,
+      "zone_above_market": false,
+      "recommended_band_low": 101.35,
+      "recommended_band_high": 103.35
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 102.35,
+      "r_r": 2.0000000000000075
+    },
+    "limit_order": {
+      "entry": 101.21,
+      "r_r": 6.6216,
+      "unavailable": null
+    },
+    "p_win": 0.517
+  },
+  "what_would_flip_me": [
+    "a stop placed at or beyond 0.75x daily ATR is available"
+  ],
+  "avoid_reason": "hard circuit breaker(s) tripped: tighter_than_0_75x_atr",
+  "confidence_deficit": null
+}

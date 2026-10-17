@@ -1,0 +1,51 @@
+{
+  "symbol": "BAJFINANCE",
+  "final_score": 17.26,
+  "max_possible_score": 45.0,
+  "effective_score_pct": 38.36,
+  "decision": "GO_WEAK",
+  "verdict": "GO_WEAK",
+  "p_win": 0.5034,
+  "expectancy": 0.6108,
+  "circuit_breakers_tripped": [],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.069892,
+      "dtw_win_rate_22d": 0.0,
+      "prob_target_hit_22d": 0.0948
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": {
+        "p10": 642.28,
+        "p25": 668.55,
+        "p50": 727.91,
+        "p75": 783.67,
+        "p90": 810.32
+      },
+      "mae_projected": -26.89
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 706.58,
+      "zone_above_market": false,
+      "recommended_band_low": 716.74,
+      "recommended_band_high": 718.74
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 717.74,
+      "r_r": 2.199892386333066
+    },
+    "limit_order": {
+      "entry": 706.58,
+      "r_r": 3.5729,
+      "unavailable": null
+    },
+    "p_win": 0.5034
+  },
+  "what_would_flip_me": [
+    "live price improves to the limit band or the model/flow evidence strengthens P(win) above the 55% floor"
+  ],
+  "avoid_reason": null,
+  "confidence_deficit": "P(win) 50.3% below the 55% floor with positive expectancy (+0.61R)"
+}

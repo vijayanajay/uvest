@@ -107,6 +107,16 @@ MODEL_PARAMS = {
 }
 NUM_BOOST_ROUND = 200
 
+# What the shipped `prob_target_hit_22d` *is*, carried in the artifact rather
+# than only in prose: decision D's graded estimator, disclosed as a lower bound.
+RACE_ESTIMATOR_NOTE = (
+    "prob_target_hit_22d = P(best high >= target) x P(worst low > -stop), "
+    "class-weighted over the excursion pools (stage4.race_probability). The "
+    "product of two positively-associated marginals is at most their joint, so "
+    "it understates the first-touch race and is never tuned upward — a "
+    "disclosed lower bound (decision D, 2026-10-16)."
+)
+
 
 def load_module(name: str, filename: str):
     """Import a script whose filename is not a valid module name."""
@@ -398,7 +408,13 @@ def build_rows(stage4, sector_map: dict, stocks: dict,
                 _ret, close_mae, close_mfe = stage4.close_path_outcome(series, index)
             except (ValueError, KeyError, IndexError, ZeroDivisionError):
                 continue
-            label = stage4.classify_outcome(forward_return)
+            # Decision D: the label is the reference-band race — which ±3% level
+            # the forward window printed first — scanned by stage 4's own
+            # `first_touch_outcome`, the same rule the benchmark's recorded
+            # `resolution_outcome` is derived by.
+            label = stage4.classify_outcome(
+                float(series[index]["close"]),
+                series[index + 1:index + 1 + stage4.HORIZON])
             rows.append({
                 "symbol": symbol,
                 "date": day,
@@ -500,15 +516,18 @@ def split_fold(rows: list[dict], ranks: dict, span: tuple[str, str], *,
     return {"span": (low, high), "test": test, "train": train, "purged": purged}
 
 
-def calibration_samples(rows: list[dict]) -> dict[str, dict[str, list[float]]]:
+def calibration_samples(rows: list[dict],
+                        classes: tuple[str, ...] | None = None) -> dict[str, dict[str, list[float]]]:
     """The artifact's `samples` block: measure → class → observed values.
 
     This is the shape stage 4's inference reads (`samples["forward_return_pct"]`
-    for the cone, `mae_pct`/`mfe_pct` for the projected excursions), so the
-    trainer writes exactly what the engine consumes.
+    for the cone, `mae_pct`/`mfe_pct` for the projected excursions and for the
+    race probability), so the trainer writes exactly what the engine consumes.
+    The class set is stage 4's own unless the caller already holds it.
     """
+    classes = tuple(classes or load_stage4().CLASSES)
     pools = {
-        measure: {cls: [] for cls in ("BEAR", "NEUTRAL", "BULL")}
+        measure: {cls: [] for cls in classes}
         for measure in ("forward_return_pct", "mae_pct", "mfe_pct")
     }
     for row in rows:
@@ -548,7 +567,8 @@ def block_disclosure(block: dict) -> dict:
     }
 
 
-def calibration_samples_by_sector(rows: list[dict]) -> dict[str, dict]:
+def calibration_samples_by_sector(rows: list[dict],
+                                  classes: tuple[str, ...] | None = None) -> dict[str, dict]:
     """The same pools, split by the sector index each row trades under.
 
     The cone's levels are quantiles of observed excursions, so the block they
@@ -558,34 +578,30 @@ def calibration_samples_by_sector(rows: list[dict]) -> dict[str, dict]:
     so this reader and that selector cannot drift apart, and the pooled block
     stays in the artifact as the fallback for a sector too thin to answer.
     """
+    classes = tuple(classes or load_stage4().CLASSES)
     pools: dict[str, dict[str, dict[str, list[float]]]] = {}
     for row in rows:
         sector = row["sector_index"]
         block = pools.setdefault(sector, {
-            measure: {cls: [] for cls in ("BEAR", "NEUTRAL", "BULL")}
+            measure: {cls: [] for cls in classes}
             for measure in ("forward_return_pct", "mae_pct", "mfe_pct")})
         for measure in block:
             block[measure][row["class"]].append(round(row[measure], 6))
     return {sector: pools[sector] for sector in sorted(pools)}
 
 
-def _up_share_of_neutral(rows: list[dict]) -> float:
-    """φ: the share of NEUTRAL-labelled rows that closed *up* on the entry.
+def _race_probability(stage4, weights: dict, sample_sets: dict) -> float:
+    """The reference-band race probability the out-of-fold Brier grades.
 
-    This is the data-derived bridge from the engine's three classes to the
-    binary event evals dimension 4 grades (`actual_direction`, i.e. the window's
-    final close against the entry): `P(up) = P(BULL) + φ·P(NEUTRAL)`. It is
-    measured from the corpus rather than assumed at 0.5.
+    Decision D (2026-10-16): the graded event is the target-versus-stop race,
+    and the corpus's only common geometry is the reference band the labels were
+    decided at — so the OOF number is the *same estimator* the shipped payload
+    uses (`stage4.race_probability`) evaluated at ±`RACE_BAND_PCT` against each
+    row's own `TARGET_FIRST` label, read off the fold's training pools through
+    `samples_for` (the shipped selector, exactly as the cone's CV does).
     """
-    neutral = [row for row in rows if row["class"] == "NEUTRAL"]
-    if not neutral:
-        return 0.5
-    return sum(1 for row in neutral if row["forward_return_pct"] > 0.0) / len(neutral)
-
-
-def _up_probability(probabilities: list[float], classes: tuple[str, ...], phi: float) -> float:
-    return (probabilities[classes.index("BULL")]
-            + phi * probabilities[classes.index("NEUTRAL")])
+    band = stage4.RACE_BAND_PCT
+    return stage4.race_probability(weights, sample_sets, band, band)
 
 
 def cross_validate(stage4, rows: list[dict], *, folds: int, embargo: int,
@@ -598,6 +614,24 @@ def cross_validate(stage4, rows: list[dict], *, folds: int, embargo: int,
         "folds": folds,
         "embargo_sessions": embargo,
         "horizon_sessions": stage4.HORIZON,
+        # The event decision D moved evals dimension 4 onto, and the geometry
+        # the corpus can state it at (the rows carry no target and no stop).
+        "graded_event": (
+            "the target-versus-stop race at the reference band: 1 iff the "
+            f"{stage4.HORIZON}-session forward window prints +"
+            f"{stage4.RACE_BAND_PCT}% before -{stage4.RACE_BAND_PCT}% from the "
+            "entry (first touch wins, one bar carrying both resolves to the "
+            "stop — stage4.first_touch_outcome)"),
+        "race_band_pct": stage4.RACE_BAND_PCT,
+        "brier_note": (
+            "oof_brier_race is stage4.race_probability — the conservative "
+            "product of the two excursion marginals — evaluated at the "
+            "reference band off this fold's training pools through "
+            "stage4.samples_for, against the row's own race label; "
+            "oof_brier_race_base_rate is the constant-predictor floor at the "
+            "corpus's own race-win share. The shipped payload's "
+            "prob_target_hit_22d is the same estimator at each trade's own "
+            "target and stop"),
         "cone_definition": ("path envelope on the session extremes: p10/p25 from "
                             "the adverse-excursion mixture (worst low), p50 from "
                             "terminal returns, p75/p90 from the favourable-"
@@ -648,16 +682,13 @@ def cross_validate(stage4, rows: list[dict], *, folds: int, embargo: int,
                                  num_boost_round=NUM_BOOST_ROUND)
         probabilities = booster.predict(
             np.asarray([r["features"] for r in split["test"]], dtype=float))
-        phi = _up_share_of_neutral(train)
-        pools = calibration_samples(train)
-        pools_by_sector = calibration_samples_by_sector(train)
+        pools = calibration_samples(train, classes)
+        pools_by_sector = calibration_samples_by_sector(train, classes)
         majority = Counter(r["class"] for r in train).most_common(1)[0][0]
-        brier_up = multiclass = 0.0
+        brier_race = multiclass = 0.0
         covered = close_covered = terminal_covered = pooled_covered = correct = 0
         for row, probs in zip(split["test"], probabilities):
             probs = [float(p) for p in probs]
-            truth = 1 if row["forward_return_pct"] > 0.0 else 0
-            brier_up += (_up_probability(probs, classes, phi) - truth) ** 2
             multiclass += sum((probs[classes.index(cls)] - (1.0 if row["class"] == cls else 0.0)) ** 2
                               for cls in classes)
             correct += 1 if classes[int(max(range(len(probs)), key=probs.__getitem__))] == row["class"] else 0
@@ -671,6 +702,13 @@ def cross_validate(stage4, rows: list[dict], *, folds: int, embargo: int,
             if sample_sets is not pools:
                 sector_rows += 1
             weights = dict(zip(classes, probs))
+            # Decision D's graded event, measured out of fold: the same
+            # conservative estimator the payload ships (`stage4.race_probability`)
+            # at the reference band the labels were decided at, against the
+            # row's own first-touch label — never a direction proxy.
+            race = _race_probability(stage4, weights, sample_sets)
+            truth = 1 if row["class"] == "TARGET_FIRST" else 0
+            brier_race += (race - truth) ** 2
             envelope = stage4.cone_levels_pct(sample_sets, weights)
             # The pooled block's cone over the same row, measured beside the
             # shipped one: the two blocks are different envelopes for one row
@@ -693,8 +731,8 @@ def cross_validate(stage4, rows: list[dict], *, folds: int, embargo: int,
             close_covered += 1 if close_ok else 0
             terminal_covered += 1 if terminal_ok else 0
             pooled_covered += 1 if pooled_ok else 0
-            oof.append({"brier_up": (_up_probability(probs, classes, phi) - truth) ** 2,
-                        "up": truth == 1,
+            oof.append({"brier_race": (race - truth) ** 2,
+                        "race_won": truth == 1,
                         "covered": path_ok, "close_covered": close_ok,
                         "terminal_covered": terminal_ok,
                         "pooled_covered": pooled_ok,
@@ -706,7 +744,7 @@ def cross_validate(stage4, rows: list[dict], *, folds: int, embargo: int,
             "test_rows": n,
             "train_rows": len(train),
             "purged_rows": len(split["purged"]),
-            "oof_brier_up": round(brier_up / n, 6),
+            "oof_brier_race": round(brier_race / n, 6),
             "oof_brier_multiclass": round(multiclass / n, 6),
             "oof_cone_coverage_pct": round(100.0 * covered / n, 2),
             "oof_cone_close_path_coverage_pct": round(100.0 * close_covered / n, 2),
@@ -715,19 +753,20 @@ def cross_validate(stage4, rows: list[dict], *, folds: int, embargo: int,
             "oof_accuracy_pct": round(100.0 * correct / n, 2),
             "majority_class_share_pct": round(100.0 * sum(
                 1 for r in train if r["class"] == majority) / len(train), 2),
-            "neutral_up_share": round(phi, 6),
+            "race_band_pct": stage4.RACE_BAND_PCT,
         })
     if oof:
         report["oof_rows"] = len(oof)
         report["oof_sector_pool_share_pct"] = round(
             100.0 * sector_rows / len(oof), 2)
-        report["oof_brier_up"] = round(
-            sum(entry["brier_up"] for entry in oof) / len(oof), 6)
-        # A constant predictor at the corpus's own up-share is the honest floor
-        # for the Brier score: with no skill, `p(1-p)` is what it scores.
-        up_share = sum(1 for entry in oof if entry["up"]) / len(oof)
-        report["oof_up_share"] = round(up_share, 6)
-        report["oof_brier_up_base_rate"] = round(up_share * (1.0 - up_share), 6)
+        report["oof_brier_race"] = round(
+            sum(entry["brier_race"] for entry in oof) / len(oof), 6)
+        # A constant predictor at the corpus's own race-win share is the honest
+        # floor for the Brier score: with no skill, `p(1-p)` is what it scores.
+        race_share = sum(1 for entry in oof if entry["race_won"]) / len(oof)
+        report["oof_race_win_share"] = round(race_share, 6)
+        report["oof_brier_race_base_rate"] = round(
+            race_share * (1.0 - race_share), 6)
         report["oof_cone_coverage_pct"] = round(
             100.0 * sum(1 for entry in oof if entry["covered"]) / len(oof), 2)
         report["oof_cone_close_path_coverage_pct"] = round(
@@ -790,9 +829,8 @@ def main(argv: list[str] | None = None) -> int:
         feature_name=list(stage4.FEATURES), free_raw_data=False)
     booster = lightgbm.train(MODEL_PARAMS, dataset, num_boost_round=NUM_BOOST_ROUND)
 
-    phi = _up_share_of_neutral(rows)
-    pooled_blocks = calibration_samples(rows)
-    sector_blocks = calibration_samples_by_sector(rows)
+    pooled_blocks = calibration_samples(rows, classes)
+    sector_blocks = calibration_samples_by_sector(rows, classes)
     dates = sorted({row["date"] for row in rows})
     try:
         shown_corpus = corpus_dir.relative_to(REPO_ROOT).as_posix()
@@ -850,7 +888,9 @@ def main(argv: list[str] | None = None) -> int:
         "lightgbm_version": lightgbm.__version__,
         "fetched_on": date.today().isoformat(),
         "note": (
-            "Sourced booster for BRD §5.2's 1-month direction engine: real yfinance "
+            "Sourced booster for BRD §5.2's target-versus-stop race engine "
+            "(decision D — the graded event is the reference-band race, not the "
+            "1-month up/down): real yfinance "
             "daily bars for the symbols whose sectoral index the tier-1 source "
             "serves, point-in-time rows only with forward label windows kept "
             "inside one committed vintage and feature histories kept inside one "
@@ -862,7 +902,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cv_only:
         print(json.dumps(report, indent=2))
-        print(f"rows: {len(rows)} · classes: {dict(counts)} · phi: {phi:.4f}")
+        print(f"rows: {len(rows)} · classes: {dict(counts)}")
         dropped = sum(disclosure["label_windows_dropped"].values())
         print(f"label windows dropped for a gap between vintages: {dropped}")
         for symbol, count in disclosure["label_windows_dropped"].items():
@@ -891,8 +931,8 @@ def main(argv: list[str] | None = None) -> int:
         "horizon": stage4.HORIZON,
         "classes": list(classes),
         "features": list(stage4.FEATURES),
-        "bull_band_pct": stage4.BULL_BAND_PCT,
-        "neutral_up_share": round(phi, 6),
+        "race_band_pct": stage4.RACE_BAND_PCT,
+        "race_estimator": RACE_ESTIMATOR_NOTE,
         "samples": pooled_blocks,
         # One block per sectoral index, plus the pooled block above as the
         # fallback; stage 4's `samples_for` picks between them.
@@ -910,7 +950,8 @@ def main(argv: list[str] | None = None) -> int:
         shown_model, shown_calibration = model_path, calibration_path
     print(f"wrote {shown_model} ({model_path.stat().st_size} bytes)")
     print(f"wrote {shown_calibration}")
-    print(f"rows: {len(rows)} · classes: {dict(counts)} · phi: {phi:.4f}")
+    print(f"rows: {len(rows)} · classes: {dict(counts)} · "
+          f"race band ±{stage4.RACE_BAND_PCT}%")
     dropped = sum(disclosure["label_windows_dropped"].values())
     print(f"label windows dropped for a gap between vintages: {dropped}")
     for symbol, count in disclosure["label_windows_dropped"].items():
@@ -923,9 +964,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  [dropped] {symbol}: {count} row(s) whose "
               f"{stage4.MIN_SESSIONS}-session feature history crossed a "
               "hole between vintage runs")
-    print(f"out-of-fold Brier (up): {report.get('oof_brier_up')} over "
+    print(f"out-of-fold Brier (race): {report.get('oof_brier_race')} over "
           f"{report.get('oof_rows')} row(s) (base rate "
-          f"{report.get('oof_brier_up_base_rate')}) · cone coverage "
+          f"{report.get('oof_brier_race_base_rate')}) · cone coverage "
           f"{report.get('oof_cone_coverage_pct')}% bar path / "
           f"{report.get('oof_cone_close_path_coverage_pct')}% close path / "
           f"{report.get('oof_cone_terminal_coverage_pct')}% terminal · "

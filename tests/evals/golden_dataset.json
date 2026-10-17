@@ -34,8 +34,11 @@
       "option_probes: 5 authored Univest-style option pastes (CE/PE/OPT/CALL/PUT) seeded in the top-level `option_probes` roster as gate 1's stage-0 test cases (docs/agents/evals.md §2.1). They are AUTHORED PARSER INPUTS, disclosed as such — never sourced recommendations and never hazard measurements — and they are not trades: stage 0 rejects them before a canonical current_trade.json exists and the proof root pins no option scenario, so the frozen 52-trade quota, the class counts and distribution_verified are untouched. Gate 1 replays each paste live through scripts/0_ingest_reco.py and grades exit 2 + ERR_OPTIONS_PROHIBITED with no canonical payload (ADR-001, TICK-001 §3); meta.option_probes_expected governs the roster size.",
       "REF-001..REF-005 are authored stage-0 *refusal* probes, not trades: input to the ingestion gate, disclosed as authored and counted by meta.refusal_probes_expected. They exercise ADR-001's closed instrument domain (\"only Equities and Futures are permitted\") at the two shapes the option-token gate cannot name: an option written with look-alike letters (Cyrillic/Greek/mixed) and an invented or un-aliased label (NFO, FUTURES). Each declares the refusal it must reproduce (exit 2, ERR_INSTRUMENT_UNRECOGNIZED, no canonical payload) and is replayed live by the Unrecognized Instrument Guardrail; the code is deliberately not ERR_OPTIONS_PROHIBITED, so a paste the gate never classified as an option cannot inflate the option rejection rate. No class count, census cell or distribution_verified claim is touched.",
       "58 of 58 records: all seven classes are seeded and every class count matches class_counts_expected (distribution_verified=true). The three geometry classes (clean_bullish 15/15, inverted_rr 10/10, tight_stop 5/5) carry recorded stage-1/2 evidence over their pinned <=T_rec tape; the two hazard classes (pledge_hazard 5/5, earnings_hazard 7/7) are views of the frozen catalog's own hazard rows (business_test_cases.md §3) with recorded stage-6 evidence over an authored, disclosed bundle — the catalog's documented level verbatim where it states one and a disclosed value above the stated floor where it states only the inequality, statement blocks deliberately empty so stage 6 reports null ratios with missing_inputs naming every gap (E4: absence, never an invented filing); GB-2023-0003's legacy pledge payload was retired into recorded stage-6 evidence (tests/evals/retire_quarantine_records.py), so the E5 meter is 0 and gate 2 has no abstention left. institutional_distribution 10/10 (GB-2022-0033, GB-2022-0034, GB-2022-0035, GB-2022-0036, GB-2022-0037, GB-2022-0038, GB-2023-0039, GB-2023-0040, GB-2023-0041, GB-2023-0042): scan-authored by tests/evals/seed_distribution_records.py from NSE's own daily files — sec_bhavdata_full delivery % (EQ series) and the F&O bhavcopy's front-month open interest on each T_rec — admitting only sessions the files measure as price up, delivery < 25% and OI <= -5% (the class signature of docs/agents/evals.md §2) whose pinned tape then resolves LOSS under the frozen crisis geometry (T_rec open, 0.5x ATR stop, 2.0R target); every fixture discloses its source files' sha256 and a 20-session delivery window, and stage 5 is recorded through `5_institutional_flow.py --record`, so the class invariant (SHORT_COVERING_TRAP matrix, delivery < 25%, OI <= -5%) grades from proven bytes. Authored by tests/evals/seed_distribution_records.py. regime_shock 1/1 (SCEN-002, Covid Panic Liquidity Freeze): the catalog's stated panic bounds (VIX > 80; NIFTY 500 breadth < 5% bullish) authored into a disclosed `uvest-market-context/1` bundle (tests/evals/seed_regime_records.py) and recorded through `7_sector_macro_regime.py --record`, so gate 2 grades the panic_regime conjunction (VIX > 24 AND breadth < 30) from proven bytes rather than a pending promise. regime_shock 6/6 (SCEN-001, SCEN-002, SCEN-003, SCEN-004, SCEN-006, SCEN-008) — the catalog's panic scenarios with a stage-7 `panic_regime` intent, each recorded through `7_sector_macro_regime.py --record` over a disclosed `uvest-market-context/1` bundle (tests/evals/seed_regime_records.py): the trap's own level where it states one (SCEN-001: VIX 83.6 documented verbatim; SCEN-003: VIX 32.0 documented verbatim; SCEN-002 at its stated > 80 / < 5% bounds), disclosed authored values inside the breaker arms where it states none, so gate 2 grades the panic_regime conjunction (VIX > 24 AND breadth < 30, ADR-010 decision 6) from proven bytes rather than pending promises.",
-      "stage 4 (BRD §5.2) promotion: 6 record(s) now carry a recorded `out_4_ml.json` — the cone envelope ([P10, P90]), the direction label and the calibrated direction probability (`direction_probability`, i.e. P(up) = P(BULL) + φ·P(NEUTRAL)) read out of the stage's own stdout over the row's pinned ≤T_rec tape and its market-context bundle, with the artifact `$ref`d from `script_outputs`. Eval dimensions 4 and 5 grade those bytes instead of skipping; a row whose artifact is waived keeps null claims. Authored by tests/evals/record_stage4_evidence.py.",
-      "stage 8 (BRD §4 Core Prediction 3) promotion: 58 record(s) now carry a recorded `out_8_dhan.json` — the daily-tier precision execution zone (AVWAP from the swing-low pivot, demand-order-block support, the limit band between them; the Dhan intraday/depth half is operator-gated and waived offline) — with `limit_entry_price` read out of the stage's own stdout and `limit_mae_pct` a `$derive` on the row's own pinned tape (unfilled ⇒ null, excluded from gate 6's denominator). Eval dimension 6 grades those bytes instead of skipping. Authored by tests/evals/record_stage8_evidence.py."
+      "stage 8 (BRD §4 Core Prediction 3) promotion: 58 record(s) now carry a recorded `out_8_dhan.json` — the daily-tier precision execution zone (AVWAP from the swing-low pivot, demand-order-block support, the limit band between them; the Dhan intraday/depth half is operator-gated and waived offline) — with `limit_entry_price` read out of the stage's own stdout and `limit_mae_pct` a `$derive` on the row's own pinned tape (unfilled ⇒ null, excluded from gate 6's denominator). Eval dimension 6 grades those bytes instead of skipping. Authored by tests/evals/record_stage8_evidence.py.",
+      "stage 9 (BRD §10 decision engine) evidence: 58 record(s) now carry a recorded `out_9_decision.json` — the canonical pre-entry verdict, the composite score over the frozen §10.2 weights (its maximum reduced by the §10.4 waiver rule whenever a source is absent or waived), the calibrated P(win) and the expectancy — run over each row's own already-recorded payloads in stage order and `$ref`d from `script_outputs`. The report's header badge transcribes those bytes, so every figure under it is graded by the Zero-Hallucination gate instead of printing an absence. Authored by tests/evals/record_stage9_evidence.py.",
+      "stage 3 (BRD §5.1 DTW analog engine) evidence: 58 record(s) now carry a recorded `out_3_dtw.json` — the 30-session Z-scored window warped against the row's own T_rec-truncated symbol-month tape (fastdtw, K=15 analogs, forward 22d win rate at the strict > +4% boundary) — declared on the proof row and `$ref`d from `script_outputs`. Stage 3 was the one retained scoring source waived on every record, so §10.4's waiver rule capped every verdict at GO_WEAK; the cap now fires only where a source is genuinely absent. Authored by tests/evals/record_stage3_evidence.py.",
+      "Representative-set context campaign (signed gate-thresholds option C (docs/agents/proposal-gate-thresholds.md, signed 2026-10-16); roster completed 2026-10-17): 25 market-context bundle(s) sourced from the committed tier-1 index corpus (tests/fixtures/history/indices_daily.json, origin: recorded, point-in-time ≤ T_rec) over every mapped clean_bullish/inverted_rr row, so eval dimensions 4 and 5 grade a corpus-representative slice instead of six crisis tapes while those six stay in the denominator as the disclosed tail slice; 0 row(s) left unmapped — every roster symbol now carries a pin read from NSE's own constituent list, never a guessed index; 2 of them have a forward tape past the trained corpus window (GB-2025-0031, GB-2025-0032) and are excluded from gate 5's denominator by that gate's frozen scope (evals.md §3 #5) while staying named there — stage 4's inputs stop at T_rec, so their cone, race probability and calibrated P(win) are recorded and graded like every other row's, and the window scopes only what the coverage gate counts. Breadth and FII/DII series are absent from the corpus and named absent in every bundle. Authored by tests/evals/seed_context_records.py.",
+      "stage 4 (BRD §5.2, decision D) promotion: 31 record(s) now carry a recorded `out_4_ml.json` — the cone envelope ([P10, P90]), the race label (`direction_label`) and the race probability `prob_target_hit_22d` (this trade's target-versus-stop geometry read through the excursion pools, promoted as `predicted_probability`) read out of the stage's own stdout over the row's pinned ≤T_rec tape and its market-context bundle, with the artifact `$ref`d from `script_outputs`. Eval dimensions 4 and 5 grade those bytes instead of skipping; a row whose artifact is waived keeps null claims. Authored by tests/evals/record_stage4_evidence.py."
     ],
     "distribution_verified": true
   },
@@ -199,6 +202,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0001/recorded/out_8_dhan.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0001/recorded/out_4_ml.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0001/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0001/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -207,8 +219,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 1074.04,
+      "cone_p90": 1356.49,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0001/forward_tape.json",
@@ -221,14 +233,15 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": null,
+      "predicted_direction": "TARGET_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0001/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": 1132.74
+      "limit_entry_price": 1132.74,
+      "predicted_probability": 0.1314
     },
     {
       "trade_id": "GB-2022-0002",
@@ -260,6 +273,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0002/recorded/out_8_dhan.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0002/recorded/out_4_ml.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0002/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0002/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -268,8 +290,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 345.67,
+      "cone_p90": 434.0,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0002/forward_tape.json",
@@ -277,14 +299,15 @@
         }
       },
       "limit_mae_pct": null,
-      "predicted_direction": null,
+      "predicted_direction": "STRONG_TARGET_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0002/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": null
+      "limit_entry_price": null,
+      "predicted_probability": 0.4527
     },
     {
       "trade_id": "GB-2022-0006",
@@ -316,6 +339,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0006/recorded/out_8_dhan.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0006/recorded/out_4_ml.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0006/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0006/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -324,8 +356,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 1046.78,
+      "cone_p90": 1323.57,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0006/forward_tape.json",
@@ -338,14 +370,15 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": null,
+      "predicted_direction": "STOP_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0006/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": 1133.11
+      "limit_entry_price": 1133.11,
+      "predicted_probability": 0.2134
     },
     {
       "trade_id": "GB-2022-0007",
@@ -377,6 +410,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0007/recorded/out_8_dhan.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0007/recorded/out_4_ml.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0007/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0007/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -385,8 +427,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 661.3,
+      "cone_p90": 819.38,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0007/forward_tape.json",
@@ -394,14 +436,15 @@
         }
       },
       "limit_mae_pct": null,
-      "predicted_direction": null,
+      "predicted_direction": "STOP_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0007/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": null
+      "limit_entry_price": null,
+      "predicted_probability": 0.3038
     },
     {
       "trade_id": "GB-2022-0008",
@@ -433,6 +476,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0008/recorded/out_8_dhan.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0008/recorded/out_4_ml.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0008/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0008/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -441,8 +493,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 678.22,
+      "cone_p90": 834.88,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0008/forward_tape.json",
@@ -455,14 +507,15 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": null,
+      "predicted_direction": "STOP_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0008/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": 734.91
+      "limit_entry_price": 734.91,
+      "predicted_probability": 0.1803
     },
     {
       "trade_id": "GB-2022-0009",
@@ -494,6 +547,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0009/recorded/out_8_dhan.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0009/recorded/out_4_ml.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0009/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0009/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -502,8 +564,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 461.81,
+      "cone_p90": 569.65,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0009/forward_tape.json",
@@ -516,14 +578,15 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": null,
+      "predicted_direction": "STOP_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0009/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": 487.07
+      "limit_entry_price": 487.07,
+      "predicted_probability": 0.0985
     },
     {
       "trade_id": "GB-2022-0010",
@@ -555,6 +618,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0010/recorded/out_8_dhan.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0010/recorded/out_4_ml.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0010/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0010/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -563,8 +635,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 1529.65,
+      "cone_p90": 1927.82,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0010/forward_tape.json",
@@ -577,14 +649,15 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": null,
+      "predicted_direction": "STOP_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0010/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": 1714.53
+      "limit_entry_price": 1714.53,
+      "predicted_probability": 0.1643
     },
     {
       "trade_id": "GB-2022-0011",
@@ -616,6 +689,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0011/recorded/out_8_dhan.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0011/recorded/out_4_ml.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0011/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0011/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -624,8 +706,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 3289.0,
+      "cone_p90": 4141.66,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0011/forward_tape.json",
@@ -638,14 +720,15 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": null,
+      "predicted_direction": "STRONG_TARGET_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0011/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": 3613.85
+      "limit_entry_price": 3613.85,
+      "predicted_probability": 0.2824
     },
     {
       "trade_id": "GB-2022-0012",
@@ -677,6 +760,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0012/recorded/out_8_dhan.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0012/recorded/out_4_ml.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0012/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0012/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -685,8 +777,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 1563.43,
+      "cone_p90": 1978.13,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0012/forward_tape.json",
@@ -699,14 +791,15 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": null,
+      "predicted_direction": "STOP_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0012/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": 1734.1
+      "limit_entry_price": 1734.1,
+      "predicted_probability": 0.2039
     },
     {
       "trade_id": "GB-2022-0013",
@@ -738,6 +831,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0013/recorded/out_8_dhan.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0013/recorded/out_4_ml.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0013/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0013/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -746,8 +848,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 116.46,
+      "cone_p90": 147.33,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0013/forward_tape.json",
@@ -760,14 +862,15 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": null,
+      "predicted_direction": "STOP_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0013/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": 130.88
+      "limit_entry_price": 130.88,
+      "predicted_probability": 0.1566
     },
     {
       "trade_id": "GB-2022-0014",
@@ -799,6 +902,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0014/recorded/out_8_dhan.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0014/recorded/out_4_ml.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0014/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0014/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -807,8 +919,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 227.6,
+      "cone_p90": 287.21,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0014/forward_tape.json",
@@ -821,14 +933,15 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": null,
+      "predicted_direction": "STOP_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0014/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": 237.19
+      "limit_entry_price": 237.19,
+      "predicted_probability": 0.086
     },
     {
       "trade_id": "GB-2022-0015",
@@ -860,6 +973,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0015/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0015/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0015/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -921,6 +1040,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0016/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0016/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0016/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -982,6 +1107,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0017/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0017/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0017/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -1043,6 +1174,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0018/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0018/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0018/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -1104,6 +1241,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0020/recorded/out_8_dhan.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0020/recorded/out_4_ml.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0020/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0020/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -1112,8 +1258,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 778.38,
+      "cone_p90": 984.21,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0020/forward_tape.json",
@@ -1126,14 +1272,15 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": null,
+      "predicted_direction": "TARGET_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2022-0020/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": 872.67
+      "limit_entry_price": 872.67,
+      "predicted_probability": 0.1638
     },
     {
       "trade_id": "GB-2022-0033",
@@ -1168,6 +1315,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0033/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0033/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0033/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -1232,6 +1385,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0034/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0034/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0034/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -1296,6 +1455,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0035/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0035/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0035/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -1360,6 +1525,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0036/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0036/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0036/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -1424,6 +1595,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0037/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0037/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0037/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -1488,6 +1665,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2022-0038/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0038/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2022-0038/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -1552,6 +1735,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2023-0003/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0003/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0003/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -1613,6 +1802,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2023-0021/recorded/out_8_dhan.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0021/recorded/out_4_ml.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0021/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0021/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -1621,8 +1819,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 703.34,
+      "cone_p90": 866.15,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2023-0021/forward_tape.json",
@@ -1630,14 +1828,15 @@
         }
       },
       "limit_mae_pct": null,
-      "predicted_direction": null,
+      "predicted_direction": "STRONG_TARGET_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2023-0021/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": null
+      "limit_entry_price": null,
+      "predicted_probability": 0.2425
     },
     {
       "trade_id": "GB-2023-0022",
@@ -1669,6 +1868,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2023-0022/recorded/out_8_dhan.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0022/recorded/out_4_ml.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0022/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0022/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -1677,8 +1885,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 753.86,
+      "cone_p90": 927.94,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2023-0022/forward_tape.json",
@@ -1686,14 +1894,15 @@
         }
       },
       "limit_mae_pct": null,
-      "predicted_direction": null,
+      "predicted_direction": "STRONG_TARGET_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2023-0022/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": null
+      "limit_entry_price": null,
+      "predicted_probability": 0.2034
     },
     {
       "trade_id": "GB-2023-0023",
@@ -1725,6 +1934,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2023-0023/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0023/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0023/recorded/out_3_dtw.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0023/recorded/out_4_ml.json"
         }
       },
       "forward_prices_22d": {
@@ -1733,8 +1951,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 2166.53,
+      "cone_p90": 2720.44,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2023-0023/forward_tape.json",
@@ -1747,14 +1965,15 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": null,
+      "predicted_direction": "STRONG_TARGET_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2023-0023/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": 2397.82
+      "limit_entry_price": 2397.82,
+      "predicted_probability": 0.2232
     },
     {
       "trade_id": "GB-2023-0024",
@@ -1786,6 +2005,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2023-0024/recorded/out_8_dhan.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0024/recorded/out_4_ml.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0024/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0024/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -1794,8 +2022,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 862.05,
+      "cone_p90": 1080.22,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2023-0024/forward_tape.json",
@@ -1808,14 +2036,15 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": null,
+      "predicted_direction": "STRONG_TARGET_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2023-0024/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": 948.66
+      "limit_entry_price": 948.66,
+      "predicted_probability": 0.2186
     },
     {
       "trade_id": "GB-2023-0039",
@@ -1850,6 +2079,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2023-0039/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0039/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0039/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -1914,6 +2149,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2023-0040/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0040/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0040/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -1978,6 +2219,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2023-0041/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0041/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0041/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -2042,6 +2289,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2023-0042/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0042/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2023-0042/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -2103,6 +2356,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2024-0004/recorded/out_8_dhan.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2024-0004/recorded/out_4_ml.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2024-0004/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2024-0004/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -2111,8 +2373,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 755.98,
+      "cone_p90": 929.35,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2024-0004/forward_tape.json",
@@ -2125,14 +2387,15 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": null,
+      "predicted_direction": "STRONG_TARGET_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2024-0004/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": 781.33
+      "limit_entry_price": 781.33,
+      "predicted_probability": 0.2027
     },
     {
       "trade_id": "GB-2024-0025",
@@ -2164,6 +2427,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2024-0025/recorded/out_8_dhan.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2024-0025/recorded/out_4_ml.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2024-0025/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2024-0025/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -2172,8 +2444,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 973.48,
+      "cone_p90": 1204.34,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2024-0025/forward_tape.json",
@@ -2186,14 +2458,15 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": null,
+      "predicted_direction": "STOP_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2024-0025/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": 1061.09
+      "limit_entry_price": 1061.09,
+      "predicted_probability": 0.1193
     },
     {
       "trade_id": "GB-2024-0026",
@@ -2225,6 +2498,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2024-0026/recorded/out_8_dhan.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2024-0026/recorded/out_4_ml.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2024-0026/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2024-0026/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -2233,8 +2515,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 682.43,
+      "cone_p90": 845.33,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2024-0026/forward_tape.json",
@@ -2247,14 +2529,15 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": null,
+      "predicted_direction": "STOP_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2024-0026/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": 716.13
+      "limit_entry_price": 716.13,
+      "predicted_probability": 0.0965
     },
     {
       "trade_id": "GB-2024-0027",
@@ -2286,6 +2569,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2024-0027/recorded/out_8_dhan.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2024-0027/recorded/out_4_ml.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2024-0027/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2024-0027/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -2294,8 +2586,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 1146.45,
+      "cone_p90": 1408.5,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2024-0027/forward_tape.json",
@@ -2308,14 +2600,15 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": null,
+      "predicted_direction": "STRONG_TARGET_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2024-0027/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": 1146.84
+      "limit_entry_price": 1146.84,
+      "predicted_probability": 0.2243
     },
     {
       "trade_id": "GB-2024-0028",
@@ -2347,6 +2640,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2024-0028/recorded/out_8_dhan.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2024-0028/recorded/out_4_ml.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2024-0028/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2024-0028/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -2355,8 +2657,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 11083.8,
+      "cone_p90": 13939.83,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2024-0028/forward_tape.json",
@@ -2369,14 +2671,15 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": null,
+      "predicted_direction": "STRONG_TARGET_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2024-0028/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": 12140.12
+      "limit_entry_price": 12140.12,
+      "predicted_probability": 0.2159
     },
     {
       "trade_id": "GB-2025-0005",
@@ -2408,6 +2711,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2025-0005/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2025-0005/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2025-0005/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -2469,6 +2778,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2025-0029/recorded/out_8_dhan.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2025-0029/recorded/out_4_ml.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2025-0029/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2025-0029/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -2477,8 +2795,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 10737.54,
+      "cone_p90": 13519.09,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2025-0029/forward_tape.json",
@@ -2491,14 +2809,15 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": null,
+      "predicted_direction": "STRONG_TARGET_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2025-0029/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": 11563.42
+      "limit_entry_price": 11563.42,
+      "predicted_probability": 0.1344
     },
     {
       "trade_id": "GB-2025-0030",
@@ -2530,6 +2849,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2025-0030/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2025-0030/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2025-0030/recorded/out_3_dtw.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2025-0030/recorded/out_4_ml.json"
         }
       },
       "forward_prices_22d": {
@@ -2538,8 +2866,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 642.28,
+      "cone_p90": 810.32,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2025-0030/forward_tape.json",
@@ -2552,14 +2880,15 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": null,
+      "predicted_direction": "TARGET_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2025-0030/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": 706.58
+      "limit_entry_price": 706.58,
+      "predicted_probability": 0.0948
     },
     {
       "trade_id": "GB-2025-0031",
@@ -2591,6 +2920,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2025-0031/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2025-0031/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2025-0031/recorded/out_3_dtw.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2025-0031/recorded/out_4_ml.json"
         }
       },
       "forward_prices_22d": {
@@ -2599,8 +2937,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 1271.18,
+      "cone_p90": 1568.69,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2025-0031/forward_tape.json",
@@ -2608,14 +2946,15 @@
         }
       },
       "limit_mae_pct": null,
-      "predicted_direction": null,
+      "predicted_direction": "STRONG_TARGET_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2025-0031/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": null
+      "limit_entry_price": null,
+      "predicted_probability": 0.4056
     },
     {
       "trade_id": "GB-2025-0032",
@@ -2647,6 +2986,15 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/GB-2025-0032/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/GB-2025-0032/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/GB-2025-0032/recorded/out_3_dtw.json"
+        },
+        "out_4_ml.json": {
+          "$ref": "tests/proof/fixtures/GB-2025-0032/recorded/out_4_ml.json"
         }
       },
       "forward_prices_22d": {
@@ -2655,8 +3003,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": null,
-      "cone_p90": null,
+      "cone_p10": 816.19,
+      "cone_p90": 997.83,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2025-0032/forward_tape.json",
@@ -2669,14 +3017,15 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": null,
+      "predicted_direction": "STRONG_TARGET_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/GB-2025-0032/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "limit_entry_price": 838.45
+      "limit_entry_price": 838.45,
+      "predicted_probability": 0.2582
     },
     {
       "trade_id": "SCEN-001",
@@ -2714,6 +3063,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/SCEN-001/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/SCEN-001/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/SCEN-001/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -2722,8 +3077,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": 386.82,
-      "cone_p90": 472.5,
+      "cone_p10": 370.99,
+      "cone_p90": 469.53,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-001/forward_tape.json",
@@ -2736,14 +3091,14 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": "STRONG_BULLISH",
+      "predicted_direction": "STOP_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-001/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "predicted_probability": 0.7766,
+      "predicted_probability": 0.0849,
       "limit_entry_price": 410.4
     },
     {
@@ -2782,6 +3137,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/SCEN-002/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/SCEN-002/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/SCEN-002/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -2790,8 +3151,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": 178.7,
-      "cone_p90": 216.12,
+      "cone_p10": 172.23,
+      "cone_p90": 213.32,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-002/forward_tape.json",
@@ -2799,14 +3160,14 @@
         }
       },
       "limit_mae_pct": null,
-      "predicted_direction": "BULLISH",
+      "predicted_direction": "STOP_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-002/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "predicted_probability": 0.7701,
+      "predicted_probability": 0.0427,
       "limit_entry_price": null
     },
     {
@@ -2845,6 +3206,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/SCEN-003/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/SCEN-003/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/SCEN-003/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -2853,8 +3220,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": 840.88,
-      "cone_p90": 1017.56,
+      "cone_p10": 822.26,
+      "cone_p90": 1010.72,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-003/forward_tape.json",
@@ -2867,14 +3234,14 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": "STRONG_BULLISH",
+      "predicted_direction": "STRONG_TARGET_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-003/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "predicted_probability": 0.7946,
+      "predicted_probability": 0.2795,
       "limit_entry_price": 763.98
     },
     {
@@ -2913,6 +3280,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/SCEN-004/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/SCEN-004/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/SCEN-004/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -2921,8 +3294,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": 3548.46,
-      "cone_p90": 4549.5,
+      "cone_p10": 3398.57,
+      "cone_p90": 4299.68,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-004/forward_tape.json",
@@ -2935,14 +3308,14 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": "STRONG_BULLISH",
+      "predicted_direction": "STOP_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-004/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "predicted_probability": 0.8405,
+      "predicted_probability": 0.0832,
       "limit_entry_price": 3298.01
     },
     {
@@ -2981,6 +3354,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/SCEN-006/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/SCEN-006/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/SCEN-006/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -2989,8 +3368,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": 650.6,
-      "cone_p90": 775.35,
+      "cone_p10": 634.75,
+      "cone_p90": 784.94,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-006/forward_tape.json",
@@ -2998,14 +3377,14 @@
         }
       },
       "limit_mae_pct": null,
-      "predicted_direction": "NEUTRAL",
+      "predicted_direction": "TARGET_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-006/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "predicted_probability": 0.6008,
+      "predicted_probability": 0.1696,
       "limit_entry_price": null
     },
     {
@@ -3041,6 +3420,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/SCEN-007/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/SCEN-007/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/SCEN-007/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -3108,6 +3493,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/SCEN-008/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/SCEN-008/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/SCEN-008/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -3116,8 +3507,8 @@
           "rule": "forward_min_max"
         }
       },
-      "cone_p10": 629.49,
-      "cone_p90": 819.61,
+      "cone_p10": 624.58,
+      "cone_p90": 788.68,
       "market_mae_pct": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-008/forward_tape.json",
@@ -3130,14 +3521,14 @@
           "rule": "limit_mae_pct"
         }
       },
-      "predicted_direction": "STRONG_BULLISH",
+      "predicted_direction": "TARGET_FIRST",
       "actual_direction": {
         "$derive": {
           "tape": "tests/proof/fixtures/SCEN-008/forward_tape.json",
           "rule": "realized_direction"
         }
       },
-      "predicted_probability": 0.7456,
+      "predicted_probability": 0.1903,
       "limit_entry_price": 694.68
     },
     {
@@ -3173,6 +3564,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/SCEN-009/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/SCEN-009/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/SCEN-009/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -3237,6 +3634,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/SCEN-011/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/SCEN-011/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/SCEN-011/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -3301,6 +3704,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/SCEN-012/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/SCEN-012/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/SCEN-012/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -3365,6 +3774,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/SCEN-013/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/SCEN-013/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/SCEN-013/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -3424,6 +3839,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/SCEN-014/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/SCEN-014/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/SCEN-014/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -3483,6 +3904,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/SCEN-015/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/SCEN-015/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/SCEN-015/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -3542,6 +3969,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/SCEN-016/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/SCEN-016/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/SCEN-016/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -3601,6 +4034,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/SCEN-017/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/SCEN-017/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/SCEN-017/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -3660,6 +4099,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/SCEN-062/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/SCEN-062/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/SCEN-062/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {
@@ -3724,6 +4169,12 @@
         },
         "out_8_dhan.json": {
           "$ref": "tests/proof/fixtures/SCEN-063/recorded/out_8_dhan.json"
+        },
+        "out_9_decision.json": {
+          "$ref": "tests/proof/fixtures/SCEN-063/recorded/out_9_decision.json"
+        },
+        "out_3_dtw.json": {
+          "$ref": "tests/proof/fixtures/SCEN-063/recorded/out_3_dtw.json"
         }
       },
       "forward_prices_22d": {

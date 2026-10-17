@@ -1,0 +1,47 @@
+{
+  "symbol": "AXISBANK",
+  "final_score": 18.14,
+  "max_possible_score": 32.5,
+  "effective_score_pct": 55.82,
+  "decision": "AVOID",
+  "verdict": "AVOID",
+  "p_win": 0.5733,
+  "expectancy": 1.0062,
+  "circuit_breakers_tripped": [
+    "tighter_than_0_75x_atr"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.091475,
+      "dtw_win_rate_22d": 0.26666666666666666,
+      "prob_target_hit_22d": null
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": null,
+      "mae_projected": null
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 757.65,
+      "zone_above_market": false,
+      "recommended_band_low": 792.05,
+      "recommended_band_high": 794.05
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 793.05,
+      "r_r": 2.49936467598476
+    },
+    "limit_order": {
+      "entry": 757.65,
+      "r_r": null,
+      "unavailable": null
+    },
+    "p_win": 0.5733
+  },
+  "what_would_flip_me": [
+    "a stop placed at or beyond 0.75x daily ATR is available"
+  ],
+  "avoid_reason": "hard circuit breaker(s) tripped: tighter_than_0_75x_atr",
+  "confidence_deficit": null
+}

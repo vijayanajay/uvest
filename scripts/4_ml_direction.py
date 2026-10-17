@@ -51,13 +51,22 @@ otherwise. A thin or missing block is a fallback (disclosed on stderr, never in
 the frozen payload); a calibration without sector blocks behaves exactly as
 before.
 
-`direction_probability` is the engine's calibrated probability that the
-trade's direction resolves *up* (the 22-session close finishing above the
-entry, the event evals dimension 4 grades): `P(BULL) + φ·P(NEUTRAL)`, where φ —
-the share of NEUTRAL-labelled training rows that closed up — is measured from
-the corpus and frozen in the calibration. It is a different event from
-`prob_target_hit_22d`, which is the target-versus-stop race; reporting one as
-the other would grade a question the engine never answered.
+`direction_probability` and `prob_target_hit_22d` both state the
+**target-versus-stop race** — decision D (2026-10-16) moved evals dimension 4
+onto that event — at two different geometries, and reporting either as the
+other would grade a question the engine never answered:
+
+* `direction_probability` is the booster's own class probability that the
+  **reference-band** race resolves target-first: ±3% around the entry
+  (`RACE_BAND_PCT`), the band the corpus rows' labels were decided at and
+  frozen in the calibration as `race_band_pct`.
+* `prob_target_hit_22d` is **this trade's** race — its own target and stop —
+  read through the class-weighted excursion pools as the product
+  `P(best high ≥ target) × P(worst low > −stop)`. That product is at most the
+  true first-touch probability (the two events are positively associated), so
+  it ships as a **disclosed lower bound**, never a tuned-up one; the
+  calibration carries the disclosure in `race_estimator`. A stop at or above
+  the market (`stop_pct ≤ 0`) wins no race and scores 0.0.
 
 **Waiver policy (BRD §10.4).** Any absent, short, malformed or unmapped input
 — model artifact, OHLCV, bundle, series, common date window, or an unsupported
@@ -105,8 +114,8 @@ CROSS_ASSET_WINDOW = 20      # BRD §5.2: 20D beta / 20D sectoral correlation
 # run 0.6-1.0%.
 MIN_MARKET_VARIANCE = 1e-6
 
-BULL_BAND_PCT = 3.0          # |forward return| < 3% is the NEUTRAL band
-STRONG_BULL_PROB = 0.60      # P(BULL) at or above this reads STRONG_BULLISH
+RACE_BAND_PCT = 3.0          # reference band (decision D): +3% target, −3% stop
+STRONG_TARGET_PROB = 0.60    # P(TARGET_FIRST) ≥ this reads STRONG_TARGET_FIRST
 SHAP_TOP_K = 5
 
 # Frozen feature order. The trainer and this stage share `feature_vector`, so
@@ -117,7 +126,11 @@ FEATURES = (
     "sma50_dist", "sma200_dist", "vol_14", "vol_ratio_14_60",
     "bollinger_bw_20", "zscore_20", "beta_20_nifty", "corr_20_sector",
 )
-CLASSES = ("BEAR", "NEUTRAL", "BULL")
+CLASSES = ("TARGET_FIRST", "STOP_FIRST", "NEITHER")
+# Decision D (2026-10-16): the booster's classes are the reference-band race's
+# own outcomes — which ±3% level the forward window printed first — so the
+# mixture weights the excursion pools by *race* shape instead of by terminal
+# direction. Every doc that described a 1-month direction label moves with it.
 # The 22-session price cone, frozen as the envelope of the **path** (BRD §5.2,
 # ADR-011 decision 7): the lower quartiles are inverted from the mixture of
 # observed *adverse* excursions, the upper ones from the mixture of *favourable*
@@ -238,12 +251,12 @@ def load_model(model_path: str | Path, calibration_path: str | Path):
         return None, None, "model:calibration-features"
     if int(calibration.get("horizon") or 0) != HORIZON:
         return None, None, "model:calibration-horizon"
-    # φ bridges the engine's three classes to the binary direction the evals
-    # grade; a calibration without it cannot state P(up), so it is unusable
-    # rather than silently defaulted to a coin flip.
-    phi = calibration.get("neutral_up_share")
-    if not isinstance(phi, (int, float)) or isinstance(phi, bool) \
-            or not 0.0 <= float(phi) <= 1.0:
+    # The reference band is the label rule the corpus was labeled at; a band
+    # the stage would not label at makes every shipped class a lie about its
+    # own training data, so it is required — absent, malformed or foreign.
+    band = calibration.get("race_band_pct")
+    if isinstance(band, bool) or not isinstance(band, (int, float)) \
+            or float(band) != RACE_BAND_PCT:
         return None, None, "model:calibration-fields"
     if not Path(model_path).exists():
         return None, None, "model:booster-absent"
@@ -418,13 +431,48 @@ def close_path_outcome(sessions: list[dict], index: int) -> tuple[float, float, 
     return relative[-1], min(0.0, min(relative)), max(0.0, max(relative))
 
 
-def classify_outcome(forward_return_pct: float) -> str:
-    """|r| < 3% is NEUTRAL; the band edges belong to NEUTRAL (strict > / <)."""
-    if forward_return_pct > BULL_BAND_PCT:
-        return "BULL"
-    if forward_return_pct < -BULL_BAND_PCT:
-        return "BEAR"
-    return "NEUTRAL"
+def first_touch_outcome(bars: list[dict], stop: float,
+                         target: float) -> tuple[str, str]:
+    """`(outcome, basis)` — the frozen race scan: first touch wins.
+
+    Bars are scanned in order and the first level printed decides — the trade
+    is flat the moment either level prints. Daily bars cannot order touches
+    *within* a bar, so a bar carrying both levels resolves to the worse one
+    (LOSS).
+
+    This is the **single** implementation of the race, and it is the one the
+    benchmark's `$derive` rule, the curator's seed scan, the catalog
+    scaffolder's tape comparison and the migration tool's row scan all use:
+    `tests/evals/dataset_refs.resolution_of` aliases this function, so a
+    corpus label and a benchmark trade's recorded resolution can never scan
+    differently under one name (decision D, 2026-10-16).
+    """
+    for bar in bars:
+        hit_stop, hit_target = bar["low"] <= stop, bar["high"] >= target
+        if hit_stop and hit_target:
+            return "LOSS", "both_hit_conservative_loss"
+        if hit_stop:
+            return "LOSS", "stop_first"
+        if hit_target:
+            return "WIN", "target_first"
+    return "TIME", "horizon_end"
+
+
+def classify_outcome(entry: float, window: list[dict]) -> str:
+    """The reference-band race label: `TARGET_FIRST` / `STOP_FIRST` / `NEITHER`.
+
+    `entry` is the row's own session close and `window` its next `HORIZON`
+    sessions; the levels are `RACE_BAND_PCT` either side of the entry, read as
+    a trade's target and stop. The scan is `first_touch_outcome`, so the label
+    means exactly what the benchmark's recorded `resolution_outcome` means —
+    a WIN at the reference band is `TARGET_FIRST`, a LOSS `STOP_FIRST`, and a
+    window that prints neither level inside the horizon `NEITHER`.
+    """
+    target = float(entry) * (1.0 + RACE_BAND_PCT / 100.0)
+    stop = float(entry) * (1.0 - RACE_BAND_PCT / 100.0)
+    outcome, _basis = first_touch_outcome(window, stop, target)
+    return {"WIN": "TARGET_FIRST", "LOSS": "STOP_FIRST",
+            "TIME": "NEITHER"}[outcome]
 
 
 # --------------------------------------------------------------------------
@@ -484,17 +532,33 @@ def mixture_prob_at_least(pairs: list[tuple[float, float]], threshold: float) ->
     return sum(weight for value, weight in pairs if value >= threshold)
 
 
-def up_probability(probabilities: dict, neutral_up_share: float) -> float:
-    """P(direction up) = P(BULL) + φ·P(NEUTRAL) — the graded binary event.
+def race_probability(probabilities: dict, samples: dict, target_pct: float,
+                     stop_pct: float) -> float:
+    """P(target hit before the stop) — the conservative product (decision D).
 
-    A three-class model does not answer a yes/no direction question by itself;
-    φ is the corpus-measured share of NEUTRAL outcomes that closed up, so the
-    probability states what the model believes about *that* event instead of
-    folding NEUTRAL arbitrarily (a coin flip) or into BEAR.
+    Both factors are read off the same class-weighted pools the cone reads:
+    `P(best high ≥ target)` from the favourable-excursion atoms and
+    `P(worst low > −stop)` from the adverse ones. Their product **understates**
+    the first-touch race whenever a window reaches the target while also
+    breaching the stop later (or vice versa) — the two events are positively
+    associated — so this is a disclosed lower bound on the race, not an
+    estimate tuned to look like one. A `stop_pct ≤ 0` means the stop sits at or
+    beyond the entry: the race is lost on print, whatever the target does.
     """
-    value = float(probabilities["BULL"]) \
-        + float(neutral_up_share) * float(probabilities["NEUTRAL"])
-    return min(1.0, max(0.0, value))
+    if stop_pct <= 0:
+        return 0.0
+    reached = mixture_prob_at_least(_pooled(samples["mfe_pct"], probabilities),
+                                    target_pct)
+    held = mixture_prob_at_least(_pooled(samples["mae_pct"], probabilities),
+                                 -float(stop_pct))
+    return min(1.0, max(0.0, reached * held))
+
+
+def direction_label(probabilities: dict) -> str:
+    """STRONG_TARGET_FIRST at P(TARGET_FIRST) >= 0.60; else the winning class."""
+    if probabilities["TARGET_FIRST"] >= STRONG_TARGET_PROB:
+        return "STRONG_TARGET_FIRST"
+    return max(CLASSES, key=lambda cls: probabilities[cls])
 
 
 def _sector_block_usable(block) -> bool:
@@ -563,14 +627,6 @@ def cone_envelope(samples: dict, probabilities: dict, live_price: float) -> dict
     """The same cone as ₹ prices around the entry (2 dp)."""
     return {key: round(live_price * (1.0 + level / 100.0), 2)
             for key, level in cone_levels_pct(samples, probabilities).items()}
-
-
-def direction_label(probabilities: dict) -> str:
-    """STRONG_BULLISH at P(BULL) >= 0.60; otherwise the winning class."""
-    if probabilities["BULL"] >= STRONG_BULL_PROB:
-        return "STRONG_BULLISH"
-    winner = max(CLASSES, key=lambda cls: probabilities[cls])
-    return {"BULL": "BULLISH", "NEUTRAL": "NEUTRAL", "BEAR": "BEARISH"}[winner]
 
 
 def stoploss_safely_below_mae(live_price: float, stoploss: float,
@@ -649,15 +705,15 @@ def compute(payload: dict, sessions: list[dict] | None, bundle: dict | None,
               f"({sum(len(v) for v in sample_sets['mae_pct'].values())} "
               "observed excursion atom(s))", file=sys.stderr)
     cone = cone_envelope(sample_sets, probabilities, live_price)
-    returns = _pooled(sample_sets["forward_return_pct"], probabilities)
     # The projected excursions stay the mixtures' medians in ₹ around the entry.
     mae = _pooled(sample_sets["mae_pct"], probabilities)
     mfe = _pooled(sample_sets["mfe_pct"], probabilities)
     mae_projected = round(live_price * mixture_quantile(mae, 0.50) / 100.0, 2)
     mfe_projected = round(live_price * mixture_quantile(mfe, 0.50) / 100.0, 2)
     target_return_pct = (float(payload["target"]) / live_price - 1.0) * 100.0
-    prob_target = round(
-        min(1.0, max(0.0, mixture_prob_at_least(returns, target_return_pct))), 4)
+    stop_pct = (live_price - float(payload["stoploss"])) / live_price * 100.0
+    prob_target = round(race_probability(probabilities, sample_sets,
+                                         target_return_pct, stop_pct), 4)
 
     result = {
         "prob_target_hit_22d": prob_target,
@@ -666,8 +722,7 @@ def compute(payload: dict, sessions: list[dict] | None, bundle: dict | None,
         "mfe_projected": mfe_projected,
         "shap_drivers": drivers,
         "direction_label": direction_label(probabilities),
-        "direction_probability": round(
-            up_probability(probabilities, calibration["neutral_up_share"]), 4),
+        "direction_probability": round(probabilities["TARGET_FIRST"], 4),
         "waived": False,
     }
     return result, []

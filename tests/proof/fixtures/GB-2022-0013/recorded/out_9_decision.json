@@ -1,0 +1,53 @@
+{
+  "symbol": "TATASTEEL",
+  "final_score": 10.26,
+  "max_possible_score": 45.0,
+  "effective_score_pct": 22.8,
+  "decision": "WAIT",
+  "verdict": "WAIT",
+  "p_win": 0.4412,
+  "expectancy": -0.1618,
+  "circuit_breakers_tripped": [
+    "inverted_risk_reward"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.071959,
+      "dtw_win_rate_22d": 0.4,
+      "prob_target_hit_22d": 0.1566
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": {
+        "p10": 116.46,
+        "p25": 121.2,
+        "p50": 131.58,
+        "p75": 142.21,
+        "p90": 147.33
+      },
+      "mae_projected": -6.65
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 130.88,
+      "zone_above_market": false,
+      "recommended_band_low": 130.95,
+      "recommended_band_high": 132.95
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 131.95,
+      "r_r": 0.8997555012224979
+    },
+    "limit_order": {
+      "entry": 130.88,
+      "r_r": 1.5728,
+      "unavailable": null
+    },
+    "p_win": 0.4412
+  },
+  "what_would_flip_me": [
+    "price returns to the limit band (<= 130.95) so a limit order restores R:R >= 1.5"
+  ],
+  "avoid_reason": null,
+  "confidence_deficit": null
+}

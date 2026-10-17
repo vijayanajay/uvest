@@ -1,6 +1,13 @@
 """Regenerate every golden record's stage-12 report (TICK-010 workflow).
 
     python tests/evals/report_regen.py [--out-dir reports] [--benchmark <dataset>]
+    python tests/evals/report_regen.py --prototype   # the tracked sample_report.html
+
+`--prototype` writes only `reports/sample_report.html`, from a single named
+record (`PROTOTYPE_TRADE_ID`): the one report that is committed has to be a
+*produced* artifact with a source it can be re-derived from, not a mock, and
+`tests/test_12_generate_html_report.py` fails if the committed bytes stop being
+a byte-exact fresh render of that record.
 
 A report is a *generated* artifact (`reports/report_*.html` is gitignored, so
 no stale local bytes can ever be graded as evidence): this driver is how the
@@ -56,6 +63,17 @@ STAGE12 = REPO_ROOT / "scripts" / "12_generate_html_report.py"
 MANIFEST_FILE = REPO_ROOT / "tests" / "proof" / "scenario_manifest.json"
 DEFAULT_BENCHMARK = TESTS_DIR / "golden_dataset.json"
 PROOF_ROOT = REPO_ROOT / "tests" / "proof"
+
+# The tracked prototype (`reports/sample_report.html`) — the one report that is
+# committed (`reports/report_*.html` is gitignored), so it is what a reviewer
+# opens and what a fresh clone has as a real-HTML example. It is *produced*, not
+# drawn: it is this record's own stage-12 report, and
+# `tests/test_12_generate_html_report.py` fails if the tracked bytes stop being
+# what stage 12 renders for it. The record is the benchmark's first — a FUTURES
+# trade that carries stage-4 evidence, so the prototype shows §13.2's race gauge
+# rather than a placeholder.
+PROTOTYPE_TRADE_ID = "GB-2022-0001"
+PROTOTYPE_NAME = "sample_report.html"
 
 
 def report_jobs(data: dict, manifest: dict) -> list[dict]:
@@ -214,6 +232,44 @@ def regenerate(jobs: list[dict], out_dir: Path,
     return artifacts, failures
 
 
+def prototype_job(data: dict | None = None, manifest: dict | None = None) -> dict:
+    """The regeneration job behind the tracked prototype.
+
+    Fails loudly rather than writing something else: a prototype that silently
+    became a different record's report would be a hand-drawn artifact again.
+    """
+    if data is None:
+        data = json.loads(DEFAULT_BENCHMARK.read_text(encoding="utf-8"))
+    if manifest is None:
+        manifest = json.loads(MANIFEST_FILE.read_text(encoding="utf-8"))
+    for job in report_jobs(data, manifest):
+        if str(job["trade"].get("trade_id")) == PROTOTYPE_TRADE_ID:
+            return job
+    raise SystemExit(
+        f"ERR_INPUT: no record {PROTOTYPE_TRADE_ID} with a proof row — the tracked "
+        f"prototype ({PROTOTYPE_NAME}) has no source to be rendered from")
+
+
+def write_prototype(out_path: Path | None = None, *,
+                    python: str = sys.executable) -> Path:
+    """Render the prototype from its record; return the path written.
+
+    The bytes are stage 12's own output for one golden record, so the committed
+    artifact is regenerable by anyone with the repo (`report_regen.py
+    --prototype`) and gradeable by the same gates as any other report.
+    """
+    job = prototype_job()
+    target = Path(out_path) if out_path else REPO_ROOT / "reports" / PROTOTYPE_NAME
+    with tempfile.TemporaryDirectory() as tmp:
+        artifacts, failures = regenerate([job], Path(tmp), python=python)
+        if failures or len(artifacts) != 1:
+            raise SystemExit("ERR_STAGE12: "
+                             + "; ".join(failures or ["no artifact produced"]))
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(artifacts[0].read_bytes())
+    return target
+
+
 def diff_reports(data: dict, out_dir: Path) -> list[str]:
     """Every produced report must be differ-clean against its own record."""
     materialized, _refs, _derives = dataset_refs.materialize(data)
@@ -236,7 +292,17 @@ def main(argv: list[str] | None = None) -> int:
         description="Regenerate every golden record's stage-12 HTML report.")
     parser.add_argument("--out-dir", default=str(REPO_ROOT / "reports"))
     parser.add_argument("--benchmark", default=str(DEFAULT_BENCHMARK))
+    parser.add_argument("--prototype", action="store_true",
+                        help=f"write only the tracked prototype ({PROTOTYPE_NAME}) "
+                             f"from its record ({PROTOTYPE_TRADE_ID})")
     args = parser.parse_args(argv)
+
+    if args.prototype:
+        written = write_prototype(Path(args.out_dir) / PROTOTYPE_NAME)
+        print(f"  ↳ {written.relative_to(REPO_ROOT).as_posix()}"
+              if written.is_relative_to(REPO_ROOT) else f"  ↳ {written}")
+        print(f"\n{PROTOTYPE_NAME} regenerated from {PROTOTYPE_TRADE_ID}")
+        return 0
 
     data = json.loads(Path(args.benchmark).read_text(encoding="utf-8"))
     manifest = json.loads(MANIFEST_FILE.read_text(encoding="utf-8"))

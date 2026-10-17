@@ -1815,32 +1815,99 @@ def gate_hallucination(trades: list[dict], reports_dir: Path | None = None,
 
 
 # --------------------------------------------------------------------------
-# Gate 4: Directional Calibration (Brier), evals.md §3 #4
+# Gate 4: Race Calibration (Brier), evals.md §3 #4
 # --------------------------------------------------------------------------
-def gate_brier(trades: list[dict]) -> Gate:
-    """Brier = mean((p − y)²) over calibrated 1-month direction probabilities.
+# Decision D (signed 2026-10-16, docs/agents/proposal-gate-thresholds.md):
+# dimension 4 grades the **target-versus-stop race** — the event stage 9's
+# `score_ml` prices and stage 4's `prob_target_hit_22d` answers — instead of
+# 22-session up/down, which measured no skill at all (out-of-fold 0.2630
+# against a 0.2447 base rate). Q3's representative + tail slices still travel
+# with every verdict, and neither slice may be re-rolled by outcome.
+REPRESENTATIVE_CLASSES = frozenset({"clean_bullish", "inverted_rr",
+                                     "tight_stop"})
+TAIL_CLASSES = frozenset({"institutional_distribution", "pledge_hazard",
+                          "earnings_hazard", "regime_shock"})
 
-    `predicted_direction` is a hard class label (ties to accuracy tracking),
-    NOT a probability — grading it here would silently substitute accuracy
-    for calibration, so the gate stays [SKIP] until the stage-4 model replay
-    supplies `predicted_probability` per trade.
+
+def slice_of(trade_class: object) -> str:
+    """The signed slice a graded row belongs to (`Gate.coverage`'s buckets)."""
+    if trade_class in REPRESENTATIVE_CLASSES:
+        return "representative"
+    if trade_class in TAIL_CLASSES:
+        return "tail"
+    return "unclassified"
+
+
+def slice_disclosure(entries: list[tuple[object, float]], *, fmt: str) -> str:
+    """`slices: representative n (score); tail n (score)` — always all buckets.
+
+    An empty slice is named with its count and `ungraded` rather than dropped
+    from the line: a tail-only denominator that printed only "tail" would read
+    like the whole benchmark, which is exactly the misreading option C exists
+    to end. Every graded row lands in exactly one bucket (`slice_of`), so the
+    three counts always sum to the graded set.
     """
-    g = Gate("Directional Brier Score", BRIER_MAX, higher_is_pass=False)
-    graded = []
+    buckets: dict[str, list[float]] = {"representative": [], "tail": [],
+                                       "unclassified": []}
+    for trade_class, value in entries:
+        buckets[slice_of(trade_class)].append(value)
+    parts = []
+    for name in ("representative", "tail", "unclassified"):
+        values = buckets[name]
+        if name == "unclassified" and not values:
+            continue
+        if values:
+            parts.append(f"{name} {len(values)} "
+                         f"({fmt.format(statistics.fmean(values))})")
+        else:
+            parts.append(f"{name} {len(values)} (ungraded)")
+    return "slices: " + "; ".join(parts)
+
+
+def gate_brier(trades: list[dict]) -> Gate:
+    """Brier = mean((p − y)²) over calibrated **race** probabilities.
+
+    Since decision D the pair is (stage 4's `prob_target_hit_22d` promoted as
+    `predicted_probability` from the recorded artifact, the row's frozen
+    `$derive: resolution_outcome`). The probability answers *this trade's*
+    geometry — its own target and stop through the excursion pools, a
+    disclosed conservative product of the two marginals
+    (`4_ml_direction.race_probability`) — and the outcome is the same
+    first-touch scan the curator admits records with: **WIN = 1**, and both
+    **LOSS and TIME = 0**, because the event is "the target prints before the
+    stop, inside the horizon" and a window that printed neither level did not
+    hit the target either.
+
+    TIME rows are *counted and named* on the detail line rather than dropped:
+    shrinking the denominator around the model is exactly the move this gate
+    exists to refuse. A probability with no resolvable outcome grades nothing,
+    as before, and since Q3 the headline mean is graded over the
+    representative *and* the tail slice together with `coverage` printing each
+    slice's count and score beside it (evals.md §3 #4).
+    """
+    g = Gate("Race Calibration Brier Score", BRIER_MAX, higher_is_pass=False)
+    graded: list[tuple[object, float]] = []
+    timed_out = 0
     for t in trades:
         prob = t.get("predicted_probability")
-        actual = t.get("actual_direction")
-        if prob is None or actual not in (0, 1):
+        outcome = t.get("resolution_outcome")
+        if prob is None or outcome not in ("WIN", "LOSS", "TIME"):
             continue
-        graded.append((prob, actual))
+        if outcome == "TIME":
+            timed_out += 1
+        graded.append((t.get("trade_class"),
+                       (float(prob) - (1 if outcome == "WIN" else 0)) ** 2))
     g.fmt = "{:.3f}"
     if not graded:
         g.skipped = True
-        g.detail = ("no calibrated direction probabilities yet — hard labels in "
+        g.detail = ("no calibrated race probabilities yet — a hard label in "
                     "`predicted_direction` cannot stand in for a Brier score")
         return g
-    g.value = sum((p - y) ** 2 for p, y in graded) / len(graded)
-    g.detail = f"{len(graded)} calibrated predictions"
+    g.value = sum(sq for _cls, sq in graded) / len(graded)
+    g.detail = (f"{len(graded)} calibrated predictions "
+                f"(race: WIN vs LOSS/TIME, first touch; {timed_out} TIME "
+                "counted as not-hit, none dropped)")
+    g.coverage = slice_disclosure(graded, fmt="{:.3f}")
     return g
 
 
@@ -1945,9 +2012,14 @@ def gate_cone_coverage(trades: list[dict], *, window: tuple[str, str] | None,
     (`dataset_refs.forward_tape_span`), read before materialize because a
     `$derive` is the only place a tape's dates live; `None` means the record
     pins no tape and therefore cannot be placed in the window at all.
+
+    Since Q3 (option C, signed 2026-10-16) the denominator is a
+    **representative slice plus the tail slice**: the six crisis tapes stay in
+    it and the corpus-representative rows join it, with each slice's count and
+    coverage printed on `coverage` beside the headline (evals.md §3 #5).
     """
     g = Gate("Price Cone Range Coverage", COVERAGE_MIN, higher_is_pass=True)
-    graded: list[float] = []
+    graded: list[tuple[object, float]] = []
     ungraded: list[str] = []
     diagnoses: list[str] = []
     candidates = 0
@@ -1974,7 +2046,8 @@ def gate_cone_coverage(trades: list[dict], *, window: tuple[str, str] | None,
             continue
         covered_low = cone_p10 <= lo
         covered_high = hi <= cone_p90
-        graded.append(1.0 if covered_low and covered_high else 0.0)
+        graded.append((t.get("trade_class"),
+                        1.0 if covered_low and covered_high else 0.0))
         if (covered_low and covered_high) or calibration is None:
             continue
         entry = t.get("entry_price")
@@ -2015,9 +2088,9 @@ def gate_cone_coverage(trades: list[dict], *, window: tuple[str, str] | None,
             # miss itself is already counted; the gate never dies on prose.
             diagnoses.append(f"{tid}: pool percentile unavailable "
                              "(calibration unreadable)")
-    g.value = 100.0 * (sum(graded) / len(graded)) if graded else None
-    g.skipped = not graded
     if window is None:
+        g.value = None
+        g.skipped = True
         g.coverage = (f"scope: trained corpus window unavailable "
                       f"({CALIBRATION_FILE.name}); {candidates} cone-labeled "
                       f"trade(s) ungraded until it reads")
@@ -2026,7 +2099,9 @@ def gate_cone_coverage(trades: list[dict], *, window: tuple[str, str] | None,
                     f"({CALIBRATION_FILE.name})")
         return g
     if graded:
-        misses = len(graded) - int(sum(graded))
+        covered = sum(value for _cls, value in graded)
+        misses = len(graded) - int(covered)
+        g.value = 100.0 * (covered / len(graded))
         g.detail = (f"{len(graded)} of {candidates} cone-labeled trades graded "
                     f"inside the trained corpus window; {misses} of them "
                     f"missed [P10, P90]"
@@ -2038,9 +2113,13 @@ def gate_cone_coverage(trades: list[dict], *, window: tuple[str, str] | None,
     shown = ungraded[:3]
     if len(ungraded) > 3:
         shown.append(f"+{len(ungraded) - 3} more")
+    g.skipped = not graded
     g.coverage = (f"scope: trained corpus window {window[0]}..{window[1]}; "
                   f"{len(graded)} of {candidates} cone-labeled trades graded"
-                  + (f"; ungraded: {'; '.join(shown)}" if ungraded else ""))
+                  + (f"; ungraded: {'; '.join(shown)}" if ungraded else "")
+                  + " | " + slice_disclosure(
+                      [(cls, 100.0 * value) for cls, value in graded],
+                      fmt="{:.1f}%"))
     return g
 
 
@@ -2187,6 +2266,74 @@ def gate_html_validity(trades: list[dict], reports_dir: Path | None = None,
                     + (f"; not graded (unproven): {'; '.join(unproven[:2])}"
                        if unproven else ""))
     return g
+
+
+def gate_verdict_alignment(trades: list[dict],
+                           expected: dict[str, str | None]) -> Gate:
+    """Gate 8: every computed verdict equals its authored expectation.
+
+    The engine's verdict and the benchmark's expectation are two independent
+    claims about the same trade: the proof row's `expected_verdict` (the frozen
+    catalog/legacy label, `scenario-manifest-schema.md` §4) and the `decision`
+    in the record's own recorded `out_9_decision.json`. Before this gate the
+    scorecard never compared them, so a divergence — an expectation the engine
+    would not reach, or a verdict the author would not have issued — was at
+    most somebody's side calculation, not a graded fact.
+
+    Both halves are read, never retyped: the expectation out of the committed
+    manifest, the verdict out of the payload the dataset `$ref`s (materialized
+    like every other payload the gates read). A record missing either half is
+    **named on the coverage line and never counted as aligned** — a percentage
+    that silently dropped its divergences would be the exact failure this gate
+    exists to make impossible.
+
+    The threshold is 100% by policy, exactly like gates 4/5's reds: a
+    divergence is a fact to adjudicate (fix the engine or re-freeze the
+    expectation — never tune the scorecard), so it is published into
+    `baseline_scorecard.json`'s `gates` block by `--re-freeze-gates` and the
+    baseline's regression rule takes over from there — a *further* divergence
+    is a named regression, an improvement is a re-bank hint.
+    """
+    gate = Gate("Verdict Alignment vs Expectation", 100.0, True)
+    aligned = 0
+    graded = 0
+    abstained = 0
+    transitions: dict[tuple[str, str], int] = {}
+    divergent: list[str] = []
+    for trade in trades:
+        tid = str(trade.get("trade_id"))
+        want = expected.get(tid)
+        have = _field(trade, "out_9_decision.json", "decision")
+        if not isinstance(want, str) or not isinstance(have, str):
+            abstained += 1
+            continue
+        graded += 1
+        if want == have:
+            aligned += 1
+            continue
+        transitions[(want, have)] = transitions.get((want, have), 0) + 1
+        divergent.append(f"{tid} {want}→{have}")
+    if not graded:
+        gate.skipped = True
+        gate.detail = (f"{len(trades)} record(s), none carrying both an "
+                       "authored expectation and a recorded stage-9 verdict")
+        return gate
+    gate.value = 100.0 * aligned / graded
+    counts = ", ".join(
+        f"{want}→{have} ×{n}"
+        for (want, have), n in sorted(transitions.items(),
+                                      key=lambda kv: (-kv[1], kv[0]))) or "none"
+    parts = [f"{aligned}/{graded} record(s) aligned; transitions: {counts}"]
+    if abstained:
+        parts.append(f"{abstained} abstained (no expected_verdict or no "
+                     "recorded out_9_decision.json), never counted as aligned")
+    gate.coverage = " · ".join(parts)
+    if divergent:
+        gate.detail = (
+            f"{len(divergent)} divergent record(s): " + ", ".join(divergent)
+            + " — each is adjudicated by fixing the engine or re-freezing "
+              "the expectation, never by tuning the scorecard")
+    return gate
 
 
 # --------------------------------------------------------------------------
@@ -2400,6 +2547,18 @@ def main(argv: list[str] | None = None) -> int:
             print(f"   ✗ {problem}", file=sys.stderr)
 
     unbacked = unbacked_payloads(trades, payload_targets)
+    # The benchmark's authored expectation lives on the proof row (the frozen
+    # catalog/legacy label, scenario-manifest-schema.md §4), read straight from
+    # the committed manifest so the alignment gate compares two independent
+    # sources — never a field copied beside the verdict it grades.
+    try:
+        proof_manifest = json.loads(
+            proof_root.MANIFEST_PATH.read_text(encoding="utf-8"))
+        expected_verdicts = {
+            str(r.get("scenario_id")): r.get("expected_verdict")
+            for r in proof_manifest.get("scenarios", [])}
+    except (OSError, json.JSONDecodeError):
+        expected_verdicts = {}
     gates = [
         # Gate 1 grades a live replay of the seeded option pastes, not the
         # trade roster: an option never becomes a trade (ADR-001).
@@ -2426,6 +2585,12 @@ def main(argv: list[str] | None = None) -> int:
                            calibration=cone_calibration),
         gate_mae_reduction(trades),
         gate_html_validity(trades, proof=proof),
+        # Gate 8 grades the engine's verdict against the benchmark's own
+        # authored expectation (evals.md §3 #8): its transition slice prints
+        # every expectation→computed divergence and names each divergent
+        # record, and the gate makes the divergence a published red rather
+        # than a side calculation nobody is graded on.
+        gate_verdict_alignment(trades, expected_verdicts),
     ]
     dist_ok, dist_reason = check_class_distribution(data)
     # The option probes are the one roster outside `trades`, so their own

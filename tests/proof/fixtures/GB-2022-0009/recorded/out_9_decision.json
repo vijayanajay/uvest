@@ -1,0 +1,53 @@
+{
+  "symbol": "SBIN",
+  "final_score": 9.08,
+  "max_possible_score": 45.0,
+  "effective_score_pct": 20.18,
+  "decision": "AVOID",
+  "verdict": "AVOID",
+  "p_win": 0.4307,
+  "expectancy": -0.2461,
+  "circuit_breakers_tripped": [
+    "inverted_risk_reward"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.108039,
+      "dtw_win_rate_22d": 0.0,
+      "prob_target_hit_22d": 0.0985
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": {
+        "p10": 461.81,
+        "p25": 479.24,
+        "p50": 514.12,
+        "p75": 550.95,
+        "p90": 569.65
+      },
+      "mae_projected": -25.35
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 487.07,
+      "zone_above_market": false,
+      "recommended_band_low": 516.7,
+      "recommended_band_high": 518.7
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 517.7,
+      "r_r": 0.7502812148481357
+    },
+    "limit_order": {
+      "entry": 487.07,
+      "r_r": null,
+      "unavailable": null
+    },
+    "p_win": 0.4307
+  },
+  "what_would_flip_me": [
+    "price returns to the limit band (<= 516.7) so a limit order restores R:R >= 1.5"
+  ],
+  "avoid_reason": "inverted R:R at market and no limit order restores R:R >= 1.5 (limit view: None)",
+  "confidence_deficit": null
+}

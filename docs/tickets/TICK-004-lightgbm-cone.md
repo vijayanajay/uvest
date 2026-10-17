@@ -10,7 +10,7 @@
 ### 1. Goal & Context
 
 Stage 4 is the **Machine Learning Directional and Volatility Range Engine** (BRD §5.2, §9.1 row 4). It consumes `current_trade.json`, daily OHLCV from stage 2, and historical features to deliver:
-1. **Directional Probability:** LightGBM classifier prediction ($P(\text{Bullish})$, $P(\text{Neutral})$, $P(\text{Bearish})$) calibrated to achieve Brier score $\le 0.18$.
+1. **Race Probability:** LightGBM classifier prediction of the **target-versus-stop race** (classes `TARGET_FIRST` / `STOP_FIRST` / `NEITHER`) calibrated to achieve Brier score $\le 0.18$ — decision D, 2026-10-16 (BRD §5.2; the retired directional framing is recorded there, not restated here).
 2. **22-Day Volatility Price Cone:** Statistical expected price envelope ($[P_{10}, P_{25}, P_{50}, P_{75}, P_{90}]$), projected Max Adverse Excursion (MAE), and Max Favorable Excursion (MFE).
 3. **Feature Attribution:** Top SHAP drivers explaining the model prediction.
 
@@ -36,14 +36,14 @@ Stage 4 is the **Machine Learning Directional and Volatility Range Engine** (BRD
 | `mae_projected` | float \| null | Projected Maximum Adverse Excursion in ₹ |
 | `mfe_projected` | float \| null | Projected Maximum Favorable Excursion in ₹ |
 | `shap_drivers` | list[dict] \| null | Top 5 predictive feature contributions |
-| `direction_label` | str \| null | `STRONG_BULLISH` \| `BULLISH` \| `NEUTRAL` \| `BEARISH` |
-| `direction_probability` | float \| null | Calibrated $P(\text{direction up})$: $P(\text{BULL}) + \varphi \cdot P(\text{NEUTRAL})$, the event evals dimension 4 grades |
+| `direction_label` | str \| null | `STRONG_TARGET_FIRST` \| `TARGET_FIRST` \| `STOP_FIRST` \| `NEITHER` — the field name outlived the event it was named for; the value is `CLASSES` (decision D) |
+| `direction_probability` | float \| null | Calibrated $P(\text{TARGET\_FIRST})$ at the reference ±3% band (`race_band_pct`) — one of the two geometries the race is stated at, and the event evals dimension 4 grades (decision D) |
 | `waived` | bool | `true` if model/features unavailable |
 
 ### 3. TDD Acceptance Criteria
 
 - [x] Consumes canonical `current_trade.json` and evaluates 22-session forward trajectory.
-- [x] States the graded direction event explicitly: `direction_probability` = $P(\text{BULL}) + \varphi \cdot P(\text{NEUTRAL})$ with $\varphi$ read from the calibration — never `prob_target_hit_22d`, which answers the target-versus-stop race.
+- [x] States the graded race event explicitly: `direction_probability` = $P(\text{TARGET\_FIRST})$ at the reference band, `prob_target_hit_22d` = this trade's own target-versus-stop race — two geometries of one event, never reported as each other.
 - [x] Price cone envelope contains $P_{10} \le P_{25} \le P_{50} \le P_{75} \le P_{90}$ monotonically.
 - [x] The envelope is the **path** the coverage gate grades: its lower quartiles are the adverse-excursion mixture's and its upper quartiles the favourable-excursion mixture's, so it contains the terminal interval rather than approximating it (BRD §5.2 cone definition, 2026-10-14).
 - [x] The path's atoms are the forward sessions' **extremes** — `mae_pct` the window's worst low against the entry, `mfe_pct` its best high, both read from the corpus's `open/high/low/close` vintages by one `forward_outcome` implementation the trainer imports — the same realization the coverage gate reads off the forward bars (BRD §5.2 excursion realization, 2026-10-15).
@@ -67,10 +67,11 @@ stage share, so a feature cannot mean one thing in training and another at infer
 Close-based features only (the committed history carries closes); `beta_20_nifty`
 returns 0.0 below a documented market-variance floor, because a near-flat index has no
 estimable slope and a spuriously large beta would read as conviction. Labels are
-`BULL` / `NEUTRAL` / `BEAR` at the strict ±3% bands; `STRONG_BULLISH` at
-$P(\text{BULL}) \ge 0.60$.The cone is the class-probability-weighted mixture of the observed **path** — `p10`/`p25` inverted exactly from the pooled adverse excursions, `p75`/`p90` from the pooled favourable excursions, `p50` from the pooled terminal returns — so it contains the terminal interval and stays monotone in level by construction (each observed row has $\text{mae} \le \text{terminal} \le \text{mfe}$ and the three pools share one weight vector) — and MAE/MFE are that mixture's medians in ₹ around the entry. The path is measured on the sessions' **extremes**, not their closes: `forward_outcome` takes the window's worst low and its best high against the entry, so the atoms are the same objects the coverage gate compares against the forward bars, and a close-based pool would build a strictly narrower envelope than the quantity being graded. A terminal-return interval is *not* this quantity: measured over the corpus it covers the path in 49.5% of rows against 72.3% for the close, which is why the envelope is built from the excursions the artifact already carries. **Which observations enter the pools is part of the frozen definition too** (ADR-011 decision 13, 2026-10-15): the calibration ships one block per sectoral index beside the pooled block, and `samples_for` answers with the trade's own sector's when every class of every measure holds at least `MIN_SECTOR_ATOMS_PER_CLASS` (30) atoms, the pooled block otherwise — a thin block is a disclosed fallback (stderr), never a waiver, and the 8-key payload does not grow. Measured over the 10,869-row corpus, 99.72% of out-of-fold rows read their own sector's block and the shipped envelope's out-of-fold bar-path containment is 76.02% against 77.10% pooled: more faithful, slightly narrower, both published (`docs/agents/evals.md` §2). `prob_target_hit_22d` is the mixture's completion mass at the recommended
-target; the target-vs-stop race is reported by the MAE side, and a stop inside the
-projected MAE raises a stderr warning rather than passing silently.
+`TARGET_FIRST` / `STOP_FIRST` / `NEITHER` at the reference ±3% band;
+`STRONG_TARGET_FIRST` at $P(\text{TARGET\_FIRST}) \ge 0.60$.The cone is the class-probability-weighted mixture of the observed **path** — `p10`/`p25` inverted exactly from the pooled adverse excursions, `p75`/`p90` from the pooled favourable excursions, `p50` from the pooled terminal returns — so it contains the terminal interval and stays monotone in level by construction (each observed row has $\text{mae} \le \text{terminal} \le \text{mfe}$ and the three pools share one weight vector) — and MAE/MFE are that mixture's medians in ₹ around the entry. The path is measured on the sessions' **extremes**, not their closes: `forward_outcome` takes the window's worst low and its best high against the entry, so the atoms are the same objects the coverage gate compares against the forward bars, and a close-based pool would build a strictly narrower envelope than the quantity being graded. A terminal-return interval is *not* this quantity: measured over the corpus it covers the path in 49.5% of rows against 72.3% for the close, which is why the envelope is built from the excursions the artifact already carries. **Which observations enter the pools is part of the frozen definition too** (ADR-011 decision 13, 2026-10-15): the calibration ships one block per sectoral index beside the pooled block, and `samples_for` answers with the trade's own sector's when every class of every measure holds at least `MIN_SECTOR_ATOMS_PER_CLASS` (30) atoms, the pooled block otherwise — a thin block is a disclosed fallback (stderr), never a waiver, and the 8-key payload does not grow. Measured over the 10,869-row corpus, 99.72% of out-of-fold rows read their own sector's block and the shipped envelope's out-of-fold bar-path containment is 76.02% against 77.10% pooled: more faithful, slightly narrower, both published (`docs/agents/evals.md` §2). `prob_target_hit_22d` is **this trade's race** — the class-weighted mixture's
+completion mass at its own target times the mass that holds its own stop
+(a disclosed lower bound) — and a stop inside the projected MAE raises a
+stderr warning rather than passing silently.
 
 **Provenance — sourced (2026-10-14).** The booster + calibration are trained offline
 by `tests/evals/train_direction_model.py` from the committed sourced corpus: real
@@ -134,3 +135,5 @@ terminal and only widens downward — the $P(\text{up})$ bridge and its refused
 calibrations, every waiver arm, artifact provenance (the CV block names the
 realization each coverage figure covered), one CLI invocation and `--record`
 identity.
+
+**Outcome — Decision D run (2026-10-16).** The three sub-decisions are signed (conservative race estimator; labels at the reference ±3% band; TIME counted as not-hit) and this ticket's outcome follows them through. The booster's classes are now `TARGET_FIRST` / `STOP_FIRST` / `NEITHER` against `prob_target_hit_22d`, it was retrained (race OOF Brier **0.3268** vs base **0.2477** at a **0.5476** race-win share — still no signal, published as measured), all 27 stage-4 artifacts were re-recorded and re-promoted at each trade's own target and stop, and every stage-12 report was regenerated from those bytes. Gates 4 and 5 re-measured at **unchanged thresholds**: 0.376 (≤ 0.18) and 51.9% (≥ 80) over the same 27 rows — both still red, gate 4's tail slice now *ahead* of the representative slice (0.169 vs 0.435). The structural cost the relabel introduced is carried openly: race classes left 205 `NEITHER` rows across 9 sector pools, so `oof_sector_pool_share_pct` fell **99.72% → 32.21%**, the shipped cone defers to the pooled block far more often, and ADR-011 decision 15 records that (bar-path containment **77.3%** OOF, close 82.84%, terminal 89.7%, pooled 78.8%).

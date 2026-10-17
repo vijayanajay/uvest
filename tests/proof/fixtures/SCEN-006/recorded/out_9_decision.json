@@ -1,0 +1,55 @@
+{
+  "symbol": "HDFCBANK",
+  "final_score": 17.96,
+  "max_possible_score": 60.0,
+  "effective_score_pct": 29.93,
+  "decision": "AVOID",
+  "verdict": "AVOID",
+  "p_win": 0.4697,
+  "expectancy": 0.4091,
+  "circuit_breakers_tripped": [
+    "tighter_than_0_75x_atr",
+    "panic_regime"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.087243,
+      "dtw_win_rate_22d": 0.06666666666666667,
+      "prob_target_hit_22d": 0.1696
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": {
+        "p10": 634.75,
+        "p25": 657.18,
+        "p50": 708.88,
+        "p75": 759.3,
+        "p90": 784.94
+      },
+      "mae_projected": -25.3
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": null,
+      "zone_above_market": true,
+      "recommended_band_low": 699.0,
+      "recommended_band_high": 701.0
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 700.0,
+      "r_r": 2.0
+    },
+    "limit_order": {
+      "entry": null,
+      "r_r": null,
+      "unavailable": "zone_above_market"
+    },
+    "p_win": 0.4697
+  },
+  "what_would_flip_me": [
+    "a stop placed at or beyond 0.75x daily ATR is available",
+    "India VIX cools below 24 with breadth recovery"
+  ],
+  "avoid_reason": "hard circuit breaker(s) tripped: tighter_than_0_75x_atr, panic_regime",
+  "confidence_deficit": null
+}

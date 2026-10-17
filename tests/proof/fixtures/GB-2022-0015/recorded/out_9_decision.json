@@ -1,0 +1,47 @@
+{
+  "symbol": "TITAN",
+  "final_score": 17.75,
+  "max_possible_score": 32.5,
+  "effective_score_pct": 54.62,
+  "decision": "AVOID",
+  "verdict": "AVOID",
+  "p_win": 0.5685,
+  "expectancy": 0.9898,
+  "circuit_breakers_tripped": [
+    "tighter_than_0_75x_atr"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.060184,
+      "dtw_win_rate_22d": 0.6666666666666666,
+      "prob_target_hit_22d": null
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": null,
+      "mae_projected": null
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 2343.4,
+      "zone_above_market": false,
+      "recommended_band_low": 2458.89,
+      "recommended_band_high": 2463.81
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 2461.35,
+      "r_r": 2.5000000000000218
+    },
+    "limit_order": {
+      "entry": 2343.4,
+      "r_r": null,
+      "unavailable": null
+    },
+    "p_win": 0.5685
+  },
+  "what_would_flip_me": [
+    "a stop placed at or beyond 0.75x daily ATR is available"
+  ],
+  "avoid_reason": "hard circuit breaker(s) tripped: tighter_than_0_75x_atr",
+  "confidence_deficit": null
+}

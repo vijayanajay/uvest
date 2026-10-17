@@ -1,0 +1,47 @@
+{
+  "symbol": "MRF",
+  "final_score": 23.79,
+  "max_possible_score": 52.5,
+  "effective_score_pct": 45.31,
+  "decision": "AVOID",
+  "verdict": "AVOID",
+  "p_win": 0.5312,
+  "expectancy": 0.5936,
+  "circuit_breakers_tripped": [
+    "tighter_than_0_75x_atr"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.079394,
+      "dtw_win_rate_22d": 0.8,
+      "prob_target_hit_22d": null
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": null,
+      "mae_projected": null
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 84124.74,
+      "zone_above_market": false,
+      "recommended_band_low": 86393.52,
+      "recommended_band_high": 86566.48
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 86480.0,
+      "r_r": 2.0
+    },
+    "limit_order": {
+      "entry": 84124.74,
+      "r_r": null,
+      "unavailable": null
+    },
+    "p_win": 0.5312
+  },
+  "what_would_flip_me": [
+    "a stop placed at or beyond 0.75x daily ATR is available"
+  ],
+  "avoid_reason": "hard circuit breaker(s) tripped: tighter_than_0_75x_atr",
+  "confidence_deficit": null
+}

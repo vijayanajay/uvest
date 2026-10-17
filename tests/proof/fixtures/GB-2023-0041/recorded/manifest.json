@@ -35,6 +35,26 @@
       "stage": 8,
       "artifact": "out_8_dhan.json",
       "recorded_at": "2026-10-16T09:59:59+00:00"
+    },
+    {
+      "stage": 9,
+      "artifact": "out_9_decision.json",
+      "recorded_at": "2026-10-16T19:14:40+00:00"
+    },
+    {
+      "stage": 3,
+      "artifact": "out_3_dtw.json",
+      "recorded_at": "2026-10-16T20:47:57+00:00"
+    },
+    {
+      "stage": 9,
+      "artifact": "out_9_decision.json",
+      "recorded_at": "2026-10-16T20:48:45+00:00"
+    },
+    {
+      "stage": 9,
+      "artifact": "out_9_decision.json",
+      "recorded_at": "2026-10-17T03:17:05+00:00"
     }
   ]
 }

@@ -19,10 +19,15 @@ What this seam guards, beyond the arithmetic:
 * **Provenance is disclosed in the artifact**, not just in prose: the trainer
   writes `origin: sourced`, the corpus and the out-of-fold CV metrics into the
   calibration the stage loads.
-* **The graded event is stated, not implied.** `direction_probability` is
-  P(up) = P(BULL) + φ·P(NEUTRAL) with φ read from the calibration; the seam
-  pins that bridge against `up_probability` and refuses a calibration without
-  φ (a coin-flip default would silently mis-grade evals dimension 4).
+* **The graded event is stated, not implied** (decision D, 2026-10-16): evals
+  dimension 4 grades the target-versus-stop race, so the payload's two
+  probability keys state that race at two different geometries —
+  `direction_probability` is the booster's own P(TARGET_FIRST) at the
+  reference ±3% band, and `prob_target_hit_22d` is *this trade's* target and
+  stop read through the excursion pools. The latter is a conservative product
+  of the two marginals (a disclosed lower bound on the first-touch race), and
+  the seam pins that estimator against hand-built pools, plus a calibration
+  whose reference band is absent or is not the stage's own.
 * **Waiver discipline (BRD §10.4).** Absent model, absent/short OHLCV, absent
   or mis-schema'd bundle, unmapped symbol, unsupported action — each waives the
   whole payload (every metric `null`, exit 0) rather than fabricating a number.
@@ -72,7 +77,8 @@ CONTRACT_KEYS = {
 }
 METRIC_KEYS = CONTRACT_KEYS - {"waived"}
 CONE_KEYS = ("p10", "p25", "p50", "p75", "p90")
-DIRECTION_LABELS = {"STRONG_BULLISH", "BULLISH", "NEUTRAL", "BEARISH"}
+DIRECTION_LABELS = {"STRONG_TARGET_FIRST", "TARGET_FIRST", "STOP_FIRST",
+                    "NEITHER"}
 
 CANONICAL = {
     "symbol": "RELIANCE",
@@ -155,10 +161,12 @@ class TestPayloadContract(unittest.TestCase):
         direction = self.payload["direction_probability"]
         self.assertGreaterEqual(direction, 0.0)
         self.assertLessEqual(direction, 1.0)
-        self.assertNotEqual(
-            direction, probability,
-            "the target-versus-stop race and the direction event are different "
-            "questions; reporting one as the other mis-grades the eval")
+        # Since decision D both keys state the *same* race at two geometries —
+        # the reference ±3% band (the model's class probability) and this
+        # trade's own levels (the pools) — so they may coincide numerically.
+        # What they may never do is swap jobs: the trade-geometry estimator is
+        # pinned on its own in `TestTheRaceProbabilityIsConservative`, and that
+        # seam is what proves the graded number answers *this trade's* stop.
         self.assertIn(self.payload["direction_label"], DIRECTION_LABELS)
 
     def test_shap_drivers_are_at_most_five_ranked_contributions(self):
@@ -295,37 +303,111 @@ class TestWaiverDiscipline(unittest.TestCase):
 class TestFrozenConventions(unittest.TestCase):
     """The pure conventions the model and the cone are built on."""
 
-    def test_label_bands_are_strict_on_both_edges(self):
+    @staticmethod
+    def window(sessions):
+        """Forward bars for the label rule: `(high, low)` pairs, one per session."""
+        return [{"date": f"2024-01-{i + 1:02d}", "open": 100.0, "close": 100.0,
+                 "high": high, "low": low}
+                for i, (high, low) in enumerate(sessions)]
+
+    def test_the_race_label_is_first_touch_at_the_reference_band(self):
+        """Decision D: the label is the ±3% race, first touch wins.
+
+        The reference levels are today's BULL band read as *both* sides of a
+        trade — +3% is the target, −3% the stop — so the label says which
+        level the window printed first, exactly as the frozen `$derive` rule
+        scores the benchmark's own trades (`resolution_of`).
+        """
         module, _ = import_mode(4)
-        self.assertEqual(module.classify_outcome(3.0), "NEUTRAL")
-        self.assertEqual(module.classify_outcome(-3.0), "NEUTRAL")
-        self.assertEqual(module.classify_outcome(3.0001), "BULL")
-        self.assertEqual(module.classify_outcome(-3.0001), "BEAR")
-        self.assertEqual(module.classify_outcome(0.0), "NEUTRAL")
+        entry = 100.0
+        target, stop = entry * 1.03, entry * 0.97
+        classify = module.classify_outcome
+        # Target printed first.
+        self.assertEqual(classify(entry, self.window([(104.0, 99.0),
+                                                      (103.0, 102.0)])),
+                         "TARGET_FIRST")
+        # Stop printed first.
+        self.assertEqual(classify(entry, self.window([(101.0, 96.0),
+                                                      (100.0, 99.5)])),
+                         "STOP_FIRST")
+        # Neither level printed inside the horizon.
+        self.assertEqual(classify(entry, self.window([(101.5, 98.5)] * 3)),
+                         "NEITHER")
+        # One bar carrying both levels resolves to the worse one — the same
+        # conservative convention the frozen resolution rule uses.
+        self.assertEqual(classify(entry, self.window([(104.0, 96.0)])),
+                         "STOP_FIRST")
+        # The levels themselves are inclusive touches (>= target, <= stop).
+        self.assertEqual(classify(entry, self.window([(target, 99.0)])),
+                         "TARGET_FIRST")
+        self.assertEqual(classify(entry, self.window([(101.0, stop)])),
+                         "STOP_FIRST")
+        self.assertEqual(module.RACE_BAND_PCT, 3.0)
+        self.assertEqual((target, stop), (103.0, 97.0))
+
+    def test_the_race_scan_is_the_frozen_resolution_rule(self):
+        """One implementation behind the label *and* the `$derive` rule.
+
+        A corpus label and a benchmark trade's recorded resolution that scanned
+        differently would grade two different events under one name — the exact
+        drift `dataset_refs.resolution_of`'s docstring guards against.
+        """
+        module, _ = import_mode(4)
+        bars = self.window([(104.0, 99.0), (103.0, 96.0)])
+        self.assertEqual(module.first_touch_outcome(bars, 96.0, 103.0),
+                         ("WIN", "target_first"))
+        self.assertEqual(
+            module.first_touch_outcome(self.window([(101.0, 96.0),
+                                                    (104.0, 99.0)]),
+                                       97.0, 103.0),
+            ("LOSS", "stop_first"))
+        self.assertEqual(module.first_touch_outcome(self.window([(101.0, 99.0)]),
+                                                    97.0, 103.0),
+                         ("TIME", "horizon_end"))
+        # …and the benchmark's `$derive` rule really is *this* function's file:
+        # two separately-loaded module objects are two instances of one source,
+        # so the pin is where the callable is defined, not object identity.
+        import importlib.util
+        import inspect
+        spec = importlib.util.spec_from_file_location(
+            "dataset_refs_for_stage4", TESTS_DIR / "evals" / "dataset_refs.py")
+        dr = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(dr)
+        self.assertEqual(
+            Path(inspect.getsourcefile(dr.resolution_of)).resolve(),
+            Path(module.__file__).resolve(),
+            "dataset_refs must alias stage 4's race scan, never keep a copy")
 
     def test_direction_label_promotes_only_at_the_frozen_threshold(self):
         module, _ = import_mode(4)
         self.assertEqual(
-            module.direction_label({"BEAR": 0.1, "NEUTRAL": 0.2, "BULL": 0.7}),
-            "STRONG_BULLISH")
+            module.direction_label({"TARGET_FIRST": 0.7, "STOP_FIRST": 0.2,
+                                    "NEITHER": 0.1}),
+            "STRONG_TARGET_FIRST")
         self.assertEqual(
-            module.direction_label({"BEAR": 0.1, "NEUTRAL": 0.2, "BULL": 0.6}),
-            "STRONG_BULLISH", "0.60 is inclusive")
+            module.direction_label({"TARGET_FIRST": 0.6, "STOP_FIRST": 0.2,
+                                    "NEITHER": 0.2}),
+            "STRONG_TARGET_FIRST", "0.60 is inclusive")
         self.assertEqual(
-            module.direction_label({"BEAR": 0.1, "NEUTRAL": 0.3, "BULL": 0.59}),
-            "BULLISH")
+            module.direction_label({"TARGET_FIRST": 0.59, "STOP_FIRST": 0.3,
+                                    "NEITHER": 0.11}),
+            "TARGET_FIRST")
         self.assertEqual(
-            module.direction_label({"BEAR": 0.1, "NEUTRAL": 0.6, "BULL": 0.3}),
-            "NEUTRAL")
+            module.direction_label({"TARGET_FIRST": 0.3, "STOP_FIRST": 0.1,
+                                    "NEITHER": 0.6}),
+            "NEITHER")
         self.assertEqual(
-            module.direction_label({"BEAR": 0.7, "NEUTRAL": 0.2, "BULL": 0.1}),
-            "BEARISH")
+            module.direction_label({"TARGET_FIRST": 0.1, "STOP_FIRST": 0.7,
+                                    "NEITHER": 0.2}),
+            "STOP_FIRST")
 
     def test_mixture_quantiles_are_monotone_in_the_level(self):
         module, _ = import_mode(4)
-        probabilities = {"BEAR": 0.3, "NEUTRAL": 0.4, "BULL": 0.3}
+        probabilities = {"TARGET_FIRST": 0.3, "STOP_FIRST": 0.4, "NEITHER": 0.3}
         pairs = module._pooled(
-            {"BEAR": [-12.0, -6.0], "NEUTRAL": [-1.0, 2.0], "BULL": [5.0, 11.0]},
+            {"TARGET_FIRST": [-12.0, -6.0], "STOP_FIRST": [-1.0, 2.0],
+             "NEITHER": [5.0, 11.0]},
             probabilities)
         levels = [i / 20 for i in range(21)]
         values = [module.mixture_quantile(pairs, level) for level in levels]
@@ -466,11 +548,11 @@ class TestConeEnvelopeIsThePath(unittest.TestCase):
 
     def test_wicks_outside_the_close_widen_the_envelope(self):
         """Ten atoms, a flat close and symmetric wicks: the path is wider."""
-        probs = {"BEAR": 0.0, "NEUTRAL": 0.0, "BULL": 1.0}
+        probs = {"TARGET_FIRST": 0.0, "STOP_FIRST": 0.0, "NEITHER": 1.0}
         samples = {
-            "forward_return_pct": {"BULL": [0.0] * 10},
-            "mae_pct": {"BULL": [float(-v) for v in range(10, 0, -1)]},
-            "mfe_pct": {"BULL": [float(v) for v in range(1, 11)]},
+            "forward_return_pct": {"NEITHER": [0.0] * 10},
+            "mae_pct": {"NEITHER": [float(-v) for v in range(10, 0, -1)]},
+            "mfe_pct": {"NEITHER": [float(v) for v in range(1, 11)]},
         }
         cone = self.module.cone_envelope(samples, probs, 100.0)
         # ₹ from the mixtures: q10/q25 of the adverse atoms, q75/q90 of the
@@ -484,9 +566,9 @@ class TestConeEnvelopeIsThePath(unittest.TestCase):
 
     def test_a_flat_path_envelope_collapses_to_the_terminal_interval(self):
         """No wicks ⇒ the two definitions agree; the widening is not a fudge."""
-        probs = {"BEAR": 0.0, "NEUTRAL": 0.0, "BULL": 1.0}
+        probs = {"TARGET_FIRST": 0.0, "STOP_FIRST": 0.0, "NEITHER": 1.0}
         flat = [float(v) for v in range(-5, 5)]
-        samples = {measure: {"BULL": list(flat)} for measure in
+        samples = {measure: {"NEITHER": list(flat)} for measure in
                    ("forward_return_pct", "mae_pct", "mfe_pct")}
         cone = self.module.cone_envelope(samples, probs, 100.0)
         expected = {key: round(100.0 * (1.0 + self.module.mixture_quantile(
@@ -503,11 +585,11 @@ class TestConeEnvelopeIsThePath(unittest.TestCase):
         guarantees it, and no probability mixture can break it.
         """
         samples = self.calibration["samples"]
-        mixtures = [{"BEAR": 1.0, "NEUTRAL": 0.0, "BULL": 0.0},
-                    {"BEAR": 0.0, "NEUTRAL": 1.0, "BULL": 0.0},
-                    {"BEAR": 0.0, "NEUTRAL": 0.0, "BULL": 1.0},
-                    {"BEAR": 1 / 3, "NEUTRAL": 1 / 3, "BULL": 1 / 3},
-                    {"BEAR": 0.6, "NEUTRAL": 0.3, "BULL": 0.1}]
+        mixtures = [{"TARGET_FIRST": 1.0, "STOP_FIRST": 0.0, "NEITHER": 0.0},
+                    {"TARGET_FIRST": 0.0, "STOP_FIRST": 1.0, "NEITHER": 0.0},
+                    {"TARGET_FIRST": 0.0, "STOP_FIRST": 0.0, "NEITHER": 1.0},
+                    {"TARGET_FIRST": 1 / 3, "STOP_FIRST": 1 / 3, "NEITHER": 1 / 3},
+                    {"TARGET_FIRST": 0.6, "STOP_FIRST": 0.3, "NEITHER": 0.1}]
         for probs in mixtures:
             with self.subTest(mixture=probs):
                 cone = self.module.cone_envelope(samples, probs, 2450.0)
@@ -570,16 +652,16 @@ class TestTheConePoolsComeFromTheTradesOwnSector(unittest.TestCase):
         chosen = self.module.samples_for(
             {"samples": pooled, "samples_by_sector": {SECTOR: sector}}, SECTOR)
         self.assertIs(chosen, sector)
-        self.assertEqual(chosen["mae_pct"]["BEAR"][0], -30.0)
+        self.assertEqual(chosen["mae_pct"]["STOP_FIRST"][0], -30.0)
 
     def test_a_thin_or_incomplete_sector_block_falls_back_to_the_pooled_pools(self):
         pooled = self.block(mae=-5.0, mfe=5.0)
         thin = self.block(mae=-30.0, mfe=30.0,
                           atoms=self.module.MIN_SECTOR_ATOMS_PER_CLASS - 1)
         missing_class = self.block(mae=-30.0, mfe=30.0)
-        del missing_class["mae_pct"]["BEAR"]
+        del missing_class["mae_pct"]["STOP_FIRST"]
         empty_class = self.block(mae=-30.0, mfe=30.0)
-        empty_class["mfe_pct"]["BULL"] = []
+        empty_class["mfe_pct"]["TARGET_FIRST"] = []
         missing_measure = self.block(mae=-30.0, mfe=30.0)
         del missing_measure["forward_return_pct"]
         for label, block in (("thin", thin), ("missing class", missing_class),
@@ -683,37 +765,47 @@ class TestModelArtifactsAreDisclosed(unittest.TestCase):
         self.assertIn("oof_cone_coverage_pct", cv)
         self.assertGreater(cv["oof_rows"], 0)
 
-    def test_the_calibration_carries_the_neutral_up_share(self):
-        """φ is required: without it P(up) has no honest value."""
-        phi = self.calibration["neutral_up_share"]
-        self.assertTrue(0.0 <= phi <= 1.0)
-        module, _ = import_mode(4)
-        self.assertEqual(
-            module.up_probability({"BEAR": 0.2, "NEUTRAL": 0.4, "BULL": 0.4}, phi),
-            0.4 + phi * 0.4)
-        self.assertEqual(module.up_probability(
-            {"BEAR": 0.0, "NEUTRAL": 0.0, "BULL": 1.0}, phi), 1.0)
-        self.assertEqual(module.up_probability(
-            {"BEAR": 1.0, "NEUTRAL": 0.0, "BULL": 0.0}, phi), 0.0)
+    def test_the_calibration_carries_the_reference_race_band(self):
+        """The reference band is required: it is what the label was measured at.
 
-    def test_a_calibration_without_the_up_share_is_unusable(self):
+        Decision D retired φ (P(up) is no longer graded) and replaced it with
+        the ±3% band the corpus rows' TARGET_FIRST / STOP_FIRST / NEITHER
+        labels were decided at — the label rule and the calibration that ships
+        it cannot disagree without the artifact lying about its own classes.
+        """
+        band = self.calibration["race_band_pct"]
+        module, _ = import_mode(4)
+        self.assertEqual(band, module.RACE_BAND_PCT)
+        self.assertEqual(self.calibration["classes"], list(module.CLASSES))
+        self.assertNotIn("neutral_up_share", self.calibration,
+                         "the retired direction bridge must not survive")
+
+    def test_a_calibration_without_the_race_band_is_unusable(self):
         module, _ = import_mode(4)
         broken = dict(self.calibration)
-        broken.pop("neutral_up_share", None)
+        broken.pop("race_band_pct", None)
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "calibration.json"
             path.write_text(json.dumps(broken), encoding="utf-8")
             booster, calibration, reason = module.load_model(MODEL, path)
         self.assertIsNone(booster)
         self.assertEqual(reason, "model:calibration-fields")
-        for bad in (-0.1, 1.1, "half", True, None):
+        for bad in (-0.1, 0.0, "three", True, None):
             broken = dict(self.calibration)
-            broken["neutral_up_share"] = bad
+            broken["race_band_pct"] = bad
             with tempfile.TemporaryDirectory() as tmp:
                 path = Path(tmp) / "calibration.json"
                 path.write_text(json.dumps(broken), encoding="utf-8")
                 _, _, reason = module.load_model(MODEL, path)
             self.assertEqual(reason, "model:calibration-fields", bad)
+        # A band the stage would not label at is the same lie as a missing one.
+        broken = dict(self.calibration)
+        broken["race_band_pct"] = module.RACE_BAND_PCT + 1.0
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "calibration.json"
+            path.write_text(json.dumps(broken), encoding="utf-8")
+            _, _, reason = module.load_model(MODEL, path)
+        self.assertEqual(reason, "model:calibration-fields")
 
     def test_calibration_and_booster_load_together_or_not_at_all(self):
         module, _ = import_mode(4)
@@ -796,6 +888,102 @@ class TestCliAndRecording(unittest.TestCase):
             capture_output=True, text=True, encoding="utf-8", check=False)
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertEqual(proc.stdout, "")
+
+
+class TestTheRaceProbabilityIsConservative(unittest.TestCase):
+    """Decision D's prediction side (2026-10-16) — the number gate 4 grades.
+
+    `prob_target_hit_22d` must answer *this trade's* race: the probability
+    that the tape reaches the trade's target without first printing its stop.
+    The estimator is the class-weighted product of the two excursion
+    marginals — P(best high ≥ target) × P(worst low > −stop) — which is
+    **at most** the true first-touch probability (the two events are
+    positively associated), so it is a disclosed lower bound, never a
+    tuned-up one. The calibration ships the disclosure in `race_estimator`.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.module, _ = import_mode(4)
+
+    @staticmethod
+    def pools(mae: list[float], mfe: list[float]) -> dict:
+        """One class holding every atom, so the arithmetic is hand-checkable."""
+        return {
+            "forward_return_pct": {"TARGET_FIRST": [0.0]},
+            "mae_pct": {"TARGET_FIRST": list(mae)},
+            "mfe_pct": {"TARGET_FIRST": list(mfe)},
+        }
+
+    def weights(self, target: float = 1.0) -> dict:
+        return {"TARGET_FIRST": target, "STOP_FIRST": 0.0, "NEITHER": 0.0}
+
+    def test_it_is_the_product_of_the_two_marginals(self):
+        # mfe atoms: two of them reach 5%, one does not → P(reach) = 2/3.
+        # mae atoms: two hold above −4%, one breaches → P(hold) = 2/3.
+        value = self.module.race_probability(
+            self.weights(), self.pools([-2.0, -3.0, -9.0], [2.0, 5.0, 8.0]),
+            target_pct=5.0, stop_pct=4.0)
+        self.assertAlmostEqual(value, (2 / 3) * (2 / 3), places=6)
+
+    def test_a_stop_already_beyond_the_market_wins_no_race(self):
+        """stop_pct ≤ 0 means the stop sits at/above the entry: lost on print."""
+        for stop_pct in (0.0, -1.5):
+            with self.subTest(stop_pct=stop_pct):
+                self.assertEqual(
+                    self.module.race_probability(
+                        self.weights(), self.pools([-1.0], [50.0]),
+                        target_pct=2.0, stop_pct=stop_pct),
+                    0.0)
+
+    def test_a_harder_target_lowers_it_and_a_deeper_stop_raises_it(self):
+        pools = self.pools([-2.0, -6.0, -12.0], [3.0, 9.0, 15.0])
+        easier = self.module.race_probability(
+            self.weights(), pools, target_pct=3.0, stop_pct=7.0)
+        harder = self.module.race_probability(
+            self.weights(), pools, target_pct=9.0, stop_pct=7.0)
+        deeper = self.module.race_probability(
+            self.weights(), pools, target_pct=3.0, stop_pct=13.0)
+        tighter = self.module.race_probability(
+            self.weights(), pools, target_pct=3.0, stop_pct=1.0)
+        self.assertGreater(easier, harder, "a target 9% away is likelier to "
+                           "lose than one 3% away, all else equal")
+        self.assertGreater(deeper, easier, "a stop no atom breaches cannot "
+                           "cost the race anything")
+        self.assertLess(tighter, easier, "a stop every atom breaches wins "
+                        "nothing, however reachable the target is")
+
+    def test_it_never_exceeds_either_marginal(self):
+        """A lower bound may not exceed either event it multiplies."""
+        pools = self.pools([-2.0, -6.0, -12.0], [3.0, 9.0, 15.0])
+        weights = self.weights()
+        for target_pct, stop_pct in ((3.0, 7.0), (9.0, 7.0), (15.0, 1.0),
+                                     (5.0, 5.0), (14.9, 13.0)):
+            with self.subTest(target=target_pct, stop=stop_pct):
+                value = self.module.race_probability(
+                    weights, pools, target_pct, stop_pct)
+                reached = self.module.mixture_prob_at_least(
+                    self.module._pooled(pools["mfe_pct"], weights), target_pct)
+                held = self.module.mixture_prob_at_least(
+                    self.module._pooled(pools["mae_pct"], weights), -stop_pct)
+                self.assertGreaterEqual(value, 0.0)
+                self.assertLessEqual(value, min(reached, held))
+
+    def test_the_graded_number_answers_this_trades_geometry(self):
+        """End to end: move the trade's target and stop, the graded key moves
+        with them while the reference-band key does not — the proof that gate
+        4 is graded on the trade's own race and not on a label-space echo."""
+        base, code, err = run_stage4(CANONICAL)
+        self.assertEqual(code, 0, err)
+        self.assertFalse(base["waived"], err)
+        harder, code, err = run_stage4(make_input(target=4000.0, stoploss=2950.0))
+        self.assertEqual(code, 0, err)
+        self.assertFalse(harder["waived"], err)
+        self.assertLess(harder["prob_target_hit_22d"], base["prob_target_hit_22d"],
+                        "a target 29% away cannot be likelier than one 4.4% away")
+        self.assertEqual(harder["direction_probability"],
+                         base["direction_probability"],
+                         "the reference-band key must not follow the trade's levels")
 
 
 if __name__ == "__main__":

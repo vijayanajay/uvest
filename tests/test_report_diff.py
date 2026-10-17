@@ -9,12 +9,13 @@ a report. This seam freezes the check that replaces it:
 2. The runner's gate wiring — graded 100.0 on a faithful stage-12 report,
    0.0 the moment one number is invented, honest [SKIP] when no report exists,
    and honest exclusion when a report exists but no run record proves it.
-3. The committed sample report (`reports/sample_report.html`) as a real-HTML
+3. The committed prototype (`reports/sample_report.html`) as a real-HTML
    extraction fixture: its cards are scanned, its stylesheet is not.
 """
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import sys
 import tempfile
@@ -25,6 +26,7 @@ from unittest import mock
 TESTS_DIR = Path(__file__).resolve().parent
 REPO_ROOT = TESTS_DIR.parent
 SAMPLE_REPORT = REPO_ROOT / "reports" / "sample_report.html"
+STAGE12 = REPO_ROOT / "scripts" / "12_generate_html_report.py"
 
 sys.path.insert(0, str(TESTS_DIR / "evals"))
 sys.path.insert(0, str(TESTS_DIR))
@@ -32,7 +34,16 @@ sys.path.insert(0, str(TESTS_DIR))
 import dataset_refs  # noqa: E402  (sibling eval modules, spliced above)
 import provenance  # noqa: E402
 import report_diff  # noqa: E402
+import report_regen  # noqa: E402
 import run_evals  # noqa: E402
+
+
+def load_stage12():
+    """Stage 12 as a module: the fixture pins its numbers with stage 12's `fmt`."""
+    spec = importlib.util.spec_from_file_location("stage12_for_diff", STAGE12)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def prove(*artifacts: Path) -> None:
@@ -229,18 +240,32 @@ class TestHallucinationGate(unittest.TestCase):
 
 
 class TestSampleReportFixture(unittest.TestCase):
-    """The committed sample is a real HTML report — cards scan, CSS does not."""
+    """The committed prototype is a real HTML report — cards scan, CSS does not.
+
+    It is a *regenerated* artifact (`report_regen.PROTOTYPE_TRADE_ID`'s own
+    stage-12 report), so the numbers pinned here are read out of that record and
+    rendered by stage 12's own formatter rather than retyped. The literals this
+    replaces (`₹2,974.00` / `₹2,988.20`) belonged to a hand-written mock: pinning
+    a number by hand is how that mock drifted years away from the frozen spec.
+    """
 
     @classmethod
     def setUpClass(cls):
         if not SAMPLE_REPORT.exists():
             raise unittest.SkipTest("sample report not present")
         cls.html = SAMPLE_REPORT.read_text(encoding="utf-8")
+        cls.stage12 = load_stage12()
+        cls.canonical = json.loads(
+            report_regen.prototype_job()["canonical"].read_text(encoding="utf-8"))
 
     def test_cards_are_scanned_and_the_stylesheet_is_not(self):
         found = report_diff.claims(self.html)
-        self.assertIn("2,974.00", found, "the execution card number must be scanned")
-        self.assertIn("2,988.20", found, "the live price must be scanned")
+        for field in ("entry_price", "target", "stoploss"):
+            token = self.stage12.fmt(self.canonical[field])
+            with self.subTest(field=field):
+                self.assertIn(token, found,
+                              f"the record's own {field} ({token}) is a claim the "
+                              "report makes, and visible-text extraction must see it")
         self.assertGreater(len(report_diff.claims(self.html)), len(found) - 1)
         raw_with_css = report_diff._NUMBER_RE.findall(self.html)
         self.assertGreater(len(raw_with_css), len(found),

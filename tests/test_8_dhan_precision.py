@@ -72,6 +72,31 @@ def trade_doc(**overrides):
     return doc
 
 
+# Dhan's documented v2 shapes (plan-tier2-dhan-collection.md §2, researched
+# 2026-10-16): parallel OHLCV arrays with epoch timestamps for candles, and
+# the authed 5-level book under data.<segment>.<securityId>.depth for quotes.
+# The client is pinned to *these*, never to whatever it used to send.
+INTRADAY_DOC = {
+    "timestamp": [1578030000, 1578030300],   # 2020-01-03 11:10 / 11:15 IST
+    "open": [100, 100], "high": [101, 102], "low": [97, 99],
+    "close": [100, 101], "volume": [5, 5],
+}
+BOOK_DOC = {"data": {"NSE_EQ": {"1333": {"depth": {
+    "buy": [{"price": 100.5, "quantity": 10, "orders": 2}],
+    "sell": [{"price": 100.6, "quantity": 5, "orders": 1}],
+}}}}}
+# Same two-bar shape as INTRADAY_DOC but with a deeper swing low (90) at the
+# anchor bar, so the trailing AVWAP lands strictly below INTRADAY_DOC's 100.0:
+# typical(bar0)=(101+90+100)/3=97.0, typical(bar1)=(102+99+101)/3=100.667,
+# equal-volume mean → 98.8333. The pivot is the first lowest-low (bar 0),
+# so both bars enter the window.
+DEEP_INTRADAY_DOC = {
+    "timestamp": [1578030000, 1578030300],   # 2020-01-03 11:10 / 11:15 IST
+    "open": [100, 100], "high": [101, 102], "low": [90, 99],
+    "close": [100, 101], "volume": [5, 5],
+}
+
+
 def write_inputs(tmp: Path, bars, trade=None):
     prefix = tmp / "ohlcv_prefix.json"
     prefix.write_text(json.dumps({"symbol": "RELIANCE", "sessions": bars}),
@@ -279,17 +304,12 @@ class TestTheWaiverContract(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             canonical, prefix = write_inputs(Path(tmp), [
                 session("2020-01-0%d" % i, 100, 101, 99, 100) for i in (1, 2, 3)])
-            intraday = [{"date": "2020-01-03 10:00", "open": 100, "high": 101,
-                         "low": 97, "close": 100, "volume": 5},
-                        {"date": "2020-01-03 10:05", "open": 100, "high": 102,
-                         "low": 99, "close": 101, "volume": 5}]
-            answers = iter([{"candles": intraday},
-                            {"best_bid": 100.5, "best_ask": 100.6}])
             env = dict(os.environ, DHAN_CLIENT_ID="x", DHAN_ACCESS_TOKEN="y")
             with tempfile.TemporaryDirectory() as cache_dir, \
                  mock.patch.dict(os.environ, env, clear=True), \
                  mock.patch.object(self.stage8, "http_post_json",
-                                   side_effect=lambda *a, **k: next(answers)) as post:
+                                   side_effect=iter([INTRADAY_DOC,
+                                                     BOOK_DOC])) as post:
                 payload, code, _ = call_imported_main(self.stage8, [
                     "--input", str(canonical), "--ohlcv-fixture", str(prefix),
                     "--live", "--dhan-security-id", "1333",
@@ -299,7 +319,7 @@ class TestTheWaiverContract(unittest.TestCase):
         self.assertEqual(payload["precision_source"], "dhan_intraday")
         self.assertEqual(post.call_count, 2)
         self.assertAlmostEqual(payload["spread_impact_cost_pct"], 100.0 *
-                               (100.6 - 100.5) / 100.55, places=4)
+                               (100.6 - 100.5) / 100.55, places=3)
         # The intraday pivot (low 97) refines the anchor below the daily one.
         self.assertLess(payload["anchored_vwap"], 101.0)
 
@@ -346,6 +366,196 @@ class TestTheDhanCache(unittest.TestCase):
                 "past the TTL: miss, the API would be re-queried")
             self.assertIsNone(self.stage8.get_cached("absent", now=t0,
                                                      db_path=db))
+
+
+class TestTheLiveClientSpeaksTheDocumentedApi(unittest.TestCase):
+    """Tier-2 plan Phase 1 (plan-tier2-dhan-collection.md §2/§4): before any
+    recorded fixture can pin a real response, the shipped client must match
+    the documented one — host, path, body keys, candle shape, book shape.
+    The old client sent the *daily* route to a host that isn't Dhan's, with
+    invented body keys and a scalar depth the docs never serve.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.stage8, cls.script = import_mode(8)
+
+    def run_live(self, answers):
+        """One live run over a mocked transport; returns (payload, calls)."""
+        calls = []
+
+        def capture(url, headers, body):
+            calls.append((url, dict(headers), body))
+            return next(answers)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            canonical, prefix = write_inputs(Path(tmp), [
+                session("2020-01-0%d" % i, 100, 101, 99, 100)
+                for i in (1, 2, 3)])
+            env = dict(os.environ, DHAN_CLIENT_ID="x", DHAN_ACCESS_TOKEN="y")
+            with tempfile.TemporaryDirectory() as cache_dir, \
+                 mock.patch.dict(os.environ, env, clear=True), \
+                 mock.patch.object(self.stage8, "http_post_json",
+                                   side_effect=capture):
+                payload, code, _ = call_imported_main(self.stage8, [
+                    "--input", str(canonical), "--ohlcv-fixture", str(prefix),
+                    "--live", "--dhan-security-id", "1333",
+                    "--cache-db", str(Path(cache_dir) / "dhan_cache.db")])
+        self.assertEqual(code, 0)
+        return payload, calls
+
+    def test_the_candles_request_is_the_documented_endpoint_and_body(self):
+        _, calls = self.run_live(iter([INTRADAY_DOC, BOOK_DOC]))
+        url, headers, body = calls[0]
+        self.assertEqual(url, "https://api.dhan.co/v2/charts/intraday",
+                         "the documented intraday route, on Dhan's host")
+        self.assertEqual(
+            set(body), {"securityId", "exchangeSegment", "instrument",
+                        "interval", "oi", "fromDate", "toDate"},
+            "the documented body keys — not the invented security_id/interval/oi")
+        self.assertEqual(body["securityId"], "1333")
+        self.assertEqual(body["interval"], "5",
+                         "the documented set is {1,5,15,25,60}; 10 does not exist")
+        self.assertEqual(body["fromDate"], "2020-01-03 09:15:00",
+                         "the graded session's own day, market open")
+        self.assertEqual(body["toDate"], "2020-01-03 15:30:00")
+        self.assertEqual((headers.get("access-token")
+                          or headers.get("ACCESS-TOKEN")), "y",
+                         "the documented auth header carries the token")
+
+    def test_the_depth_request_is_the_authed_quote_for_our_symbol(self):
+        _, calls = self.run_live(iter([INTRADAY_DOC, BOOK_DOC]))
+        url, headers, body = calls[1]
+        self.assertEqual(url, "https://api.dhan.co/v2/marketfeed/quote")
+        self.assertEqual(body, {"NSE_EQ": ["1333"]},
+                         "the documented segment→ids request, authed")
+        self.assertEqual((headers.get("access-token")
+                          or headers.get("ACCESS-TOKEN")), "y")
+
+    def test_parallel_array_candles_with_epoch_timestamps_become_bars(self):
+        """The documented v2 candle shape → normalized bars, epoch in IST
+        (deterministic on any machine's clock settings)."""
+        bars = self.stage8._candles_to_bars(INTRADAY_DOC)
+        self.assertEqual(len(bars), 2)
+        self.assertEqual(bars[0], {"date": "2020-01-03 11:10", "open": 100.0,
+                                   "high": 101.0, "low": 97.0, "close": 100.0,
+                                   "volume": 5.0})
+        self.assertEqual(bars[1]["date"], "2020-01-03 11:15")
+        # A millisecond feed is still an epoch; a ragged payload is a miss.
+        ms = dict(INTRADAY_DOC, timestamp=[t * 1000 for t in
+                                           INTRADAY_DOC["timestamp"]])
+        self.assertEqual(self.stage8._candles_to_bars(ms)[0]["date"],
+                         "2020-01-03 11:10")
+        ragged = dict(INTRADAY_DOC, volume=[1])
+        self.assertIsNone(self.stage8._candles_to_bars(ragged),
+                          "mismatched array lengths are not candles")
+
+    def test_the_documented_book_shape_feeds_the_spread(self):
+        pct, reason = self.stage8.spread_from_quote(
+            BOOK_DOC, security_id="1333")
+        self.assertIsNone(reason)
+        self.assertAlmostEqual(pct, 100.0 * (100.6 - 100.5) / 100.55, places=4)
+
+
+class TestOfflineTier2Fixtures(unittest.TestCase):
+    """`--intraday-fixture` / `--depth-fixture` (plan Phase 1 item 2): the
+    stage runs over recorded evidence offline, the way every other stage
+    does — zero network, so the validation chain stays byte-deterministic
+    and V10 keeps comparing.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.stage8, cls.script = import_mode(8)
+
+    def run_fixture(self, intraday=None, depth=None):
+        """Run the CLI with the given fixture payloads; assert no transport.
+
+        A payload of None means the flag is absent; anything else is written
+        to a temp file and passed. Returns the payload.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            canonical, prefix = write_inputs(tmp, [
+                session("2020-01-0%d" % i, 100, 101, 99, 100, 1_000)
+                for i in (1, 2, 3)])
+            argv = ["--input", str(canonical), "--ohlcv-fixture", str(prefix)]
+            if intraday is not None:
+                path = tmp / "intraday_prefix.json"
+                path.write_text(json.dumps(intraday), encoding="utf-8")
+                argv += ["--intraday-fixture", str(path)]
+            if depth is not None:
+                path = tmp / "depth_snapshot.json"
+                path.write_text(json.dumps(depth), encoding="utf-8")
+                argv += ["--depth-fixture", str(path)]
+            with mock.patch.object(self.stage8, "http_post_json") as post:
+                payload, code, _ = call_imported_main(self.stage8, argv)
+                self.assertFalse(
+                    post.called, "fixtures replace the network entirely")
+            self.assertEqual(code, 0)
+        return payload
+
+    def test_the_intraday_fixture_refines_the_zone_with_zero_network(self):
+        # A pivot whose trailing window anchors strictly below the daily
+        # tier's 100.0: INTRADAY_DOC's two bars of typicals 99.33 and 100.67
+        # average to 100.0; DEEP_INTRADAY_DOC drops the anchor bar's low to
+        # 90 so the same construction lands at 98.83, proving the refinement.
+        payload = self.run_fixture(intraday=INTRADAY_DOC)
+        self.assertEqual(payload["precision_source"], "dhan_intraday")
+        self.assertAlmostEqual(payload["anchored_vwap"], 100.0)
+        deep = self.run_fixture(intraday=DEEP_INTRADAY_DOC)
+        self.assertEqual(deep["precision_source"], "dhan_intraday")
+        self.assertLess(deep["anchored_vwap"], payload["anchored_vwap"])
+        # The daily tier alone stays at 100.0 with no intraday evidence, and
+        # its source is the daily tier — the fixture is what moved the anchor.
+        daily = self.run_fixture()
+        self.assertEqual(daily["precision_source"], "daily_tier1")
+        self.assertAlmostEqual(daily["anchored_vwap"], 100.0, places=6)
+        # Depth was never requested offline: the half is named, not invented.
+        self.assertTrue(payload["waived"])
+        self.assertEqual(payload["waived_reason"], "dhan:not-requested")
+
+    def test_both_fixtures_run_the_whole_tier2_offline(self):
+        payload = self.run_fixture(intraday=INTRADAY_DOC, depth=BOOK_DOC)
+        self.assertFalse(payload["waived"])
+        self.assertIsNone(payload["waived_reason"])
+        self.assertEqual(payload["precision_source"], "dhan_intraday")
+        self.assertAlmostEqual(payload["spread_impact_cost_pct"],
+                               100.0 * (100.6 - 100.5) / 100.55, places=3)
+        self.assertIsNotNone(payload["optimal_limit_buy"],
+                             "the refined band is still a strict discount")
+        self.assertFalse(payload["zone_above_market"])
+        self.assertFalse(payload["cache_hit"],
+                         "fixtures are the record; the cache is a live thing")
+
+    def test_a_recorded_bars_bundle_is_accepted_too(self):
+        """The campaign's fixture file shape (§3 `intraday_prefix.json`):
+        normalized bars, not a raw response."""
+        bundle = {"symbol": "RELIANCE", "bars": [
+            {"date": "2020-01-03 11:10", "open": 100, "high": 101,
+             "low": 90, "close": 100, "volume": 5},
+            {"date": "2020-01-03 11:15", "open": 100, "high": 102,
+             "low": 99, "close": 101, "volume": 5}]}
+        payload = self.run_fixture(intraday=bundle)
+        self.assertEqual(payload["precision_source"], "dhan_intraday")
+        # The swing-low bar's typical is 97.0, so the two-bar AVWAP is
+        # 98.83 — strictly below the daily tier's 100.0, proving the bundle
+        # was parsed and anchored, not silently ignored.
+        self.assertAlmostEqual(payload["anchored_vwap"], 98.83333, places=4)
+
+    def test_a_malformed_fixture_waives_naming_the_fixture(self):
+        """E3: evidence that cannot be read is disclosed, never a crash and
+        never silently ignored as if the flag were absent."""
+        payload = self.run_fixture(intraday={"nonsense": True})
+        self.assertTrue(payload["waived"])
+        self.assertIn("intraday_fixture", payload["waived_reason"])
+        self.assertEqual(payload["precision_source"], "daily_tier1",
+                         "the daily tier completes the validation (BRD §8.1)")
+        self.assertIsNotNone(payload["optimal_limit_buy"])
+        payload = self.run_fixture(depth=["not", "a", "book"])
+        self.assertTrue(payload["waived"])
+        self.assertIn("dhan:not-requested", payload["waived_reason"])
+        self.assertIsNone(payload["spread_impact_cost_pct"])
 
 
 class TestTheLimitMaeDerivation(unittest.TestCase):

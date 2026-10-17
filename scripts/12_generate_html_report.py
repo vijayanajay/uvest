@@ -19,7 +19,15 @@ attributes, which are not visible text, so charts add no claims.
 
 Every supplied payload renders: stages 1, 2 and 9 get their own sections, and
 stages 3–11 get a card of the scalar fields the payload states, rendered
-verbatim (never recomputed, never summarised). A payload that was NOT supplied
+verbatim (never recomputed, never summarised). A card's **prose labels** follow
+the vocabulary its artifact's fields now speak, not a field name that outlived
+its decision: stage 4's card renders the **target-versus-stop race**
+(`TARGET_FIRST` / `STOP_FIRST` / `NEITHER`, `RACE_FIELD_LABELS`) and draws §13.2's
+radial race gauge from the artifact's own `P(TARGET_FIRST)` (`race_svg`), because
+decision D (2026-10-16) moved that engine's event off the retired up/down one —
+a probability the engine never answered must not be rendered under a
+directional label, and no card here states a probability as bullish or bearish.
+A payload that was NOT supplied
 renders an explicit "awaiting stage N" placeholder — absence is the only honest
 value (E4, scenario-manifest-schema.md) — and a supplied payload is never
 silently dropped, because a stage's evidence a report cannot show is evidence
@@ -38,6 +46,7 @@ from __future__ import annotations
 import argparse
 import html as html_mod
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -46,13 +55,122 @@ ERR_INPUT = "ERR_INPUT"
 # Display order of the pipeline payloads; absent ones render placeholders.
 PAYLOAD_STAGES: list[tuple[str, int, str]] = [
     ("out_3_dtw.json", 3, "DTW Historical Pattern Overlay"),
-    ("out_4_ml.json", 4, "Direction Gauge & 22-Day Volatility Price Cone"),
+    ("out_4_ml.json", 4, "Target-vs-Stop Race Gauge & 22-Day Volatility Price Cone"),
     ("out_5_flow.json", 5, "Institutional Flow Matrix"),
     ("out_6_fundamental.json", 6, "Fundamental Health"),
     ("out_7_regime.json", 7, "Sector & Macro Barometer"),
     ("out_8_dhan.json", 8, "Precision Intraday & Depth"),
     ("out_9_decision.json", 9, "Decision Engine"),
 ]
+
+# Stage 4's own keys, read under the frozen race vocabulary. Decision D moved
+# the engine's event onto the target-versus-stop race (BRD §5.2, 2026-10-16):
+# the classes are TARGET_FIRST / STOP_FIRST / NEITHER, so a card that still
+# labelled `prob_target_hit_22d` a "Direction probability" would present the
+# race as the retired up/down event — and a gauge whose slices read
+# Bullish/Neutral/Bearish would state a probability the engine never answered.
+# Prose only: every value stays the payload's own, rendered by `fmt`.
+RACE_FIELD_LABELS = {
+    "direction_label": "Race label",
+    "direction_probability": "P(target first) · reference band",
+    "prob_target_hit_22d": "P(target first) · this trade's target & stop",
+}
+
+RACE_CAPTION = (
+    "Race: this trade's own target against its own stop — whichever level price "
+    "touches first decides, and NEITHER means neither was touched inside the "
+    "horizon. The label and both probabilities are the stage-4 artifact's own "
+    "values, stated at their own geometries."
+)
+
+# The one card whose vocabulary is a decision (D), not a field name.
+PAYLOAD_CAPTIONS = {"out_4_ml.json": RACE_CAPTION}
+
+# BRD §13.2's radial speedometer, in the geometry the blueprint freezes: a
+# semi-circular arc (radius 80, `viewBox "0 0 200 120"`) sliced into the
+# artifact's own three race classes, needle at `P(TARGET_FIRST) × 180°` measured
+# from the left — §13.2's own sentence, which is why the retired gauge's
+# `P(Bullish)` cannot be the input. Geometry lives in attributes only: the
+# gauge's **visible text carries no digits**, and every figure a reader sees is
+# still an artifact value in the card's rows, so the drawing cannot state a
+# claim the record does not carry.
+RACE_GAUGE = {
+    "view_box": "0 0 200 120",
+    "centre": (100.0, 100.0),
+    "radius": 80.0,
+    "stroke": 14.0,
+    "needle": 62.0,
+    "slices": (("STOP_FIRST", 0.0, 60.0, "#da3633"),
+               ("NEITHER", 60.0, 120.0, "#d29922"),
+               ("TARGET_FIRST", 120.0, 180.0, "#2ea043")),
+}
+
+
+def _num(value: float) -> str:
+    """A coordinate, trimmed — geometry is not a claim, so it need not be exact."""
+    return f"{round(float(value), 2):g}"
+
+
+def needle_svg_angle(probability) -> float:
+    """§13.2's `theta = P(TARGET_FIRST) × 180°`, mapped into SVG's angles.
+
+    The blueprint measures from the left (0° = the `STOP_FIRST` end, 180° = the
+    `TARGET_FIRST` end); SVG measures from the right with y down, so the two are
+    `180 − theta`. A probability outside [0, 1] is clipped rather than drawn past
+    the arc — the needle's position is geometry, and an out-of-range artifact is
+    a stage-4 problem, not a report that lies about angles.
+    """
+    number = float(probability)
+    clipped = min(1.0, max(0.0, number))
+    return 180.0 - 180.0 * clipped
+
+
+def _point(angle_deg: float, radius: float) -> tuple[float, float]:
+    cx, cy = RACE_GAUGE["centre"]
+    radians = math.radians(angle_deg)
+    return cx + radius * math.cos(radians), cy - radius * math.sin(radians)
+
+
+def race_svg(payload: dict) -> str:
+    """The race gauge for a stage-4 payload; `""` when it carries no probability.
+
+    Absence draws nothing at all: a gauge with no needle would be a picture of a
+    probability nobody measured, and the card's own rows already state the
+    absence (E4).
+    """
+    probability = payload.get("direction_probability")
+    if isinstance(probability, bool) or not isinstance(probability, (int, float)):
+        return ""
+    radius = RACE_GAUGE["radius"]
+    marks = []
+    for label, start, end, color in RACE_GAUGE["slices"]:
+        x0, y0 = _point(180.0 - start, radius)
+        x1, y1 = _point(180.0 - end, radius)
+        marks.append(
+            f'<path d="M {_num(x0)},{_num(y0)} A {_num(radius)},{_num(radius)} '
+            f'0 0 1 {_num(x1)},{_num(y1)}" fill="none" stroke="{color}" '
+            f'stroke-width="{_num(RACE_GAUGE["stroke"])}" stroke-linecap="butt">'
+            f'<title>{esc(label)}</title></path>')
+    angle = needle_svg_angle(probability)
+    nx, ny = _point(angle, RACE_GAUGE["needle"])
+    cx, cy = RACE_GAUGE["centre"]
+    marks.append(
+        f'<circle cx="{_num(cx)}" cy="{_num(cy)}" r="4" fill="#e6edf3"/>'
+        f'<line x1="{_num(cx)}" y1="{_num(cy)}" x2="{_num(nx)}" y2="{_num(ny)}" '
+        f'stroke="#e6edf3" stroke-width="2" stroke-linecap="round"/>')
+    legend = " · ".join(f'<span style="color:{color}">{esc(label)}</span>'
+                        for label, _s, _e, color in RACE_GAUGE["slices"])
+    return (
+        f'<svg viewBox="{RACE_GAUGE["view_box"]}" width="100%" height="120" '
+        'role="img" aria-label="Target-vs-Stop race gauge">'
+        + "".join(marks) + "</svg>"
+        f'<div class="sub">{legend} — needle: the artifact\'s own '
+        'P(target first)</div>')
+
+
+def _card_visual(name: str, payload: dict) -> str:
+    """The bespoke visual a card draws, if any (BRD §13.2)."""
+    return race_svg(payload) if name == "out_4_ml.json" else ""
 
 # Canonical 7-state verdict vocabulary (BRD §10.4, ADR-006).
 VERDICT_CLASS = {
@@ -192,32 +310,59 @@ def verdict_block(payloads: dict[str, dict]) -> str:
     verdict = decision.get("verdict")
     if verdict in VERDICT_CLASS:
         badge = f'<span class="badge {VERDICT_CLASS[verdict]}">{esc(verdict)}</span>'
-        extras = rows_of([("Composite score", decision.get("score")),
-                          ("Calibrated P(win)", decision.get("p_win")),
-                          ("Expectancy", decision.get("expectancy"))])
+        # §13.2's header draws `Score: 84/100`: stage 9's own final over its own
+        # maximum — the waiver rule (§10.4) drops `max_possible_score` below the
+        # nominal 100 whenever a source is missing or waived, so the artifact's
+        # pair is the only honest denominator — plus the effective % the P(win)
+        # calibration read from. Both halves are the artifact's numbers through
+        # `fmt`, which is what keeps this header differ-clean; a score row whose
+        # denominator the artifact does not carry is not drawn at all.
+        pairs: list[tuple[str, object]] = []
+        final, maximum = decision.get("final_score"), decision.get("max_possible_score")
+        has_final = (isinstance(final, (int, float))
+                     and not isinstance(final, bool))
+        has_maximum = (isinstance(maximum, (int, float))
+                       and not isinstance(maximum, bool))
+        if has_final and has_maximum:
+            pairs.append(("Composite score", f"{fmt(final)}/{fmt(maximum)}"))
+        elif has_final:
+            # A score the artifact carries is shown; a maximum it does not carry
+            # is never invented to make the row look complete.
+            pairs.append(("Composite score", fmt(final)))
+        pairs += [("Effective score %", decision.get("effective_score_pct")),
+                  ("Calibrated P(win)", decision.get("p_win")),
+                  ("Expectancy", decision.get("expectancy"))]
+        extras = rows_of(pairs)
         return badge + f'<div class="sub">{extras or "no score carried"}</div>'
     return ('<span class="badge v-pending">verdict pending stage-9 evidence</span>'
             '<div class="sub">decision engine has not run for this record</div>')
 
 
-def payload_rows(payload: dict) -> str:
+def payload_rows(payload: dict, labels: dict[str, str] | None = None) -> str:
     """A supplied payload's own scalar fields, rendered verbatim.
 
     The generic card for the stages without a bespoke visual yet: labels are
     prose, values are the payload's exact JSON numbers (`fmt`), so the card adds
     no claim the record's JSON does not already carry — which is what keeps it
     differ-clean (`tests/evals/report_diff.py`) while the specialized gauges of
-    TICK-010 §13.2 are still being built.
+    TICK-010 §13.2 are still being built. `labels` overrides a key's prose where
+    the field's *meaning* was re-frozen and its name was not (stage 4's race:
+    see `RACE_FIELD_LABELS`) — the value is untouched either way.
     """
     pairs: list[tuple[str, object]] = []
     for key, value in payload.items():
-        label = key.replace("_", " ").strip().capitalize()
+        label = (labels or {}).get(key) or key.replace("_", " ").strip().capitalize()
         if isinstance(value, bool) or isinstance(value, (int, float)) or isinstance(value, str):
             pairs.append((label, value))
         elif isinstance(value, list):
             rendered = ", ".join(str(item) for item in value)
             pairs.append((label, rendered or None))
     return rows_of(pairs) or '<div class="pending">payload carries no scalar fields</div>'
+
+
+def _card_labels(name: str) -> dict[str, str] | None:
+    """The prose-label overrides a payload's card renders under."""
+    return RACE_FIELD_LABELS if name == "out_4_ml.json" else None
 
 
 def render(trade: dict, payloads: dict[str, dict]) -> str:
@@ -279,9 +424,16 @@ def render(trade: dict, payloads: dict[str, dict]) -> str:
     else:
         market = '<div class="pending">awaiting stage-2 evidence</div>'
 
+    def card(name: str, stage: int, title: str) -> str:
+        caption = PAYLOAD_CAPTIONS.get(name)
+        head = f'<div class="card"><h2>{esc(title)} (stage {stage})</h2>'
+        if caption:
+            head += f'<div class="sub">{esc(caption)}</div>'
+        visual = _card_visual(name, payloads[name])
+        return f'{head}{visual}{payload_rows(payloads[name], _card_labels(name))}</div>'
+
     supplied_cards = "".join(
-        f'<div class="card"><h2>{esc(title)} (stage {stage})</h2>'
-        f'{payload_rows(payloads[name])}</div>'
+        card(name, stage, title)
         for name, stage, title in PAYLOAD_STAGES
         if name in payloads and stage != 9)
     pending_cards = "".join(

@@ -1,0 +1,55 @@
+{
+  "symbol": "SBIN",
+  "final_score": 17.42,
+  "max_possible_score": 60.0,
+  "effective_score_pct": 29.03,
+  "decision": "AVOID",
+  "verdict": "AVOID",
+  "p_win": 0.4661,
+  "expectancy": 0.3983,
+  "circuit_breakers_tripped": [
+    "tighter_than_0_75x_atr",
+    "panic_regime"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.170544,
+      "dtw_win_rate_22d": 0.26666666666666666,
+      "prob_target_hit_22d": 0.0427
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": {
+        "p10": 172.23,
+        "p25": 178.52,
+        "p50": 192.25,
+        "p75": 206.14,
+        "p90": 213.32
+      },
+      "mae_projected": -7.73
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": null,
+      "zone_above_market": true,
+      "recommended_band_low": 189.95,
+      "recommended_band_high": 191.95
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 190.95,
+      "r_r": 2.0000000000000044
+    },
+    "limit_order": {
+      "entry": null,
+      "r_r": null,
+      "unavailable": "zone_above_market"
+    },
+    "p_win": 0.4661
+  },
+  "what_would_flip_me": [
+    "a stop placed at or beyond 0.75x daily ATR is available",
+    "India VIX cools below 24 with breadth recovery"
+  ],
+  "avoid_reason": "hard circuit breaker(s) tripped: tighter_than_0_75x_atr, panic_regime",
+  "confidence_deficit": null
+}

@@ -1,0 +1,47 @@
+{
+  "symbol": "ESCORTS",
+  "final_score": 22.48,
+  "max_possible_score": 52.5,
+  "effective_score_pct": 42.82,
+  "decision": "AVOID",
+  "verdict": "AVOID",
+  "p_win": 0.5213,
+  "expectancy": 0.5639,
+  "circuit_breakers_tripped": [
+    "tighter_than_0_75x_atr"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.062741,
+      "dtw_win_rate_22d": 1.0,
+      "prob_target_hit_22d": null
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": null,
+      "mae_projected": null
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 2893.2,
+      "zone_above_market": false,
+      "recommended_band_low": 3426.57,
+      "recommended_band_high": 3433.43
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 3430.0,
+      "r_r": 1.9999999999999916
+    },
+    "limit_order": {
+      "entry": 2893.2,
+      "r_r": null,
+      "unavailable": null
+    },
+    "p_win": 0.5213
+  },
+  "what_would_flip_me": [
+    "a stop placed at or beyond 0.75x daily ATR is available"
+  ],
+  "avoid_reason": "hard circuit breaker(s) tripped: tighter_than_0_75x_atr",
+  "confidence_deficit": null
+}

@@ -1,0 +1,51 @@
+{
+  "symbol": "SUNPHARMA",
+  "final_score": 23.91,
+  "max_possible_score": 45.0,
+  "effective_score_pct": 53.13,
+  "decision": "GO_WEAK",
+  "verdict": "GO_WEAK",
+  "p_win": 0.5625,
+  "expectancy": 1.25,
+  "circuit_breakers_tripped": [],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.094091,
+      "dtw_win_rate_22d": 0.8666666666666667,
+      "prob_target_hit_22d": 0.2186
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": {
+        "p10": 862.05,
+        "p25": 896.69,
+        "p50": 976.39,
+        "p75": 1046.18,
+        "p90": 1080.22
+      },
+      "mae_projected": -25.35
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 948.66,
+      "zone_above_market": false,
+      "recommended_band_low": 950.4,
+      "recommended_band_high": 952.4
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 951.4,
+      "r_r": 3.0000000000000075
+    },
+    "limit_order": {
+      "entry": 948.66,
+      "r_r": 3.8998,
+      "unavailable": null
+    },
+    "p_win": 0.5625
+  },
+  "what_would_flip_me": [
+    "live price improves to the limit band or the model/flow evidence strengthens P(win) above the 55% floor"
+  ],
+  "avoid_reason": null,
+  "confidence_deficit": "waived source(s) reduced the evidence base: out_5_flow.json, out_6_fundamental.json, out_7_regime.json, out_8_dhan.json"
+}

@@ -1,0 +1,53 @@
+{
+  "symbol": "LT",
+  "final_score": 11.01,
+  "max_possible_score": 45.0,
+  "effective_score_pct": 24.47,
+  "decision": "WAIT",
+  "verdict": "WAIT",
+  "p_win": 0.4479,
+  "expectancy": -0.1489,
+  "circuit_breakers_tripped": [
+    "inverted_risk_reward"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.084946,
+      "dtw_win_rate_22d": 0.3333333333333333,
+      "prob_target_hit_22d": 0.2039
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": {
+        "p10": 1563.43,
+        "p25": 1627.78,
+        "p50": 1769.35,
+        "p75": 1910.56,
+        "p90": 1978.13
+      },
+      "mae_projected": -78.8
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 1734.1,
+      "zone_above_market": false,
+      "recommended_band_low": 1759.04,
+      "recommended_band_high": 1762.56
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 1760.8,
+      "r_r": 0.9000740192450047
+    },
+    "limit_order": {
+      "entry": 1734.1,
+      "r_r": 4.5683,
+      "unavailable": null
+    },
+    "p_win": 0.4479
+  },
+  "what_would_flip_me": [
+    "price returns to the limit band (<= 1759.04) so a limit order restores R:R >= 1.5"
+  ],
+  "avoid_reason": null,
+  "confidence_deficit": null
+}

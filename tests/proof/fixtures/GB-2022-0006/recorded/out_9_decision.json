@@ -1,0 +1,53 @@
+{
+  "symbol": "RELIANCE",
+  "final_score": 11.42,
+  "max_possible_score": 45.0,
+  "effective_score_pct": 25.38,
+  "decision": "AVOID",
+  "verdict": "AVOID",
+  "p_win": 0.4515,
+  "expectancy": -0.1421,
+  "circuit_breakers_tripped": [
+    "inverted_risk_reward"
+  ],
+  "three_predictions": {
+    "direction_1m": {
+      "analog_confidence": 0.108416,
+      "dtw_win_rate_22d": 0.4666666666666667,
+      "prob_target_hit_22d": 0.2134
+    },
+    "expected_range": {
+      "price_cone_p10_p50_p90": {
+        "p10": 1046.78,
+        "p25": 1089.91,
+        "p50": 1184.56,
+        "p75": 1278.65,
+        "p90": 1323.57
+      },
+      "mae_projected": -51.09
+    },
+    "optimal_price_range": {
+      "optimal_limit_buy": 1133.11,
+      "zone_above_market": false,
+      "recommended_band_low": 1176.41,
+      "recommended_band_high": 1178.77
+    }
+  },
+  "flip_table": {
+    "market_order": {
+      "entry": 1177.59,
+      "r_r": 0.9001122334455727
+    },
+    "limit_order": {
+      "entry": 1133.11,
+      "r_r": null,
+      "unavailable": null
+    },
+    "p_win": 0.4515
+  },
+  "what_would_flip_me": [
+    "price returns to the limit band (<= 1176.41) so a limit order restores R:R >= 1.5"
+  ],
+  "avoid_reason": "inverted R:R at market and no limit order restores R:R >= 1.5 (limit view: None)",
+  "confidence_deficit": null
+}

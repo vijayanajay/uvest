@@ -220,8 +220,16 @@ def score_regime(doc: dict) -> float:
 def score_precision(doc: dict) -> float:
     if doc.get("optimal_limit_buy") is None:
         return 0.0
-    spread = float(doc.get("spread_impact_cost_pct") or 0.0)
-    return _clip(1.0 - _clip(spread / 0.5))
+    # Absence is deducted, never rewarded (BRD §10.4; plan-tier2 §1, the
+    # Phase-1.3 honesty fix). The old `float(doc.get(...) or 0.0)` read "the
+    # spread was never measured" as "the spread cost nothing" and paid out a
+    # perfect 1.0 for evidence nobody collected — and blew up outright on a
+    # non-numeric value. Only a real number is a measurement; the key missing,
+    # a null, or junk all score 0.0, exactly like an unusable zone.
+    spread = doc.get("spread_impact_cost_pct")
+    if isinstance(spread, bool) or not isinstance(spread, (int, float)):
+        return 0.0
+    return _clip(1.0 - _clip(float(spread) / 0.5))
 
 
 SOURCE_SCORE = {
@@ -270,15 +278,42 @@ def tripped_breakers(trade: dict, payloads: dict[str, dict]) -> list[str]:
     return tripped
 
 
-def limit_rr(trade: dict, payloads: dict[str, dict]) -> float | None:
-    """R:R if filled at the optimal limit (stage 8) or the band low.
+def _limit_claim(payloads: dict[str, dict]) -> tuple[float | None, str | None]:
+    """(limit price stage 8 stands behind, unavailability reason).
 
-    Stage 8 is unimplemented; until it exists the recommended band low is
-    the limit reference. Returns None when geometry is unusable.
+    Stage 8 owns the limit claim (signed proposal B, 2026-10-16): when its
+    payload exists, `optimal_limit_buy` is the only price a limit leg may be
+    computed from. A clamped zone (`zone_above_market: true`) or a wholly
+    waived one carries **no** limit, and substituting the reco's band low
+    would fabricate exactly what the engine just disowned — a limit leg in
+    the flip table and a "restores R:R" rescue for the inverted-RR
+    exception. Only a chain with no stage 8 at all keeps the legacy band
+    reference.
     """
-    dhan_p = payloads.get("out_8_dhan.json") or {}
+    dhan_p = payloads.get("out_8_dhan.json")
+    if dhan_p is None:
+        return None, None          # stage 8 absent — legacy fallback applies
     limit = dhan_p.get("optimal_limit_buy")
-    if limit is None:
+    if isinstance(limit, (int, float)) and not isinstance(limit, bool):
+        return float(limit), None
+    if dhan_p.get("zone_above_market") is True:
+        return None, "zone_above_market"
+    return None, "zone_unavailable"
+
+
+def limit_rr(trade: dict, payloads: dict[str, dict]) -> float | None:
+    """R:R if filled at stage 8's optimal limit (or the reco band low when
+    stage 8 is absent from the chain entirely).
+
+    Returns None when there is no limit claim at all — a clamped or waived
+    zone is not a limit, and a fabricated R:R here would silently drive both
+    the flip table and the inverted-RR WAIT exception. Geometry that cannot
+    price the claim (non-numeric levels, risk <= 0) also returns None.
+    """
+    limit, reason = _limit_claim(payloads)
+    if limit is None and reason is None:
+        # Stage 8 absent from the chain — the legacy band reference. A
+        # *named* unavailability (clamped/waived zone) substitutes nothing.
         limit = trade.get("entry_range_min")
     if limit is None:
         return None
@@ -489,22 +524,35 @@ def _optimal_zone(trade: dict, payloads: dict[str, dict]) -> dict:
     dhan_p = payloads.get("out_8_dhan.json") or {}
     return {
         "optimal_limit_buy": dhan_p.get("optimal_limit_buy"),
+        "zone_above_market": dhan_p.get("zone_above_market"),
         "recommended_band_low": trade.get("entry_range_min"),
         "recommended_band_high": trade.get("entry_range_max"),
     }
 
 
 def _flip_table(trade: dict, payloads: dict[str, dict], p_win: float) -> dict:
-    """Market order vs limit order comparison (BRD §16)."""
+    """Market order vs limit order comparison (BRD §16).
+
+    The limit leg is stage 8's claim or it does not exist: a clamped or
+    waived zone ships `entry: null`, `r_r: null` and an `unavailable` reason
+    (`zone_above_market` / `zone_unavailable`) instead of the reco band's
+    low wearing the limit's hat. Only a chain with no stage 8 payload at all
+    keeps the legacy band reference.
+    """
     math_p = payloads.get("out_1_math.json") or {}
     live = math_p.get("live_rr")
     limit_view = limit_rr(trade, payloads)
+    limit_entry, unavailable = _limit_claim(payloads)
+    if "out_8_dhan.json" in payloads:
+        leg_entry = limit_entry
+    else:
+        leg_entry = trade.get("entry_range_min")  # legacy: stage 8 absent
     return {
         "market_order": {"entry": trade.get("live_price"),
                          "r_r": live if isinstance(live, (int, float)) else None},
-        "limit_order": {"entry": (payloads.get("out_8_dhan.json") or {}).get(
-                            "optimal_limit_buy") or trade.get("entry_range_min"),
-                        "r_r": round(limit_view, 4) if limit_view is not None else None},
+        "limit_order": {"entry": leg_entry,
+                        "r_r": round(limit_view, 4) if limit_view is not None else None,
+                        "unavailable": unavailable},
         "p_win": p_win,
     }
 
